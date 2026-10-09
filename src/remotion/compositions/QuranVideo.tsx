@@ -1,0 +1,189 @@
+import React, { useEffect, useState } from 'react';
+import { AbsoluteFill, Series, Audio, staticFile, delayRender, continueRender } from 'remotion';
+import { QuranVideoCompositionProps, AyahSequenceData } from '../../shared/types';
+import { BackgroundLayer } from './BackgroundLayer';
+import { WaveformLayer } from './WaveformLayer';
+import { TypographyLayer } from './TypographyLayer';
+import { BrandingLayer } from './BrandingLayer';
+import { getMediaUrl } from '../../shared/media-url';
+
+export const QuranVideo: React.FC<QuranVideoCompositionProps> = ({
+  config,
+  ayahs,
+  totalDurationInFrames,
+}) => {
+  // Guarantee fonts are fully loaded before capturing frames
+  const [handle] = useState(() => delayRender('fonts-loader'));
+
+  useEffect(() => {
+    if (typeof document !== 'undefined' && document.fonts) {
+      document.fonts.ready
+        .then(() => {
+          continueRender(handle);
+        })
+        .catch(() => {
+          continueRender(handle);
+        });
+    } else {
+      continueRender(handle);
+    }
+  }, [handle]);
+
+  return (
+    <AbsoluteFill
+      style={{
+        backgroundColor: '#000000',
+        userSelect: 'none',
+        overflow: 'hidden',
+        width: '100%',
+        height: '100%',
+      }}
+    >
+      {/* Self-contained Font Registration and OpenType Typography Rules */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap');
+
+        @font-face {
+          font-family: 'surah-name-v1';
+          src: url('${staticFile('Quran fonts/surah-name-v1.ttf')}') format('truetype');
+          font-display: block;
+        }
+
+        @font-face {
+          font-family: 'KFGQPC Uthmanic Script HAFS';
+          src: url('${staticFile('Quran fonts/KFGQPC Uthmanic Script HAFS Regular.otf')}') format('opentype');
+          font-display: block;
+        }
+
+        @font-face {
+          font-family: 'KFGQPC HAFS Uthmanic Script';
+          src: url('${staticFile('Quran fonts/QPC Hafs font.ttf')}') format('truetype');
+          font-display: block;
+        }
+
+        @font-face {
+          font-family: 'me_quran';
+          src: url('${staticFile('Quran fonts/me_quran_volt_newmet.ttf')}') format('truetype');
+          font-display: block;
+        }
+
+        @font-face {
+          font-family: 'AlQuran Neo v5x1';
+          src: url('${staticFile('Quran fonts/AlQuranNeov5x1.ttf')}') format('truetype');
+          font-display: block;
+        }
+
+        @font-face {
+          font-family: 'AlQuran IndoPak by QuranWBW';
+          src: url('${staticFile('Quran fonts/Indopak Nastaleeq font.ttf')}') format('truetype');
+          font-display: block;
+        }
+
+        @font-face {
+          font-family: 'Al Qalam Quran Majeed Web';
+          src: url('${staticFile('Quran fonts/Al Qalam Quran Majeed Web Regular.ttf')}') format('truetype');
+          font-display: block;
+        }
+
+        @font-face {
+          font-family: 'noorehira';
+          src: url('${staticFile('Quran fonts/noorehira Regular.ttf')}') format('truetype');
+          font-display: block;
+        }
+
+        @font-face {
+          font-family: 'noorehuda';
+          src: url('${staticFile('Quran fonts/noorehuda Regular.ttf')}') format('truetype');
+          font-display: block;
+        }
+
+        @font-face {
+          font-family: 'Amiri';
+          src: url('${staticFile('Quran fonts/Amiri Regular.ttf')}') format('truetype');
+          font-display: block;
+        }
+
+        @font-face {
+          font-family: 'Lateef';
+          src: url('${staticFile('Quran fonts/Lateef Regular.ttf')}') format('truetype');
+          font-display: block;
+        }
+
+        .surah-calligraphy-title {
+          font-family: 'surah-name-v1', sans-serif !important;
+          font-feature-settings: "liga" 1, "dlig" 1;
+          text-rendering: optimizeLegibility;
+          -webkit-font-smoothing: antialiased;
+        }
+
+        .quran-arabic-text {
+          direction: rtl;
+          unicode-bidi: isolate;
+          text-align: center;
+          font-feature-settings: "kern" 1, "liga" 1, "mkmk" 1, "mark" 1, "calt" 1;
+          text-rendering: optimizeLegibility;
+          -webkit-font-smoothing: antialiased;
+        }
+      `}</style>
+
+      {/* Layer 1: Ambient Background (Spans Entire Video) */}
+      <BackgroundLayer
+        type={config.backgroundType}
+        source={config.backgroundPath}
+        overlayOpacity={config.overlayOpacity}
+        vignetteIntensity={config.vignetteIntensity}
+        kenBurnsEffect={config.kenBurnsEffect}
+        totalDurationInFrames={totalDurationInFrames}
+      />
+
+      {/* Sequential Ayah Audio & Typography Display */}
+      {ayahs && ayahs.length > 0 ? (
+        <Series>
+          {ayahs.map((ayahData: AyahSequenceData, index: number) => {
+            const audioSrc = getMediaUrl(ayahData.audioUrl);
+
+            return (
+              <Series.Sequence
+                key={`${ayahData.surah}:${ayahData.ayah}_${index}`}
+                durationInFrames={Math.max(1, ayahData.durationInFrames)}
+              >
+                {/* Recitation Audio Track */}
+                {audioSrc && <Audio src={audioSrc} />}
+
+                {/* Layer 2: Audio-Reactive Waveform */}
+                {config.showWaveform && (
+                  <WaveformLayer
+                    audioUrl={audioSrc}
+                    type={config.waveformType}
+                    color={config.waveformColor}
+                    height={config.waveformHeight}
+                    width={config.waveformWidth ?? 92}
+                    amplitude={config.waveformAmplitude ?? 2.2}
+                    positionY={config.waveformPositionY}
+                  />
+                )}
+
+                {/* Layer 3: Typographic Hierarchy & Synchronized Karaoke */}
+                <TypographyLayer
+                  config={config}
+                  ayahData={ayahData}
+                  fps={config.fps}
+                />
+              </Series.Sequence>
+            );
+          })}
+        </Series>
+      ) : null}
+
+      {/* Layer 4: Channel Identity & Watermark (Spans Entire Video) */}
+      {config.showBranding && (
+        <BrandingLayer
+          logoPath={config.logoPath}
+          channelHandle={config.channelHandle}
+          position={config.brandingPosition}
+          scale={config.brandingScale}
+        />
+      )}
+    </AbsoluteFill>
+  );
+};

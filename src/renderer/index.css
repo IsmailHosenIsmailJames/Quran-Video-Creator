@@ -1,0 +1,120 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: 'surah-name-v1';
+  src: url('/Quran fonts/surah-name-v1.ttf') format('truetype');
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'KFGQPC Uthmanic Script HAFS';
+  src: url('/Quran fonts/KFGQPC Uthmanic Script HAFS Regular.otf') format('opentype');
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'KFGQPC HAFS Uthmanic Script';
+  src: url('/Quran fonts/QPC Hafs font.ttf') format('truetype');
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'me_quran';
+  src: url('/Quran fonts/me_quran_volt_newmet.ttf') format('truetype');
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'AlQuran Neo v5x1';
+  src: url('/Quran fonts/AlQuranNeov5x1.ttf') format('truetype');
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'AlQuran IndoPak by QuranWBW';
+  src: url('/Quran fonts/Indopak Nastaleeq font.ttf') format('truetype');
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'Al Qalam Quran Majeed Web';
+  src: url('/Quran fonts/Al Qalam Quran Majeed Web Regular.ttf') format('truetype');
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'noorehira';
+  src: url('/Quran fonts/noorehira Regular.ttf') format('truetype');
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'noorehuda';
+  src: url('/Quran fonts/noorehuda Regular.ttf') format('truetype');
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'Amiri';
+  src: url('/Quran fonts/Amiri Regular.ttf') format('truetype');
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'Lateef';
+  src: url('/Quran fonts/Lateef Regular.ttf') format('truetype');
+  font-display: block;
+}
+
+/* Base resets & theme */
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #090d16;
+  color: #f3f4f6;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Surah ligature title */
+.surah-calligraphy-title {
+  font-family: 'surah-name-v1', sans-serif;
+  font-feature-settings: "liga" 1, "dlig" 1;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Complex Quranic Arabic typography */
+.quran-arabic-text {
+  direction: rtl;
+  unicode-bidi: isolate;
+  text-align: center;
+  font-family: var(--selected-quran-font, 'KFGQPC Uthmanic Script HAFS'), serif;
+  font-size: var(--arabic-font-size, 54px);
+  line-height: var(--arabic-line-height, 2.3);
+  font-feature-settings: "kern" 1, "liga" 1, "mkmk" 1, "mark" 1, "calt" 1;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom scrollbars for studio controls */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(17, 24, 39, 0.4);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(75, 85, 99, 0.6);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.8);
+}

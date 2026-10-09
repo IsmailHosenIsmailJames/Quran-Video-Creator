@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Production builds
+dist/
+dist-electron/
+release/
+.cache/
+tsconfig.tsbuildinfo
+
+# Remotion temporary caches
+.remotion/
+/tmp/remotion-*
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment
+.env
+.env.local

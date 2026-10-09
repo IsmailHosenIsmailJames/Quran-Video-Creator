@@ -1,0 +1,48 @@
+{
+  "appId": "com.quranvideo.studio",
+  "productName": "Quran Video Studio",
+  "directories": {
+    "output": "release"
+  },
+  "files": [
+    "dist/**",
+    "dist-electron/**"
+  ],
+  "asar": true,
+  "asarUnpack": [
+    "**/node_modules/@remotion/compositor-*/**",
+    "**/node_modules/@remotion/renderer/**",
+    "**/node_modules/better-sqlite3/**"
+  ],
+  "extraResources": [
+    {
+      "from": "Quran Scripts",
+      "to": "Quran Scripts",
+      "filter": ["*.db"]
+    },
+    {
+      "from": "Quran fonts",
+      "to": "Quran fonts",
+      "filter": ["*.ttf", "*.otf"]
+    },
+    {
+      "from": "compressed_translation_simple",
+      "to": "compressed_translation_simple"
+    },
+    {
+      "from": "recitations.json",
+      "to": "recitations.json"
+    }
+  ],
+  "linux": {
+    "target": ["tar.gz"],
+    "category": "Video"
+  },
+  "mac": {
+    "category": "public.app-category.video",
+    "target": ["dmg", "zip"]
+  },
+  "win": {
+    "target": ["nsis", "portable"]
+  }
+}

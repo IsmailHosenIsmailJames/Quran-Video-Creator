@@ -1,0 +1,57 @@
+{
+  "name": "quran-video-studio",
+  "version": "1.0.0",
+  "description": "Production-grade desktop application for creating cinematic Quran recitation videos",
+  "main": "dist-electron/main/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build && electron-builder --dir",
+    "build:vite": "tsc -b && vite build",
+    "lint": "tsc --noEmit",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "keywords": [
+    "quran",
+    "video",
+    "remotion",
+    "electron",
+    "cinematic",
+    "recitation"
+  ],
+  "author": "Quran Video Studio",
+  "license": "MIT",
+  "dependencies": {
+    "@remotion/bundler": "^4.0.260",
+    "@remotion/media-utils": "^4.0.260",
+    "@remotion/player": "^4.0.260",
+    "@remotion/renderer": "^4.0.260",
+    "axios": "^1.7.9",
+    "better-sqlite3": "^11.8.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.469.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "^4.0.260",
+    "seek-bzip": "^1.0.6",
+    "tailwind-merge": "^2.6.0",
+    "zustand": "^4.5.5"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^20.17.11",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.2",
+    "vite": "^5.4.11",
+    "vite-plugin-electron": "^0.28.8",
+    "vite-plugin-electron-renderer": "^0.14.6"
+  }
+}
