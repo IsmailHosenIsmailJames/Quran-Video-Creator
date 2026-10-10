@@ -378,7 +378,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
   }, [totalSeconds]);
 
   return (
-    <div className="w-full flex-shrink-0 bg-gray-950/95 border-t border-gray-800/90 rounded-2xl p-3 shadow-2xl flex flex-col gap-2.5 backdrop-blur-md select-none mt-2">
+    <div className="w-full flex-shrink-0 bg-gray-950/95 border-t border-gray-800/90 rounded-2xl p-3 shadow-2xl flex flex-col gap-2.5 backdrop-blur-md select-none mt-2 relative z-20">
       {/* 1. Timeline Controls Header */}
       <div className="flex items-center justify-between text-xs px-1">
         <div className="flex items-center gap-3">
@@ -457,7 +457,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
       </div>
 
       {/* 2. Timeline Tracks Container */}
-      <div className="relative w-full rounded-xl bg-gray-900/90 border border-gray-800/80 p-2 flex gap-2.5 overflow-hidden">
+      <div className="relative w-full rounded-xl bg-gray-900/90 border border-gray-800/80 p-2 flex gap-2.5">
         {/* Left Track Headers / Labels Column */}
         <div className="w-11 flex-shrink-0 flex flex-col gap-1.5 select-none text-[10px] font-mono text-gray-400">
           {/* Ruler Label */}
@@ -611,63 +611,83 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
 
                   {/* Transition Badge between adjacent clips */}
                   {index > 0 && (
-                    <button
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowTransitionMenu(showTransitionMenu === clip.id ? null : clip.id);
-                      }}
-                      className={`absolute -left-3.5 top-1/2 -translate-y-1/2 z-30 px-2 py-0.5 rounded-full border shadow-lg flex items-center gap-1 text-[9px] font-medium transition cursor-pointer backdrop-blur-md hover:scale-105 active:scale-95 ${
-                        TRANSITION_COLORS[clip.transition || 'crossfade']?.bg || 'bg-amber-500/20'
-                      } ${TRANSITION_COLORS[clip.transition || 'crossfade']?.text || 'text-amber-400'} ${
-                        TRANSITION_COLORS[clip.transition || 'crossfade']?.border || 'border-amber-500/60'
-                      }`}
-                      title={`Click to change transition: ${TRANSITION_LABELS[clip.transition || 'crossfade']}`}
-                    >
-                      <Sparkles className="w-2.5 h-2.5" />
-                      <span className="font-mono font-semibold">{TRANSITION_LABELS[clip.transition || 'crossfade']}</span>
-                    </button>
-                  )}
+                    <div className="absolute -left-3.5 top-1/2 -translate-y-1/2 z-30">
+                      <button
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowTransitionMenu(showTransitionMenu === clip.id ? null : clip.id);
+                        }}
+                        className={`px-2 py-0.5 rounded-full border shadow-lg flex items-center gap-1 text-[9px] font-medium transition cursor-pointer backdrop-blur-md hover:scale-105 active:scale-95 whitespace-nowrap ${
+                          TRANSITION_COLORS[clip.transition || 'crossfade']?.bg || 'bg-amber-500/20'
+                        } ${TRANSITION_COLORS[clip.transition || 'crossfade']?.text || 'text-amber-400'} ${
+                          TRANSITION_COLORS[clip.transition || 'crossfade']?.border || 'border-amber-500/60'
+                        }`}
+                        title={`Click to change transition: ${TRANSITION_LABELS[clip.transition || 'crossfade']}`}
+                      >
+                        <Sparkles className="w-2.5 h-2.5" />
+                        <span className="font-mono font-semibold">{TRANSITION_LABELS[clip.transition || 'crossfade']}</span>
+                      </button>
 
-                  {/* Transition Picker Menu */}
-                  {showTransitionMenu === clip.id && (
-                    <div
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onClick={(e) => e.stopPropagation()}
-                      className="absolute left-0 bottom-full mb-2 w-48 bg-gray-900/95 backdrop-blur-md border border-gray-700 rounded-xl shadow-2xl p-2 z-50 text-xs"
-                    >
-                      <div className="flex justify-between items-center pb-1.5 mb-1.5 border-b border-gray-800 text-[10px] text-gray-400 font-semibold uppercase tracking-wider">
-                        <span className="flex items-center gap-1">
-                          <Sparkles className="w-3 h-3 text-amber-400" />
-                          Transition In
-                        </span>
-                        <X className="w-3.5 h-3.5 cursor-pointer text-gray-400 hover:text-white" onClick={() => setShowTransitionMenu(null)} />
-                      </div>
-                      <div className="space-y-1">
-                        {(Object.keys(TRANSITION_LABELS) as TransitionType[]).map((t) => {
-                          const isCurrent = (clip.transition || 'crossfade') === t;
-                          const col = TRANSITION_COLORS[t];
-                          return (
-                            <button
-                              key={t}
-                              onClick={() => {
-                                updateBackgroundClip(clip.id, { transition: t });
-                                setShowTransitionMenu(null);
-                              }}
-                              className={`w-full text-left px-2 py-1.5 rounded-lg text-[11px] flex items-center justify-between transition ${
-                                isCurrent
-                                  ? 'bg-amber-500/15 border border-amber-500/40 text-amber-300 font-bold'
-                                  : 'hover:bg-gray-800 text-gray-300'
-                              }`}
-                            >
-                              <span>{TRANSITION_LABELS[t]}</span>
-                              <span className={`text-[9px] px-1.5 py-0.5 rounded border font-mono ${col.bg} ${col.text} ${col.border}`}>
-                                {t}
+                      {/* Transition Picker Menu */}
+                      {showTransitionMenu === clip.id && (
+                        <>
+                          {/* Invisible backdrop to close menu when clicking anywhere outside */}
+                          <div
+                            className="fixed inset-0 z-40"
+                            onMouseDown={(e) => {
+                              e.stopPropagation();
+                              setShowTransitionMenu(null);
+                            }}
+                          />
+
+                          <div
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onClick={(e) => e.stopPropagation()}
+                            className={`absolute bottom-full mb-2 w-52 bg-gray-900/98 backdrop-blur-xl border border-gray-700/80 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] p-2 z-50 text-xs ${
+                              index === 1 ? 'left-0' : index === clips.length - 1 && clips.length > 2 ? 'right-0' : 'left-1/2 -translate-x-1/2'
+                            }`}
+                          >
+                            <div className="flex justify-between items-center pb-1.5 mb-1.5 border-b border-gray-800 text-[10px] text-gray-400 font-semibold uppercase tracking-wider">
+                              <span className="flex items-center gap-1 text-amber-400 font-bold">
+                                <Sparkles className="w-3 h-3" />
+                                Transition Effect
                               </span>
-                            </button>
-                          );
-                        })}
-                      </div>
+                              <button
+                                onClick={() => setShowTransitionMenu(null)}
+                                className="p-0.5 rounded hover:bg-gray-800 text-gray-400 hover:text-white"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                            <div className="space-y-1 max-h-60 overflow-y-auto">
+                              {(Object.keys(TRANSITION_LABELS) as TransitionType[]).map((t) => {
+                                const isCurrent = (clip.transition || 'crossfade') === t;
+                                const col = TRANSITION_COLORS[t];
+                                return (
+                                  <button
+                                    key={t}
+                                    onClick={() => {
+                                      updateBackgroundClip(clip.id, { transition: t });
+                                      setShowTransitionMenu(null);
+                                    }}
+                                    className={`w-full text-left px-2.5 py-1.5 rounded-lg text-[11px] flex items-center justify-between transition cursor-pointer ${
+                                      isCurrent
+                                        ? 'bg-amber-500/20 border border-amber-500/50 text-amber-300 font-bold shadow-sm'
+                                        : 'hover:bg-gray-800 text-gray-300'
+                                    }`}
+                                  >
+                                    <span>{TRANSITION_LABELS[t]}</span>
+                                    <span className={`text-[9px] px-1.5 py-0.5 rounded border font-mono ${col.bg} ${col.text} ${col.border}`}>
+                                      {t}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
 
