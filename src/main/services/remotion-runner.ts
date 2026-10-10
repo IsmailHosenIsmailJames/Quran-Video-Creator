@@ -4,6 +4,7 @@ import { bundle } from '@remotion/bundler';
 import { renderMedia, selectComposition } from '@remotion/renderer';
 import { BrowserWindow, app } from 'electron';
 import { VideoTemplateConfig, AyahSequenceData, QuranVideoCompositionProps } from '../../shared/types';
+import { localMediaServer } from './local-media-server';
 
 class RemotionRunnerService {
   private activeJobs = new Map<string, { cancel: () => void }>();
@@ -109,9 +110,30 @@ class RemotionRunnerService {
         return;
       }
 
+      // Ensure local media streaming server is active so headless Chromium can fetch custom videos and audio
+      await localMediaServer.start();
+
+      // Convert any local filesystem or app-media paths into HTTP streaming URLs for Headless Chrome
+      const sanitizedConfig: VideoTemplateConfig = {
+        ...config,
+        backgroundPath: localMediaServer.getMediaUrl(config.backgroundPath),
+        backgroundClips: (config.backgroundClips || []).map((clip) => ({
+          ...clip,
+          source: localMediaServer.getMediaUrl(clip.source),
+        })),
+        customAudioPath: config.customAudioPath
+          ? localMediaServer.getMediaUrl(config.customAudioPath)
+          : undefined,
+      };
+
+      const sanitizedAyahs: AyahSequenceData[] = (ayahs || []).map((ayah) => ({
+        ...ayah,
+        audioUrl: localMediaServer.getMediaUrl(ayah.audioUrl),
+      }));
+
       const inputProps: QuranVideoCompositionProps = {
-        config,
-        ayahs,
+        config: sanitizedConfig,
+        ayahs: sanitizedAyahs,
         totalDurationInFrames,
       };
 
@@ -133,6 +155,7 @@ class RemotionRunnerService {
         cancelSignal,
         chromiumOptions: {
           enableMultiProcessOnLinux: true,
+          disableWebSecurity: true,
         },
         onProgress: ({ renderedFrames, renderEstimatedTime }) => {
           if (isCancelled) return;

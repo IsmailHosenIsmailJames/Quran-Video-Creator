@@ -4,6 +4,7 @@ import fs from 'fs';
 import { pathToFileURL } from 'url';
 import { registerIpcHandlers } from './ipc-handlers';
 import { quranDbService } from './services/quran-db';
+import { localMediaServer } from './services/local-media-server';
 
 // Register custom protocol for local media streaming
 protocol.registerSchemesAsPrivileged([
@@ -271,7 +272,10 @@ function createWindow(): void {
   });
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // Start local streaming server for media
+  await localMediaServer.start();
+
   // Protocol handler for app-media://
   // Allows loading local disk files like video/audio/images cleanly into Remotion Player and img/video elements
   protocol.handle('app-media', async (request) => {
@@ -315,4 +319,5 @@ app.on('window-all-closed', () => {
 
 app.on('will-quit', () => {
   quranDbService.closeAll();
+  localMediaServer.stop();
 });
