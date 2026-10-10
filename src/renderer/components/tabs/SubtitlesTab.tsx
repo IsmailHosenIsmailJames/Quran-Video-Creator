@@ -108,47 +108,90 @@ export const SubtitlesTab: React.FC = () => {
         </div>
 
         {/* 2. Alignment & Order Quick Controls */}
-        <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-gray-950/70 border border-gray-800/80">
-          <div className="space-y-1.5">
-            <span className="text-xs text-gray-400 block">Text Alignment</span>
-            <div className="flex gap-1">
+        <div className="space-y-3 p-3.5 rounded-xl bg-gray-950/70 border border-gray-800/80">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <span className="text-xs text-gray-400 block">Horizontal Alignment</span>
+              <div className="flex gap-1">
+                {[
+                  { id: 'left' as const, label: 'Left', icon: AlignLeft },
+                  { id: 'center' as const, label: 'Center (All)', icon: AlignCenter },
+                  { id: 'right' as const, label: 'Right', icon: AlignRight },
+                ].map(({ id, label, icon: Icon }) => {
+                  const isSelected = (config.textAlignment || 'center') === id;
+                  return (
+                    <button
+                      key={id}
+                      onClick={() => updateConfig({ textAlignment: id })}
+                      className={`flex-1 py-1 px-1.5 rounded-lg border text-[11px] font-medium flex items-center justify-center gap-1 transition ${
+                        isSelected
+                          ? 'bg-amber-500/15 border-amber-500/80 text-amber-300'
+                          : 'bg-gray-900 border-gray-800 text-gray-400 hover:text-white'
+                      }`}
+                      title={label}
+                    >
+                      <Icon className="w-3 h-3" />
+                      <span className="truncate">{id === 'center' ? 'Center' : label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <span className="text-xs text-gray-400 block">Subtitle Order</span>
+              <button
+                onClick={toggleTranslationOrder}
+                className="w-full py-1 px-2 rounded-lg bg-gray-900 hover:bg-gray-800 border border-gray-800 text-xs text-amber-300 font-medium flex items-center justify-between transition cursor-pointer"
+                title="Click to swap vertical order of English and native subtitle"
+              >
+                <span className="truncate text-[11px]">
+                  {englishFirst ? '1. English ➔ 2. Subtitle' : '1. Subtitle ➔ 2. English'}
+                </span>
+                <span className="text-[10px] text-gray-400 font-mono">Swap</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Vertical Alignment */}
+          <div className="space-y-1.5 pt-2 border-t border-gray-800/60">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-400 block">Vertical Alignment (Screen Position)</span>
+              <span className="text-[10px] text-amber-400/80 font-mono">
+                {config.verticalAlignment === 'top'
+                  ? 'Top'
+                  : config.verticalAlignment === 'bottom'
+                  ? 'Bottom'
+                  : config.verticalAlignment === 'split'
+                  ? 'Split'
+                  : 'Middle'}
+              </span>
+            </div>
+            <div className="grid grid-cols-4 gap-1.5">
               {[
-                { id: 'left' as const, label: 'Left', icon: AlignLeft },
-                { id: 'center' as const, label: 'Center (All)', icon: AlignCenter },
-                { id: 'right' as const, label: 'Right', icon: AlignRight },
-              ].map(({ id, label, icon: Icon }) => {
-                const isSelected = (config.textAlignment || 'center') === id;
+                { id: 'middle' as const, label: 'Middle', desc: 'Center of Screen' },
+                { id: 'bottom' as const, label: 'Bottom', desc: 'Lower Area' },
+                { id: 'top' as const, label: 'Top', desc: 'Upper Area' },
+                { id: 'split' as const, label: 'Split', desc: 'Mid / Bottom' },
+              ].map(({ id, label, desc }) => {
+                const isSelected = (config.verticalAlignment || 'middle') === id;
                 return (
                   <button
                     key={id}
-                    onClick={() => updateConfig({ textAlignment: id })}
-                    className={`flex-1 py-1 px-1.5 rounded-lg border text-[11px] font-medium flex items-center justify-center gap-1 transition ${
+                    onClick={() => updateConfig({ verticalAlignment: id })}
+                    className={`py-1.5 px-1 rounded-lg border text-xs font-medium transition cursor-pointer flex flex-col items-center justify-center ${
                       isSelected
-                        ? 'bg-amber-500/15 border-amber-500/80 text-amber-300'
+                        ? 'bg-amber-500/20 border-amber-500 text-amber-300 shadow-sm'
                         : 'bg-gray-900 border-gray-800 text-gray-400 hover:text-white'
                     }`}
-                    title={label}
+                    title={`${label}: ${desc}`}
                   >
-                    <Icon className="w-3 h-3" />
-                    <span className="truncate">{id === 'center' ? 'Center' : label}</span>
+                    <span>{label}</span>
+                    <span className="text-[8px] text-gray-500">{id === 'middle' ? 'Center' : id}</span>
                   </button>
                 );
               })}
             </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <span className="text-xs text-gray-400 block">Subtitle Order</span>
-            <button
-              onClick={toggleTranslationOrder}
-              className="w-full py-1 px-2 rounded-lg bg-gray-900 hover:bg-gray-800 border border-gray-800 text-xs text-amber-300 font-medium flex items-center justify-between transition cursor-pointer"
-              title="Click to swap vertical order of English and native subtitle"
-            >
-              <span className="truncate text-[11px]">
-                {englishFirst ? '1. English ➔ 2. Subtitle' : '1. Subtitle ➔ 2. English'}
-              </span>
-              <span className="text-[10px] text-gray-400 font-mono">Swap</span>
-            </button>
           </div>
         </div>
 

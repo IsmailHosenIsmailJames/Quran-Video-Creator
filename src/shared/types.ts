@@ -111,10 +111,14 @@ export interface BackgroundClip {
 
 export type ScriptBlockType = 'arabic' | 'primary' | 'secondary';
 
+export type VerticalAlignmentType = 'middle' | 'top' | 'bottom' | 'split';
+
 export interface AyahFontOverride {
   arabicFontSize?: number;
   primaryFontSize?: number;
   secondaryFontSize?: number;
+  verticalAlignment?: VerticalAlignmentType;
+  verticalOffset?: number; // In pixels (-150 to +150)
 }
 
 export interface VideoTemplateConfig {
@@ -148,10 +152,13 @@ export interface VideoTemplateConfig {
   secondaryFontSize: number;
   secondaryTextColor: string;
 
-  // Layout, Reordering & Container
+  // Layout, Reordering, Alignment & Container
   scriptLayoutOrder?: ScriptBlockType[];
   showTranslationContainer?: boolean;
   textAlignment?: 'center' | 'left' | 'right';
+  verticalAlignment?: VerticalAlignmentType;
+  verticalCustomOffset?: number; // In pixels (-150 to +150, default 0)
+  showSurahHeader?: boolean;
 
   // Layout & Background
   aspectRatio: '16:9' | '9:16' | '1:1';

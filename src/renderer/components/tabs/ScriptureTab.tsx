@@ -134,7 +134,7 @@ export const ScriptureTab: React.FC = () => {
 
         {/* Text Alignment for All (Quran, English, Subtitle) */}
         <div className="space-y-1.5 pt-1">
-          <label className="text-xs text-gray-400 block">Text Alignment (All Layers)</label>
+          <label className="text-xs text-gray-400 block">Horizontal Alignment (All Layers)</label>
           <div className="grid grid-cols-3 gap-2">
             {[
               { id: 'left' as const, label: 'Left', icon: AlignLeft },
@@ -157,6 +157,96 @@ export const ScriptureTab: React.FC = () => {
                 </button>
               );
             })}
+          </div>
+        </div>
+
+        {/* Vertical Alignment (Screen Position) */}
+        <div className="space-y-2 pt-2 border-t border-gray-800/60">
+          <div className="flex items-center justify-between">
+            <label className="text-xs text-gray-300 font-medium block">
+              Vertical Alignment (Screen Position)
+            </label>
+            <span className="text-[10px] text-amber-400/80 font-mono">
+              {config.verticalAlignment === 'top'
+                ? 'Top (Upper Area)'
+                : config.verticalAlignment === 'bottom'
+                ? 'Bottom (Subtitles)'
+                : config.verticalAlignment === 'split'
+                ? 'Split (Distributed)'
+                : 'Middle (Center of Screen)'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { id: 'middle' as const, label: 'Middle', desc: 'Center of Screen' },
+              { id: 'bottom' as const, label: 'Bottom', desc: 'Lower Area' },
+              { id: 'top' as const, label: 'Top', desc: 'Upper Area' },
+              { id: 'split' as const, label: 'Split', desc: 'Mid / Bottom' },
+            ].map(({ id, label, desc }) => {
+              const isSelected = (config.verticalAlignment || 'middle') === id;
+              return (
+                <button
+                  key={id}
+                  onClick={() => updateConfig({ verticalAlignment: id })}
+                  className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl border text-xs font-medium transition cursor-pointer ${
+                    isSelected
+                      ? 'bg-amber-500/20 border-amber-500 text-amber-300 shadow-md shadow-amber-500/10'
+                      : 'bg-gray-950 border-gray-800 text-gray-400 hover:text-gray-200 hover:bg-gray-900'
+                  }`}
+                  title={`${label}: ${desc}`}
+                >
+                  <span className="font-semibold text-xs">{label}</span>
+                  <span className="text-[9px] text-gray-500 mt-0.5 leading-tight text-center">{desc}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Vertical Fine-Tuning Offset Slider */}
+          <div className="pt-1.5 space-y-1">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-gray-400 text-[11px]">Vertical Fine-Tune Offset (Nudge):</span>
+              <div className="flex items-center gap-1.5">
+                <span className="font-mono text-amber-300 text-xs">
+                  {config.verticalCustomOffset ? `${config.verticalCustomOffset > 0 ? '+' : ''}${config.verticalCustomOffset}px` : '0px (Default)'}
+                </span>
+                {config.verticalCustomOffset !== 0 && config.verticalCustomOffset !== undefined && (
+                  <button
+                    onClick={() => updateConfig({ verticalCustomOffset: 0 })}
+                    className="p-0.5 hover:text-amber-400 text-gray-500 transition"
+                    title="Reset vertical offset to 0"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            </div>
+            <input
+              type="range"
+              min="-150"
+              max="150"
+              step="2"
+              value={config.verticalCustomOffset || 0}
+              onChange={(e) => updateConfig({ verticalCustomOffset: Number(e.target.value) })}
+              className="w-full accent-amber-500 cursor-pointer h-1.5 bg-gray-800 rounded-lg"
+            />
+            <div className="flex justify-between text-[10px] text-gray-500 font-mono">
+              <span>-150px (Higher)</span>
+              <span>0 (Center)</span>
+              <span>+150px (Lower)</span>
+            </div>
+          </div>
+
+          {/* Top Surah Header Badge Toggle */}
+          <div className="flex items-center justify-between pt-1">
+            <span className="text-xs text-gray-400">Show Surah Title Badge at Top</span>
+            <input
+              type="checkbox"
+              checked={config.showSurahHeader !== false}
+              onChange={(e) => updateConfig({ showSurahHeader: e.target.checked })}
+              className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+            />
           </div>
         </div>
 

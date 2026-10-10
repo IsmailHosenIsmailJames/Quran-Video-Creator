@@ -194,11 +194,14 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
   const currentArabicSize = ayahOverride?.arabicFontSize ?? config.arabicFontSize;
   const currentEnglishSize = ayahOverride?.secondaryFontSize ?? config.secondaryFontSize;
   const currentSubtitleSize = ayahOverride?.primaryFontSize ?? config.primaryFontSize;
+  const currentVerticalOffset = ayahOverride?.verticalOffset ?? config.verticalCustomOffset ?? 0;
   const hasAyahOverride =
     ayahOverride !== undefined &&
     (ayahOverride.arabicFontSize !== undefined ||
       ayahOverride.secondaryFontSize !== undefined ||
-      ayahOverride.primaryFontSize !== undefined);
+      ayahOverride.primaryFontSize !== undefined ||
+      ayahOverride.verticalOffset !== undefined ||
+      ayahOverride.verticalAlignment !== undefined);
 
   // Global mouse handlers for playhead scrubber dragging
   const handleSeekToClientX = useCallback(
@@ -1146,6 +1149,27 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
                 className="w-12 bg-gray-900 border border-gray-700 rounded px-1.5 py-0.5 text-[11px] text-purple-400 font-mono text-center"
               />
               <span className="text-gray-500 text-[10px]">px</span>
+            </div>
+
+            {/* Vertical Nudge Offset */}
+            <div className="flex items-center gap-2 bg-gray-950 px-2.5 py-1.5 rounded-lg border border-gray-800">
+              <span className="text-gray-400 text-[11px] font-medium">Vertical:</span>
+              <input
+                type="range"
+                min="-150"
+                max="150"
+                step="2"
+                value={currentVerticalOffset}
+                onChange={(e) =>
+                  updateAyahFontOverride(selectedAyah.surah, selectedAyah.ayah, {
+                    verticalOffset: Number(e.target.value),
+                  })
+                }
+                className="w-16 accent-amber-500 cursor-pointer h-1.5 bg-gray-800 rounded-lg"
+              />
+              <span className="font-mono text-[11px] text-amber-300 min-w-[38px] text-right">
+                {currentVerticalOffset > 0 ? `+${currentVerticalOffset}` : currentVerticalOffset}px
+              </span>
             </div>
           </div>
 

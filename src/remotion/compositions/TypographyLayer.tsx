@@ -40,10 +40,14 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
   const primaryFontSize = override?.primaryFontSize ?? config.primaryFontSize;
   const secondaryFontSize = override?.secondaryFontSize ?? config.secondaryFontSize;
 
-  // Alignment
+  // Alignment & Layout Positioning
   const textAlignment = config.textAlignment || 'center';
   const flexAlignItems =
     textAlignment === 'center' ? 'center' : textAlignment === 'right' ? 'flex-end' : 'flex-start';
+
+  const verticalAlignment = override?.verticalAlignment ?? config.verticalAlignment ?? 'middle';
+  const verticalOffset = override?.verticalOffset ?? config.verticalCustomOffset ?? 0;
+  const isSplit = verticalAlignment === 'split';
 
   // Subtitle Container Box
   const showContainer = config.showTranslationContainer !== false;
@@ -58,10 +62,13 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
       style={{
         width: '100%',
         maxWidth: '1280px',
-        margin: 'auto 0',
+        margin: isSplit ? 'auto 0' : '0',
         textAlign: textAlignment,
         padding: '0 32px',
         boxSizing: 'border-box',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: flexAlignItems,
       }}
     >
       <div
@@ -198,83 +205,134 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
   );
   const arabicFirst = arabicIndex <= transIndex;
 
+  // Vertical Alignment Justification & Padding
+  let contentJustify: 'center' | 'flex-start' | 'flex-end' | 'space-between' = 'center';
+  let contentPaddingTop = '110px';
+  let contentPaddingBottom = '44px';
+
+  if (verticalAlignment === 'top') {
+    contentJustify = 'flex-start';
+    contentPaddingTop = config.showSurahHeader !== false ? '130px' : '48px';
+    contentPaddingBottom = '44px';
+  } else if (verticalAlignment === 'bottom') {
+    contentJustify = 'flex-end';
+    contentPaddingTop = '110px';
+    contentPaddingBottom = '56px';
+  } else if (verticalAlignment === 'split') {
+    contentJustify = 'space-between';
+    contentPaddingTop = '110px';
+    contentPaddingBottom = '44px';
+  } else {
+    // 'middle'
+    contentJustify = 'center';
+    contentPaddingTop = config.showSurahHeader !== false ? '110px' : '44px';
+    contentPaddingBottom = '44px';
+  }
+
   return (
     <AbsoluteFill
       style={{
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'space-between',
         alignItems: 'center',
-        padding: '52px 64px 44px',
+        padding: '0',
         userSelect: 'none',
         opacity: entranceProgress,
         transform: `translateY(${(1 - entranceProgress) * 20}px)`,
         width: '100%',
         height: '100%',
         boxSizing: 'border-box',
+        position: 'relative',
+        overflow: 'hidden',
       }}
     >
       {/* TOP HEADER: Surah Calligraphy Badge & Metadata Pill */}
+      {config.showSurahHeader !== false && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '44px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 30,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px',
+            backgroundColor: 'rgba(0, 0, 0, 0.55)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            borderRadius: '9999px',
+            padding: '10px 32px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)',
+            flexShrink: 0,
+          }}
+        >
+          <span
+            className="surah-calligraphy-title"
+            style={{
+              fontFamily: "'surah-name-v1', sans-serif",
+              fontSize: '38px',
+              lineHeight: 1,
+              color: '#FCD34D',
+              letterSpacing: '0px',
+              display: 'inline-block',
+            }}
+          >
+            {surahLigatureCode}
+          </span>
+          <div
+            style={{
+              height: '20px',
+              width: '1px',
+              backgroundColor: 'rgba(255, 255, 255, 0.3)',
+            }}
+          />
+          <span
+            style={{
+              fontFamily: "'Inter', sans-serif",
+              color: 'rgba(255, 255, 255, 0.95)',
+              fontSize: '16px',
+              fontWeight: 500,
+              letterSpacing: '0.04em',
+            }}
+          >
+            {ayahData.surahNameTransliterated} • Ayah {ayahData.ayah}
+          </span>
+        </div>
+      )}
+
+      {/* Main Scripture & Subtitle Layers in chosen layout order & vertical alignment */}
       <div
         style={{
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
-          gap: '16px',
-          backgroundColor: 'rgba(0, 0, 0, 0.55)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-          border: '1px solid rgba(255, 255, 255, 0.2)',
-          borderRadius: '9999px',
-          padding: '10px 32px',
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)',
-          flexShrink: 0,
+          justifyContent: contentJustify,
+          width: '100%',
+          height: '100%',
+          gap: isSplit ? '0px' : '28px',
+          paddingTop: contentPaddingTop,
+          paddingBottom: contentPaddingBottom,
+          paddingLeft: '48px',
+          paddingRight: '48px',
+          boxSizing: 'border-box',
+          transform: `translateY(${verticalOffset}px)`,
+          transition: 'transform 0.15s ease-out',
         }}
       >
-        <span
-          className="surah-calligraphy-title"
-          style={{
-            fontFamily: "'surah-name-v1', sans-serif",
-            fontSize: '38px',
-            lineHeight: 1,
-            color: '#FCD34D',
-            letterSpacing: '0px',
-            display: 'inline-block',
-          }}
-        >
-          {surahLigatureCode}
-        </span>
-        <div
-          style={{
-            height: '20px',
-            width: '1px',
-            backgroundColor: 'rgba(255, 255, 255, 0.3)',
-          }}
-        />
-        <span
-          style={{
-            fontFamily: "'Inter', sans-serif",
-            color: 'rgba(255, 255, 255, 0.95)',
-            fontSize: '16px',
-            fontWeight: 500,
-            letterSpacing: '0.04em',
-          }}
-        >
-          {ayahData.surahNameTransliterated} • Ayah {ayahData.ayah}
-        </span>
+        {arabicFirst ? (
+          <>
+            {arabicBlock}
+            {translationsBlock}
+          </>
+        ) : (
+          <>
+            {translationsBlock}
+            {arabicBlock}
+          </>
+        )}
       </div>
-
-      {/* Main Scripture & Subtitle Layers in chosen layout order */}
-      {arabicFirst ? (
-        <>
-          {arabicBlock}
-          {translationsBlock}
-        </>
-      ) : (
-        <>
-          {translationsBlock}
-          {arabicBlock}
-        </>
-      )}
     </AbsoluteFill>
   );
 };

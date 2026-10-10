@@ -89,10 +89,13 @@ export const DEFAULT_TEMPLATE_CONFIG: VideoTemplateConfig = {
   secondaryFontSize: 21,
   secondaryTextColor: '#9CA3AF',
 
-  // Layout, Reordering & Container
+  // Layout, Reordering, Alignment & Container
   scriptLayoutOrder: ['arabic', 'secondary', 'primary'],
   showTranslationContainer: true,
   textAlignment: 'center',
+  verticalAlignment: 'middle',
+  verticalCustomOffset: 0,
+  showSurahHeader: true,
 
   // Layout & Background
   aspectRatio: '16:9',
