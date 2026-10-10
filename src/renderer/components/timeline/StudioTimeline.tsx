@@ -328,23 +328,33 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
       </div>
 
       {/* 2. Timeline Tracks Container */}
-      <div
-        ref={timelineTrackRef}
-        onClick={handleRulerClick}
-        className="relative w-full rounded-xl bg-gray-900/90 border border-gray-800/80 p-2 cursor-pointer flex flex-col gap-1.5 overflow-hidden"
-      >
-        {/* Playhead Needle Bar (Red / Amber Scrubber) */}
-        <div
-          className="absolute top-0 bottom-0 w-[2px] bg-amber-400 shadow-[0_0_10px_#f59e0b] z-30 pointer-events-none transition-all duration-75"
-          style={{ left: `${playheadPercent}%` }}
-        >
-          <div className="w-3 h-3 bg-amber-400 transform -translate-x-[5px] -translate-y-0.5 rounded-b-md shadow-md" />
+      <div className="relative w-full rounded-xl bg-gray-900/90 border border-gray-800/80 p-2 flex gap-2.5 overflow-hidden">
+        {/* Left Track Headers / Labels Column */}
+        <div className="w-11 flex-shrink-0 flex flex-col gap-1.5 select-none text-[10px] font-mono text-gray-400">
+          <div className="h-6 flex items-center font-semibold text-gray-400">
+            Ayahs:
+          </div>
+          <div className="h-12 flex items-center font-semibold text-gray-400">
+            Media:
+          </div>
         </div>
 
-        {/* Track A: Ayahs / Scripture Audio Track */}
-        <div className="flex items-center gap-1 h-6 w-full relative">
-          <span className="text-[10px] font-mono text-gray-500 w-12 flex-shrink-0">Ayahs:</span>
-          <div className="flex-1 h-full flex gap-1 relative overflow-hidden">
+        {/* Right Scrubbable Timeline Area */}
+        <div
+          ref={timelineTrackRef}
+          onClick={handleRulerClick}
+          className="flex-1 relative cursor-pointer flex flex-col gap-1.5 min-w-0"
+        >
+          {/* Playhead Needle Bar (Red / Amber Scrubber) */}
+          <div
+            className="absolute top-0 bottom-0 w-[2px] bg-amber-400 shadow-[0_0_10px_#f59e0b] z-30 pointer-events-none transition-all duration-75"
+            style={{ left: `${playheadPercent}%` }}
+          >
+            <div className="w-3 h-3 bg-amber-400 transform -translate-x-[5px] -translate-y-0.5 rounded-b-md shadow-md" />
+          </div>
+
+          {/* Track A: Ayahs / Scripture Audio Track */}
+          <div className="h-6 w-full flex gap-1 relative overflow-hidden">
             {ayahs.map((ayah) => {
               const ayahPercent = (ayah.durationInFrames / Math.max(1, totalDurationInFrames)) * 100;
               return (
@@ -362,12 +372,9 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
               );
             })}
           </div>
-        </div>
 
-        {/* Track B: Multi-Media Background Sequence Track */}
-        <div className="flex items-center gap-1 h-12 w-full relative">
-          <span className="text-[10px] font-mono text-gray-500 w-12 flex-shrink-0">Media:</span>
-          <div className="flex-1 h-full flex relative">
+          {/* Track B: Multi-Media Background Sequence Track */}
+          <div className="h-12 w-full flex relative">
             {clipLayouts.map(({ clip, percent, durationSec, displaySpeed, isAutoSlowed, isVideo }, index) => {
               const isSelected = clip.id === selectedClipId;
               const nextLayout = clipLayouts[index + 1];
