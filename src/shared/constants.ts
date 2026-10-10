@@ -73,6 +73,9 @@ export const DEFAULT_TEMPLATE_CONFIG: VideoTemplateConfig = {
   arabicActiveColor: '#FBBF24', // Amber/gold
   arabicActiveGlow: true,
 
+  // Per-Ayah Custom Font Size Overrides
+  ayahFontOverrides: {},
+
   // Subtitles
   showPrimaryTranslation: true,
   primaryTranslationLang: 'Bengali',
@@ -85,6 +88,11 @@ export const DEFAULT_TEMPLATE_CONFIG: VideoTemplateConfig = {
   secondaryTranslationFile: 'Saheeh_International.json.txt',
   secondaryFontSize: 21,
   secondaryTextColor: '#9CA3AF',
+
+  // Layout, Reordering & Container
+  scriptLayoutOrder: ['arabic', 'secondary', 'primary'],
+  showTranslationContainer: true,
+  textAlignment: 'center',
 
   // Layout & Background
   aspectRatio: '16:9',

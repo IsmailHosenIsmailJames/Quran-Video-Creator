@@ -109,6 +109,14 @@ export interface BackgroundClip {
   transitionDurationFrames: number;
 }
 
+export type ScriptBlockType = 'arabic' | 'primary' | 'secondary';
+
+export interface AyahFontOverride {
+  arabicFontSize?: number;
+  primaryFontSize?: number;
+  secondaryFontSize?: number;
+}
+
 export interface VideoTemplateConfig {
   // Scripture Selection
   surahNumber: number;
@@ -124,6 +132,9 @@ export interface VideoTemplateConfig {
   arabicActiveColor: string;
   arabicActiveGlow: boolean;
 
+  // Per-Ayah Custom Font Size Overrides (Key: `${surah}:${ayah}`)
+  ayahFontOverrides?: Record<string, AyahFontOverride>;
+
   // Subtitles
   showPrimaryTranslation: boolean;
   primaryTranslationLang: string;
@@ -136,6 +147,11 @@ export interface VideoTemplateConfig {
   secondaryTranslationFile: string;
   secondaryFontSize: number;
   secondaryTextColor: string;
+
+  // Layout, Reordering & Container
+  scriptLayoutOrder?: ScriptBlockType[];
+  showTranslationContainer?: boolean;
+  textAlignment?: 'center' | 'left' | 'right';
 
   // Layout & Background
   aspectRatio: '16:9' | '9:16' | '1:1';

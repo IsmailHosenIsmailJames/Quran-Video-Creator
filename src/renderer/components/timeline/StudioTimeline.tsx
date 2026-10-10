@@ -22,6 +22,8 @@ import {
   Percent,
   Check,
   RefreshCw,
+  Type,
+  RotateCcw,
 } from 'lucide-react';
 
 interface StudioTimelineProps {
@@ -71,6 +73,8 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
     isPlaying,
     setIsPlaying,
     updateConfig,
+    updateAyahFontOverride,
+    resetAyahFontOverride,
     addBackgroundClip,
     removeBackgroundClip,
     updateBackgroundClip,
@@ -82,6 +86,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
   const currentFrame = storeCurrentFrame ?? propCurrentFrame ?? 0;
 
   const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
+  const [selectedAyahNumber, setSelectedAyahNumber] = useState<number | null>(null);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [showSwapMenu, setShowSwapMenu] = useState(false);
   const [showTransitionMenu, setShowTransitionMenu] = useState<string | null>(null); // clipId for transition
@@ -175,6 +180,25 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
   // Selected clip object for inspector
   const selectedClip = clips.find((c) => c.id === selectedClipId) || null;
   const selectedLayout = clipLayouts.find((l) => l.clip.id === selectedClipId) || null;
+
+  // Selected ayah object for inspector
+  const selectedAyah = useMemo(() => {
+    return ayahs.find((a) => a.ayah === selectedAyahNumber) || null;
+  }, [ayahs, selectedAyahNumber]);
+
+  const ayahOverride = useMemo(() => {
+    if (!selectedAyah) return undefined;
+    return config.ayahFontOverrides?.[`${selectedAyah.surah}:${selectedAyah.ayah}`];
+  }, [selectedAyah, config.ayahFontOverrides]);
+
+  const currentArabicSize = ayahOverride?.arabicFontSize ?? config.arabicFontSize;
+  const currentEnglishSize = ayahOverride?.secondaryFontSize ?? config.secondaryFontSize;
+  const currentSubtitleSize = ayahOverride?.primaryFontSize ?? config.primaryFontSize;
+  const hasAyahOverride =
+    ayahOverride !== undefined &&
+    (ayahOverride.arabicFontSize !== undefined ||
+      ayahOverride.secondaryFontSize !== undefined ||
+      ayahOverride.primaryFontSize !== undefined);
 
   // Global mouse handlers for playhead scrubber dragging
   const handleSeekToClientX = useCallback(
@@ -552,9 +576,13 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
           <div className="h-6 w-full flex gap-1 relative overflow-hidden">
             {ayahs.map((ayah, index) => {
               const ayahPercent = (ayah.durationInFrames / Math.max(1, totalDurationInFrames)) * 100;
+              const isAyahSelected = selectedAyahNumber === ayah.ayah;
+              const ayahKey = `${ayah.surah}:${ayah.ayah}`;
+              const hasOverride = config.ayahFontOverrides?.[ayahKey] !== undefined;
+
               return (
                 <div
-                  key={`${ayah.surah}:${ayah.ayah}`}
+                  key={ayahKey}
                   style={{ width: `${ayahPercent}%` }}
                   onMouseDown={(e) => {
                     e.stopPropagation();
@@ -564,11 +592,24 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
                     }
                     setCurrentFrame(startFrame);
                     playerRef.current?.seekTo(startFrame);
+                    setSelectedAyahNumber(ayah.ayah);
+                    setSelectedClipId(null);
                   }}
-                  className="h-full rounded-md bg-amber-500/15 hover:bg-amber-500/30 border border-amber-500/30 hover:border-amber-400/60 px-1.5 flex items-center justify-between text-[10px] text-amber-300 font-mono truncate cursor-pointer transition"
-                  title={`Jump to Verse ${ayah.ayah} (${(ayah.durationInFrames / fps).toFixed(1)}s)`}
+                  className={`h-full rounded-md px-1.5 flex items-center justify-between text-[10px] font-mono truncate cursor-pointer transition select-none ${
+                    isAyahSelected
+                      ? 'bg-amber-500/40 border-2 border-amber-400 text-amber-200 shadow-[0_0_8px_rgba(245,158,11,0.5)]'
+                      : hasOverride
+                      ? 'bg-amber-500/25 hover:bg-amber-500/35 border border-amber-500/50 text-amber-300'
+                      : 'bg-amber-500/15 hover:bg-amber-500/30 border border-amber-500/30 hover:border-amber-400/60 text-amber-300'
+                  }`}
+                  title={`Verse ${ayah.ayah} (${(ayah.durationInFrames / fps).toFixed(1)}s) - Click to inspect typography`}
                 >
-                  <span className="truncate font-semibold">v.{ayah.ayah}</span>
+                  <span className="truncate font-semibold flex items-center gap-1">
+                    v.{ayah.ayah}
+                    {hasOverride && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" title="Custom font sizes set" />
+                    )}
+                  </span>
                   <span className="text-[9px] text-amber-400/70 hidden sm:inline">
                     {(ayah.durationInFrames / fps).toFixed(1)}s
                   </span>
@@ -591,10 +632,12 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
                     e.stopPropagation();
                     // Select this clip immediately on mouse down without seeking playhead
                     setSelectedClipId(clip.id);
+                    setSelectedAyahNumber(null);
                   }}
                   onClick={(e) => {
                     e.stopPropagation();
                     setSelectedClipId(clip.id);
+                    setSelectedAyahNumber(null);
                   }}
                   className={`h-full relative rounded-lg border cursor-pointer transition-all flex items-center justify-between px-2 text-[10px] mr-1 last:mr-0 ${
                     isSelected
@@ -991,6 +1034,136 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
             {/* Close Inspector */}
             <button
               onClick={() => setSelectedClipId(null)}
+              className="p-1.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white transition"
+              title="Close Inspector"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 3b. Selected Ayah Typography Inspector Bar: Appears when an Ayah is selected in Track A */}
+      {selectedAyah && !selectedClip && (
+        <div className="p-3 rounded-xl bg-gray-900 border border-amber-500/30 flex flex-wrap items-center justify-between gap-3 text-xs animate-fade-in shadow-xl">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Verse Identifier */}
+            <div className="flex items-center gap-1.5 font-semibold text-amber-400 bg-amber-500/10 px-2.5 py-1.5 rounded-lg border border-amber-500/20">
+              <Type className="w-4 h-4 text-amber-400" />
+              <span>Verse {selectedAyah.ayah} Font Sizes</span>
+              {hasAyahOverride && (
+                <span className="text-[10px] bg-amber-500/30 text-amber-300 px-1.5 py-0.5 rounded font-normal">
+                  Custom
+                </span>
+              )}
+            </div>
+
+            {/* Arabic Font Size (10-100) */}
+            <div className="flex items-center gap-2 bg-gray-950 px-2.5 py-1.5 rounded-lg border border-gray-800">
+              <span className="text-gray-400 text-[11px] font-medium">Arabic:</span>
+              <input
+                type="range"
+                min="10"
+                max="100"
+                value={currentArabicSize}
+                onChange={(e) =>
+                  updateAyahFontOverride(selectedAyah.surah, selectedAyah.ayah, {
+                    arabicFontSize: Number(e.target.value),
+                  })
+                }
+                className="w-20 accent-amber-500 cursor-pointer h-1.5 bg-gray-800 rounded-lg"
+              />
+              <input
+                type="number"
+                min="10"
+                max="100"
+                value={currentArabicSize}
+                onChange={(e) =>
+                  updateAyahFontOverride(selectedAyah.surah, selectedAyah.ayah, {
+                    arabicFontSize: Math.max(10, Math.min(100, Number(e.target.value) || 10)),
+                  })
+                }
+                className="w-12 bg-gray-900 border border-gray-700 rounded px-1.5 py-0.5 text-[11px] text-amber-400 font-mono text-center"
+              />
+              <span className="text-gray-500 text-[10px]">px</span>
+            </div>
+
+            {/* English Font Size (10-100) */}
+            <div className="flex items-center gap-2 bg-gray-950 px-2.5 py-1.5 rounded-lg border border-gray-800">
+              <span className="text-gray-400 text-[11px] font-medium">English:</span>
+              <input
+                type="range"
+                min="10"
+                max="100"
+                value={currentEnglishSize}
+                onChange={(e) =>
+                  updateAyahFontOverride(selectedAyah.surah, selectedAyah.ayah, {
+                    secondaryFontSize: Number(e.target.value),
+                  })
+                }
+                className="w-20 accent-sky-500 cursor-pointer h-1.5 bg-gray-800 rounded-lg"
+              />
+              <input
+                type="number"
+                min="10"
+                max="100"
+                value={currentEnglishSize}
+                onChange={(e) =>
+                  updateAyahFontOverride(selectedAyah.surah, selectedAyah.ayah, {
+                    secondaryFontSize: Math.max(10, Math.min(100, Number(e.target.value) || 10)),
+                  })
+                }
+                className="w-12 bg-gray-900 border border-gray-700 rounded px-1.5 py-0.5 text-[11px] text-sky-400 font-mono text-center"
+              />
+              <span className="text-gray-500 text-[10px]">px</span>
+            </div>
+
+            {/* Subtitle Font Size (10-100) */}
+            <div className="flex items-center gap-2 bg-gray-950 px-2.5 py-1.5 rounded-lg border border-gray-800">
+              <span className="text-gray-400 text-[11px] font-medium">Subtitle:</span>
+              <input
+                type="range"
+                min="10"
+                max="100"
+                value={currentSubtitleSize}
+                onChange={(e) =>
+                  updateAyahFontOverride(selectedAyah.surah, selectedAyah.ayah, {
+                    primaryFontSize: Number(e.target.value),
+                  })
+                }
+                className="w-20 accent-purple-500 cursor-pointer h-1.5 bg-gray-800 rounded-lg"
+              />
+              <input
+                type="number"
+                min="10"
+                max="100"
+                value={currentSubtitleSize}
+                onChange={(e) =>
+                  updateAyahFontOverride(selectedAyah.surah, selectedAyah.ayah, {
+                    primaryFontSize: Math.max(10, Math.min(100, Number(e.target.value) || 10)),
+                  })
+                }
+                className="w-12 bg-gray-900 border border-gray-700 rounded px-1.5 py-0.5 text-[11px] text-purple-400 font-mono text-center"
+              />
+              <span className="text-gray-500 text-[10px]">px</span>
+            </div>
+          </div>
+
+          {/* Reset and Close */}
+          <div className="flex items-center gap-2">
+            {hasAyahOverride && (
+              <button
+                onClick={() => resetAyahFontOverride(selectedAyah.surah, selectedAyah.ayah)}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white transition text-[11px] border border-gray-700"
+                title="Reset this verse to global font sizes"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-gray-400" />
+                <span>Reset to Default</span>
+              </button>
+            )}
+
+            <button
+              onClick={() => setSelectedAyahNumber(null)}
               className="p-1.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white transition"
               title="Close Inspector"
             >

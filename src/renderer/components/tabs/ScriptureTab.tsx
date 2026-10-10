@@ -1,11 +1,50 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useStudioStore } from '../../store/studio-store';
 import { VerseSelector } from '../VerseSelector';
 import { FONT_OPTIONS } from '../../../shared/constants';
-import { Type, Sparkles } from 'lucide-react';
+import { ScriptBlockType } from '../../../shared/types';
+import {
+  Type,
+  Sparkles,
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
+  ArrowUp,
+  ArrowDown,
+  RotateCcw,
+  Layers,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
 
 export const ScriptureTab: React.FC = () => {
-  const { config, updateConfig } = useStudioStore();
+  const {
+    config,
+    updateConfig,
+    ayahs,
+    updateAyahFontOverride,
+    resetAyahFontOverride,
+  } = useStudioStore();
+
+  const [showAyahList, setShowAyahList] = useState(true);
+
+  // Script Layout Order
+  const currentOrder: ScriptBlockType[] = config.scriptLayoutOrder || ['arabic', 'secondary', 'primary'];
+
+  const moveOrder = (index: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= currentOrder.length) return;
+    const newOrder = [...currentOrder];
+    const [moved] = newOrder.splice(index, 1);
+    newOrder.splice(targetIndex, 0, moved);
+    updateConfig({ scriptLayoutOrder: newOrder });
+  };
+
+  const BLOCK_NAMES: Record<ScriptBlockType, { label: string; desc: string }> = {
+    arabic: { label: 'Arabic Quran Scripture', desc: 'Word-by-word Quranic text' },
+    secondary: { label: 'English Translation', desc: 'Secondary vernacular subtitle' },
+    primary: { label: 'Primary Subtitle', desc: `${config.primaryTranslationLang || 'Native'} translation` },
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -35,25 +74,44 @@ export const ScriptureTab: React.FC = () => {
           </select>
         </div>
 
-        {/* Font Size & Line Height */}
+        {/* Font Size (Wider Range 10 to 100) & Line Height */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <div className="flex justify-between text-xs">
-              <span className="text-gray-400">Font Size</span>
-              <span className="text-amber-400 font-mono">{config.arabicFontSize}px</span>
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-gray-400">Default Font Size</span>
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  min={10}
+                  max={100}
+                  value={config.arabicFontSize}
+                  onChange={(e) =>
+                    updateConfig({
+                      arabicFontSize: Math.max(10, Math.min(100, Number(e.target.value))),
+                    })
+                  }
+                  className="w-12 bg-gray-950 border border-gray-700 rounded px-1.5 py-0.5 text-amber-400 font-mono text-xs text-right"
+                />
+                <span className="text-gray-500 text-[11px]">px</span>
+              </div>
             </div>
             <input
               type="range"
-              min={36}
-              max={84}
+              min={10}
+              max={100}
               value={config.arabicFontSize}
               onChange={(e) => updateConfig({ arabicFontSize: Number(e.target.value) })}
               className="w-full accent-amber-500 cursor-pointer"
             />
+            <div className="flex justify-between text-[10px] text-gray-500 font-mono">
+              <span>10px</span>
+              <span>55px</span>
+              <span>100px</span>
+            </div>
           </div>
 
           <div className="space-y-1.5">
-            <div className="flex justify-between text-xs">
+            <div className="flex justify-between items-center text-xs">
               <span className="text-gray-400">Line Height</span>
               <span className="text-amber-400 font-mono">{config.arabicLineHeight}</span>
             </div>
@@ -66,6 +124,39 @@ export const ScriptureTab: React.FC = () => {
               onChange={(e) => updateConfig({ arabicLineHeight: Number(e.target.value) })}
               className="w-full accent-amber-500 cursor-pointer"
             />
+            <div className="flex justify-between text-[10px] text-gray-500 font-mono">
+              <span>1.8</span>
+              <span>2.5</span>
+              <span>3.2</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Text Alignment for All (Quran, English, Subtitle) */}
+        <div className="space-y-1.5 pt-1">
+          <label className="text-xs text-gray-400 block">Text Alignment (All Layers)</label>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { id: 'left' as const, label: 'Left', icon: AlignLeft },
+              { id: 'center' as const, label: 'Center (All)', icon: AlignCenter },
+              { id: 'right' as const, label: 'Right', icon: AlignRight },
+            ].map(({ id, label, icon: Icon }) => {
+              const isSelected = (config.textAlignment || 'center') === id;
+              return (
+                <button
+                  key={id}
+                  onClick={() => updateConfig({ textAlignment: id })}
+                  className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border text-xs font-medium transition ${
+                    isSelected
+                      ? 'bg-amber-500/15 border-amber-500/80 text-amber-300 shadow-sm'
+                      : 'bg-gray-950 border-gray-800 text-gray-400 hover:text-gray-200 hover:bg-gray-900'
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span>{label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -111,6 +202,166 @@ export const ScriptureTab: React.FC = () => {
           />
         </div>
       </div>
+
+      {/* 3. Layer Display Ordering (Swap Quran, English, Subtitle) */}
+      <div className="p-4 rounded-2xl bg-gray-900/60 border border-gray-800 space-y-3">
+        <div className="flex items-center justify-between pb-1 border-b border-gray-800">
+          <div className="flex items-center gap-2 text-xs font-semibold text-amber-300 uppercase tracking-wider">
+            <Layers className="w-4 h-4 text-amber-400" />
+            Script & Subtitles Display Order
+          </div>
+          <button
+            onClick={() => updateConfig({ scriptLayoutOrder: ['arabic', 'secondary', 'primary'] })}
+            className="text-[10px] text-gray-500 hover:text-amber-400 transition"
+            title="Reset to Quran ➔ English ➔ Subtitle"
+          >
+            Reset Order
+          </button>
+        </div>
+        <p className="text-[11px] text-gray-400">
+          Choose the vertical sequence of text on screen (e.g. Quran script first, then English, then native subtitle):
+        </p>
+
+        <div className="space-y-2 pt-1">
+          {currentOrder.map((type, idx) => {
+            const info = BLOCK_NAMES[type];
+            return (
+              <div
+                key={type}
+                className="flex items-center justify-between bg-gray-950 p-2.5 rounded-xl border border-gray-800/80 text-xs"
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 font-mono font-bold text-[10px] flex items-center justify-center">
+                    {idx + 1}
+                  </span>
+                  <div>
+                    <div className="font-semibold text-gray-200">{info.label}</div>
+                    <div className="text-[10px] text-gray-500">{info.desc}</div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => moveOrder(idx, 'up')}
+                    disabled={idx === 0}
+                    className="p-1 rounded bg-gray-900 hover:bg-gray-800 text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                    title="Move up"
+                  >
+                    <ArrowUp className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => moveOrder(idx, 'down')}
+                    disabled={idx === currentOrder.length - 1}
+                    className="p-1 rounded bg-gray-900 hover:bg-gray-800 text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                    title="Move down"
+                  >
+                    <ArrowDown className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 4. Per-Ayah Custom Font Sizing */}
+      {ayahs && ayahs.length > 0 && (
+        <div className="p-4 rounded-2xl bg-gray-900/60 border border-gray-800 space-y-3">
+          <div
+            onClick={() => setShowAyahList(!showAyahList)}
+            className="flex items-center justify-between pb-1 border-b border-gray-800 cursor-pointer select-none"
+          >
+            <div className="flex items-center gap-2 text-xs font-semibold text-amber-300 uppercase tracking-wider">
+              <Type className="w-4 h-4 text-amber-400" />
+              <span>Per-Ayah Custom Font Sizing ({ayahs.length} verses)</span>
+            </div>
+            {showAyahList ? (
+              <ChevronUp className="w-4 h-4 text-gray-400" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-gray-400" />
+            )}
+          </div>
+          <p className="text-[11px] text-gray-400">
+            Customize Arabic font size for specific long or short ayahs so the text fits comfortably without breaking the layout:
+          </p>
+
+          {showAyahList && (
+            <div className="space-y-2.5 pt-1 max-h-96 overflow-y-auto pr-1">
+              {ayahs.map((ayah) => {
+                const key = `${ayah.surah}:${ayah.ayah}`;
+                const override = config.ayahFontOverrides?.[key];
+                const activeSize = override?.arabicFontSize ?? config.arabicFontSize;
+                const isOverridden = override?.arabicFontSize !== undefined;
+
+                return (
+                  <div
+                    key={key}
+                    className={`p-3 rounded-xl border transition ${
+                      isOverridden
+                        ? 'bg-amber-500/10 border-amber-500/40 ring-1 ring-amber-500/20'
+                        : 'bg-gray-950 border-gray-800/80 hover:border-gray-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between text-xs mb-1.5">
+                      <div className="flex items-center gap-1.5 font-medium">
+                        <span className="font-mono text-amber-400 font-bold">Ayah {ayah.ayah}</span>
+                        <span className="text-[10px] text-gray-500">
+                          ({ayah.words?.length || 0} words • {(ayah.durationInFrames / (config.fps || 30)).toFixed(1)}s)
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`font-mono text-xs font-semibold ${
+                            isOverridden ? 'text-amber-300' : 'text-gray-400'
+                          }`}
+                        >
+                          {activeSize}px {isOverridden && <span className="text-[10px] text-amber-400">(custom)</span>}
+                        </span>
+                        {isOverridden && (
+                          <button
+                            onClick={() => resetAyahFontOverride(ayah.surah, ayah.ayah)}
+                            className="p-1 rounded hover:bg-gray-800 text-gray-400 hover:text-white transition"
+                            title="Reset to global font size"
+                          >
+                            <RotateCcw className="w-3 h-3 text-amber-400" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="range"
+                        min={10}
+                        max={100}
+                        value={activeSize}
+                        onChange={(e) =>
+                          updateAyahFontOverride(ayah.surah, ayah.ayah, {
+                            arabicFontSize: Number(e.target.value),
+                          })
+                        }
+                        className="flex-1 accent-amber-500 cursor-pointer"
+                      />
+                      <input
+                        type="number"
+                        min={10}
+                        max={100}
+                        value={activeSize}
+                        onChange={(e) =>
+                          updateAyahFontOverride(ayah.surah, ayah.ayah, {
+                            arabicFontSize: Math.max(10, Math.min(100, Number(e.target.value))),
+                          })
+                        }
+                        className="w-12 bg-gray-900 border border-gray-700 rounded px-1.5 py-0.5 text-amber-300 font-mono text-xs text-right"
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

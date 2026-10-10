@@ -7,6 +7,7 @@ import {
   BackgroundClip,
   TransitionType,
   WordSegment,
+  AyahFontOverride,
 } from '../../shared/types';
 import {
   DEFAULT_TEMPLATE_CONFIG,
@@ -40,6 +41,8 @@ interface StudioState {
   setCurrentFrame: (currentFrame: number) => void;
   setIsPlaying: (isPlaying: boolean) => void;
   updateConfig: (partial: Partial<VideoTemplateConfig>) => void;
+  updateAyahFontOverride: (surah: number, ayah: number, overrides: Partial<AyahFontOverride>) => void;
+  resetAyahFontOverride: (surah: number, ayah: number) => void;
   setRecitationSpeed: (speed: number) => Promise<void>;
   addBackgroundClip: (clip: Omit<BackgroundClip, 'id'>) => Promise<void> | void;
   removeBackgroundClip: (id: string) => void;
@@ -83,6 +86,38 @@ export const useStudioStore = create<StudioState>((set, get) => ({
     if (partial.fps || partial.recitationSpeed !== undefined) {
       get().refreshAyahSequence();
     }
+  },
+
+  updateAyahFontOverride: (surah: number, ayah: number, overrides: Partial<AyahFontOverride>) => {
+    const key = `${surah}:${ayah}`;
+    set((state) => {
+      const currentMap = state.config.ayahFontOverrides || {};
+      const existing = currentMap[key] || {};
+      const updated = { ...existing, ...overrides };
+      return {
+        config: {
+          ...state.config,
+          ayahFontOverrides: {
+            ...currentMap,
+            [key]: updated,
+          },
+        },
+      };
+    });
+  },
+
+  resetAyahFontOverride: (surah: number, ayah: number) => {
+    const key = `${surah}:${ayah}`;
+    set((state) => {
+      const currentMap = { ...(state.config.ayahFontOverrides || {}) };
+      delete currentMap[key];
+      return {
+        config: {
+          ...state.config,
+          ayahFontOverrides: currentMap,
+        },
+      };
+    });
   },
 
   setRecitationSpeed: async (speed: number) => {
