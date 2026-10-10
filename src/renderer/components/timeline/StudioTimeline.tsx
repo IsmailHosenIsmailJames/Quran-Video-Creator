@@ -21,6 +21,7 @@ import {
   X,
   Percent,
   Check,
+  RefreshCw,
 } from 'lucide-react';
 
 interface StudioTimelineProps {
@@ -65,6 +66,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
 
   const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
+  const [showSwapMenu, setShowSwapMenu] = useState(false);
   const [showTransitionMenu, setShowTransitionMenu] = useState<string | null>(null); // clipId for transition
 
   const timelineTrackRef = useRef<HTMLDivElement>(null);
@@ -308,8 +310,50 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
     });
   };
 
+  // Replace / Swap media on an existing clip
+  const handleReplaceMedia = async (clipId: string, type: 'video' | 'image') => {
+    const api = window.electronAPI;
+    if (!api) return;
+    const filePath = await api.selectMediaFile(type);
+    if (!filePath) return;
+
+    let sourceDurationSeconds: number | undefined = undefined;
+    if (type === 'video' && api.probeMediaDuration) {
+      try {
+        sourceDurationSeconds = await api.probeMediaDuration(filePath);
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    const fileName = filePath.split(/[/\\]/).pop() || `${type} clip`;
+    updateBackgroundClip(clipId, {
+      type,
+      source: filePath,
+      name: fileName,
+      sourceDurationSeconds,
+      trimStartSeconds: 0,
+    });
+    setShowSwapMenu(false);
+  };
+
   // Calculate current playhead percentage
   const playheadPercent = Math.min(100, Math.max(0, (currentFrame / Math.max(1, totalDurationInFrames)) * 100));
+
+  // Time ruler tick intervals (e.g. 5 ticks across video duration)
+  const totalSeconds = totalDurationInFrames / fps;
+  const timeTicks = useMemo(() => {
+    const count = 5;
+    return Array.from({ length: count + 1 }, (_, i) => {
+      const sec = (i / count) * totalSeconds;
+      const mins = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      return {
+        percent: (i / count) * 100,
+        label: `${String(mins).padStart(2, '0')}:${String(s).padStart(2, '0')}`,
+      };
+    });
+  }, [totalSeconds]);
 
   return (
     <div className="w-full flex-shrink-0 bg-gray-950/95 border-t border-gray-800/90 rounded-2xl p-3 shadow-2xl flex flex-col gap-2.5 backdrop-blur-md select-none mt-2">
@@ -394,27 +438,54 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
       <div className="relative w-full rounded-xl bg-gray-900/90 border border-gray-800/80 p-2 flex gap-2.5 overflow-hidden">
         {/* Left Track Headers / Labels Column */}
         <div className="w-11 flex-shrink-0 flex flex-col gap-1.5 select-none text-[10px] font-mono text-gray-400">
+          {/* Ruler Label */}
+          <div className="h-4 flex items-center font-semibold text-gray-500 text-[9px]">
+            Ruler:
+          </div>
+          {/* Ayahs Track Label */}
           <div className="h-6 flex items-center font-semibold text-gray-400">
             Ayahs:
           </div>
+          {/* Media Track Label */}
           <div className="h-12 flex items-center font-semibold text-gray-400">
             Media:
           </div>
         </div>
 
-        {/* Right Scrubbable Timeline Area */}
+        {/* Right Timeline Area */}
         <div
           ref={timelineTrackRef}
-          onMouseDown={(e) => {
-            if (draggingDividerIndex !== null || showTransitionMenu !== null) return;
-            setIsScrubbing(true);
-            handleSeekToClientX(e.clientX);
-          }}
-          className="flex-1 relative cursor-pointer flex flex-col gap-1.5 min-w-0"
+          className="flex-1 relative flex flex-col gap-1.5 min-w-0"
         >
+          {/* TOP TIME RULER & SCRUBBER BAR: Dedicated scrubbing region */}
+          <div
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              setIsScrubbing(true);
+              handleSeekToClientX(e.clientX);
+            }}
+            className="h-4 w-full relative bg-gray-950/60 rounded border border-gray-800/50 cursor-ew-resize flex items-center justify-between px-1 text-[9px] font-mono text-gray-500"
+            title="Click or drag anywhere on ruler to scrub timeline"
+          >
+            {timeTicks.map((tick, i) => (
+              <span
+                key={i}
+                style={{
+                  position: 'absolute',
+                  left: `${tick.percent}%`,
+                  transform: i === 0 ? 'none' : i === timeTicks.length - 1 ? 'translateX(-100%)' : 'translateX(-50%)',
+                }}
+                className="select-none pointer-events-none"
+              >
+                {tick.label}
+              </span>
+            ))}
+          </div>
+
           {/* Playhead Needle Bar & Draggable Scrubber */}
           <div
-            className="absolute top-0 bottom-0 w-[2px] bg-amber-400 shadow-[0_0_12px_#f59e0b] z-40 cursor-ew-resize select-none"
+            className="absolute top-0 bottom-0 w-[2px] bg-amber-400 shadow-[0_0_12px_#f59e0b] z-40 cursor-ew-resize select-none pointer-events-auto"
             style={{ left: `${playheadPercent}%` }}
             onMouseDown={(e) => {
               e.stopPropagation();
@@ -422,9 +493,9 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
               setIsScrubbing(true);
             }}
           >
-            {/* Draggable Scrubber Top Handle / Bookmark */}
+            {/* Draggable Scrubber Top Handle in Ruler */}
             <div
-              className="w-4 h-4 bg-amber-400 hover:bg-amber-300 transform -translate-x-[7px] -translate-y-1 rounded-sm shadow-md cursor-grab active:cursor-grabbing flex items-center justify-center hover:scale-125 transition-transform"
+              className="w-4 h-4 bg-amber-400 hover:bg-amber-300 transform -translate-x-[7px] -translate-y-0.5 rounded-sm shadow-md cursor-grab active:cursor-grabbing flex items-center justify-center hover:scale-125 transition-transform"
               title="Drag to scrub timeline"
             >
               <div className="w-1 h-2 bg-black/60 rounded-full" />
@@ -439,7 +510,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
                 <div
                   key={`${ayah.surah}:${ayah.ayah}`}
                   style={{ width: `${ayahPercent}%` }}
-                  onClick={(e) => {
+                  onMouseDown={(e) => {
                     e.stopPropagation();
                     let startFrame = 0;
                     for (let k = 0; k < index; k++) {
@@ -470,15 +541,21 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
                 <div
                   key={clip.id}
                   style={{ width: `${percent}%` }}
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                    // Select this clip immediately on mouse down without seeking playhead
+                    setSelectedClipId(clip.id);
+                  }}
                   onClick={(e) => {
                     e.stopPropagation();
-                    setSelectedClipId(clip.id === selectedClipId ? null : clip.id);
+                    setSelectedClipId(clip.id);
                   }}
                   className={`h-full relative rounded-lg border cursor-pointer transition-all flex items-center justify-between px-2 text-[10px] mr-1 last:mr-0 ${
                     isSelected
-                      ? 'border-amber-400 ring-2 ring-amber-400/40 bg-amber-500/20 z-10'
-                      : 'border-gray-800 bg-gray-950/80 hover:border-gray-700 hover:bg-gray-900/60'
+                      ? 'border-amber-400 ring-2 ring-amber-400/50 bg-amber-500/25 z-10 shadow-lg shadow-amber-500/10'
+                      : 'border-gray-800 bg-gray-950/80 hover:border-amber-500/40 hover:bg-gray-900/80'
                   }`}
+                  title={`Click to select and edit ${clip.name}`}
                 >
                   {/* Clip Thumbnail / Icon */}
                   <div className="flex items-center gap-1.5 truncate">
@@ -513,6 +590,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
                   {/* Transition Badge between adjacent clips */}
                   {index > 0 && (
                     <button
+                      onMouseDown={(e) => e.stopPropagation()}
                       onClick={(e) => {
                         e.stopPropagation();
                         setShowTransitionMenu(showTransitionMenu === clip.id ? null : clip.id);
@@ -527,6 +605,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
                   {/* Transition Picker Menu */}
                   {showTransitionMenu === clip.id && (
                     <div
+                      onMouseDown={(e) => e.stopPropagation()}
                       onClick={(e) => e.stopPropagation()}
                       className="absolute left-0 bottom-full mb-2 w-40 bg-gray-900 border border-gray-800 rounded-xl shadow-2xl p-2 z-50 text-xs"
                     >
@@ -566,7 +645,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
                         };
                       }}
                       className="absolute -right-1.5 top-0 bottom-0 w-3 cursor-col-resize z-20 flex items-center justify-center group"
-                      title="Drag to adjust time between clips"
+                      title="Drag boundary to adjust time split between clips"
                     >
                       <div className="w-1 h-4 rounded-full bg-gray-600 group-hover:bg-amber-400 group-hover:h-6 transition-all" />
                     </div>
@@ -578,16 +657,48 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
         </div>
       </div>
 
-      {/* 3. Selected Clip Inspector Popover Bar */}
+      {/* 3. Selected Clip Inspector Bar: Appears when a clip is selected */}
       {selectedClip && selectedLayout && (
-        <div className="p-3 rounded-xl bg-gray-900 border border-gray-800 flex flex-wrap items-center justify-between gap-3 text-xs animate-fade-in">
+        <div className="p-3 rounded-xl bg-gray-900 border border-amber-500/30 flex flex-wrap items-center justify-between gap-3 text-xs animate-fade-in shadow-xl">
           <div className="flex flex-wrap items-center gap-3">
             {/* Clip Identifier */}
-            <div className="flex items-center gap-1.5 font-semibold text-amber-400">
+            <div className="flex items-center gap-1.5 font-semibold text-amber-400 bg-amber-500/10 px-2 py-1 rounded-lg border border-amber-500/20">
               {selectedLayout.isVideo ? <Film className="w-4 h-4" /> : <ImageIcon className="w-4 h-4 text-emerald-400" />}
               <span className="truncate max-w-[140px]" title={selectedClip.name}>
                 {selectedClip.name}
               </span>
+            </div>
+
+            {/* Swap / Replace Media Dropdown Button */}
+            <div className="relative">
+              <button
+                onClick={() => setShowSwapMenu(!showSwapMenu)}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 hover:text-white transition text-[11px] border border-gray-700 shadow-sm"
+                title="Replace or swap this file with a different video or image"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-amber-400" />
+                <span>Swap File</span>
+                <ChevronDown className="w-3 h-3 text-gray-400" />
+              </button>
+
+              {showSwapMenu && (
+                <div className="absolute left-0 bottom-full mb-1.5 w-44 bg-gray-900 border border-gray-800 rounded-xl shadow-2xl py-1 z-50 text-xs">
+                  <button
+                    onClick={() => handleReplaceMedia(selectedClip.id, 'video')}
+                    className="w-full text-left px-3 py-1.5 text-gray-200 hover:bg-gray-800 hover:text-white flex items-center gap-2 transition"
+                  >
+                    <Film className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Replace with Video</span>
+                  </button>
+                  <button
+                    onClick={() => handleReplaceMedia(selectedClip.id, 'image')}
+                    className="w-full text-left px-3 py-1.5 text-gray-200 hover:bg-gray-800 hover:text-white flex items-center gap-2 transition"
+                  >
+                    <ImageIcon className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Replace with Image</span>
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Manual Percentage / Visualization Time Adjustment */}
@@ -731,7 +842,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
           </div>
 
           {/* Reorder, Delete, Close Controls */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
             {clips.indexOf(selectedClip) > 0 && (
               <button
                 onClick={() => reorderBackgroundClips(clips.indexOf(selectedClip), clips.indexOf(selectedClip) - 1)}
@@ -750,21 +861,30 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
                 <MoveRight className="w-3.5 h-3.5" />
               </button>
             )}
-            {clips.length > 1 && (
-              <button
-                onClick={() => {
-                  removeBackgroundClip(selectedClip.id);
-                  setSelectedClipId(null);
-                }}
-                className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition"
-                title="Delete this clip"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            )}
+
+            {/* Delete Clip Action */}
+            <button
+              onClick={() => {
+                removeBackgroundClip(selectedClip.id);
+                setSelectedClipId(null);
+              }}
+              disabled={clips.length <= 1}
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg transition text-[11px] border ${
+                clips.length > 1
+                  ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border-rose-500/30 cursor-pointer'
+                  : 'bg-gray-800/40 text-gray-600 border-gray-800 cursor-not-allowed'
+              }`}
+              title={clips.length > 1 ? 'Delete this clip from timeline' : 'At least one background clip is required'}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Delete</span>
+            </button>
+
+            {/* Close Inspector */}
             <button
               onClick={() => setSelectedClipId(null)}
-              className="p-1.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white"
+              className="p-1.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white transition"
+              title="Close Inspector"
             >
               <X className="w-3.5 h-3.5" />
             </button>
