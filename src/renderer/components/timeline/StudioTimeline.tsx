@@ -76,6 +76,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
     updateAyahFontOverride,
     resetAyahFontOverride,
     addBackgroundClip,
+    addBackgroundClips,
     removeBackgroundClip,
     updateBackgroundClip,
     updateClipPercentage,
@@ -332,55 +333,50 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [handleTogglePlay, currentFrame, totalDurationInFrames, fps, setCurrentFrame, playerRef]);
 
-  // Add new media
+  // Add new media (supports single or multiple file selections at once)
   const handleAddMedia = async (type: 'video' | 'image') => {
     const api = window.electronAPI;
     if (!api) return;
-    const filePath = await api.selectMediaFile(type);
-    if (!filePath) return;
+    const filePaths = await api.selectMediaFiles(type);
+    if (!filePaths || filePaths.length === 0) return;
 
-    const fileName = filePath.split(/[/\\]/).pop() || `${type} clip`;
+    const baseTransitionIdx = clips.length;
+    const newClipItems: Array<Omit<BackgroundClip, 'id'>> = [];
 
-    let sourceDurationSeconds: number | undefined = undefined;
-    if (type === 'video' && api.probeMediaDuration) {
-      try {
-        sourceDurationSeconds = await api.probeMediaDuration(filePath);
-      } catch (e) {
-        // ignore
+    for (let i = 0; i < filePaths.length; i++) {
+      const filePath = filePaths[i];
+      const isVideoFile = type === 'video' || /\.(mp4|webm|mov|mkv)(\?.*)?$/i.test(filePath);
+      const actualType: 'video' | 'image' = isVideoFile ? 'video' : 'image';
+      const fileName = filePath.split(/[/\\]/).pop() || `${actualType} clip`;
+
+      let sourceDurationSeconds: number | undefined = undefined;
+      if (isVideoFile && api.probeMediaDuration) {
+        try {
+          sourceDurationSeconds = await api.probeMediaDuration(filePath);
+        } catch (e) {
+          // ignore
+        }
       }
-    }
 
-    if (clips.length === 1 && clips[0].id === 'clip-preset-1') {
-      updateBackgroundClip(clips[0].id, {
-        type,
+      // Cycle transitions so subsequent clips have distinct cinematic animations
+      const assignedTransition = TRANSITION_CYCLE[(baseTransitionIdx + i) % TRANSITION_CYCLE.length];
+
+      newClipItems.push({
+        type: actualType,
         source: filePath,
         name: fileName,
+        durationRatio: 1.0,
+        speed: 1.0,
+        autoFitSpeed: true,
         sourceDurationSeconds,
         trimStartSeconds: 0,
-        percentage: 100,
-        durationRatio: 1.0,
+        kenBurns: true,
+        transition: assignedTransition,
+        transitionDurationFrames: 24,
       });
-      return;
     }
 
-    // Cycle transitions so subsequent clips have distinct cinematic animations
-    const assignedTransition = clips.length > 0
-      ? TRANSITION_CYCLE[(clips.length - 1) % TRANSITION_CYCLE.length]
-      : (config.defaultTransition || 'zoom-fade');
-
-    await addBackgroundClip({
-      type,
-      source: filePath,
-      name: fileName,
-      durationRatio: 1.0,
-      speed: 1.0,
-      autoFitSpeed: true,
-      sourceDurationSeconds,
-      trimStartSeconds: 0,
-      kenBurns: true,
-      transition: assignedTransition,
-      transitionDurationFrames: 24,
-    });
+    await addBackgroundClips(newClipItems);
   };
 
   // Replace / Swap media on an existing clip

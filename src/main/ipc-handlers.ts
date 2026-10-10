@@ -48,9 +48,18 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
   // 4. File dialogs
   ipcMain.handle('dialog:select-media-file', async (_, type: 'video' | 'audio' | 'image') => {
     const filters = {
-      video: [{ name: 'Video Files', extensions: ['mp4', 'webm', 'mov', 'mkv'] }],
-      audio: [{ name: 'Audio Files', extensions: ['mp3', 'wav', 'ogg', 'm4a', 'aac'] }],
-      image: [{ name: 'Image Files', extensions: ['png', 'jpg', 'jpeg', 'webp', 'svg'] }],
+      video: [
+        { name: 'Video Files', extensions: ['mp4', 'webm', 'mov', 'mkv', 'm4v'] },
+        { name: 'All Files', extensions: ['*'] },
+      ],
+      audio: [
+        { name: 'Audio Files', extensions: ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'] },
+        { name: 'All Files', extensions: ['*'] },
+      ],
+      image: [
+        { name: 'Image Files', extensions: ['png', 'jpg', 'jpeg', 'webp', 'svg', 'gif', 'bmp'] },
+        { name: 'All Files', extensions: ['*'] },
+      ],
     }[type];
 
     const result = await dialog.showOpenDialog(mainWindow, {
@@ -64,6 +73,44 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
     }
     return result.filePaths[0];
   });
+
+  ipcMain.handle(
+    'dialog:select-media-files',
+    async (_, type: 'video' | 'audio' | 'image' | 'media') => {
+      const filters = {
+        video: [
+          { name: 'Video Files', extensions: ['mp4', 'webm', 'mov', 'mkv', 'm4v'] },
+          { name: 'All Files', extensions: ['*'] },
+        ],
+        audio: [
+          { name: 'Audio Files', extensions: ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'] },
+          { name: 'All Files', extensions: ['*'] },
+        ],
+        image: [
+          { name: 'Image Files', extensions: ['png', 'jpg', 'jpeg', 'webp', 'svg', 'gif', 'bmp'] },
+          { name: 'All Files', extensions: ['*'] },
+        ],
+        media: [
+          {
+            name: 'Media Files (Videos & Images)',
+            extensions: ['mp4', 'webm', 'mov', 'mkv', 'png', 'jpg', 'jpeg', 'webp', 'svg', 'gif'],
+          },
+          { name: 'All Files', extensions: ['*'] },
+        ],
+      }[type];
+
+      const result = await dialog.showOpenDialog(mainWindow, {
+        title: `Select ${type.toUpperCase()} Files (Multiple Allowed)`,
+        properties: ['openFile', 'multiSelections'],
+        filters,
+      });
+
+      if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
+        return [];
+      }
+      return result.filePaths;
+    }
+  );
 
   ipcMain.handle('dialog:select-save-path', async (_, defaultFileName: string) => {
     const result = await dialog.showSaveDialog(mainWindow, {

@@ -44,16 +44,40 @@ export const App: React.FC = () => {
           break;
         }
         case 'upload-bg-video': {
-          const path = await api.selectMediaFile('video');
-          if (path) {
-            store.updateConfig({ backgroundType: 'video', backgroundPath: path });
+          const paths = await api.selectMediaFiles('video');
+          if (paths && paths.length > 0) {
+            const items = paths.map((p: string) => ({
+              type: 'video' as const,
+              source: p,
+              name: p.split(/[/\\]/).pop() || 'Video clip',
+              durationRatio: 1.0,
+              speed: 1.0,
+              autoFitSpeed: true,
+              trimStartSeconds: 0,
+              kenBurns: store.config.kenBurnsEffect,
+              transition: 'zoom-fade' as const,
+              transitionDurationFrames: 24,
+            }));
+            await store.addBackgroundClips(items);
           }
           break;
         }
         case 'upload-bg-image': {
-          const path = await api.selectMediaFile('image');
-          if (path) {
-            store.updateConfig({ backgroundType: 'image', backgroundPath: path });
+          const paths = await api.selectMediaFiles('image');
+          if (paths && paths.length > 0) {
+            const items = paths.map((p: string) => ({
+              type: 'image' as const,
+              source: p,
+              name: p.split(/[/\\]/).pop() || 'Image clip',
+              durationRatio: 1.0,
+              speed: 1.0,
+              autoFitSpeed: true,
+              trimStartSeconds: 0,
+              kenBurns: store.config.kenBurnsEffect,
+              transition: 'zoom-fade' as const,
+              transitionDurationFrames: 24,
+            }));
+            await store.addBackgroundClips(items);
           }
           break;
         }

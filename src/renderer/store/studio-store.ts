@@ -45,6 +45,7 @@ interface StudioState {
   resetAyahFontOverride: (surah: number, ayah: number) => void;
   setRecitationSpeed: (speed: number) => Promise<void>;
   addBackgroundClip: (clip: Omit<BackgroundClip, 'id'>) => Promise<void> | void;
+  addBackgroundClips: (clips: Array<Omit<BackgroundClip, 'id'>>) => Promise<void> | void;
   removeBackgroundClip: (id: string) => void;
   updateBackgroundClip: (id: string, partial: Partial<BackgroundClip>) => void;
   updateClipPercentage: (id: string, percentage: number) => void;
@@ -126,45 +127,57 @@ export const useStudioStore = create<StudioState>((set, get) => ({
     await get().refreshAyahSequence();
   },
 
-  addBackgroundClip: async (clipData) => {
-    const id = `clip_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+  addBackgroundClips: async (clipsData: Array<Omit<BackgroundClip, 'id'>>) => {
+    if (!clipsData || clipsData.length === 0) return;
 
-    // Auto-probe natural duration if it's a video and not provided
-    let sourceDurationSeconds = clipData.sourceDurationSeconds;
-    if (clipData.type === 'video' && !sourceDurationSeconds && window.electronAPI?.probeMediaDuration) {
-      try {
-        sourceDurationSeconds = await window.electronAPI.probeMediaDuration(clipData.source);
-      } catch (e) {
-        // ignore
-      }
-    }
+    // Auto-probe natural duration for any video clips missing sourceDurationSeconds
+    const preparedClips = await Promise.all(
+      clipsData.map(async (clipData) => {
+        let sourceDurationSeconds = clipData.sourceDurationSeconds;
+        if (clipData.type === 'video' && !sourceDurationSeconds && window.electronAPI?.probeMediaDuration) {
+          try {
+            sourceDurationSeconds = await window.electronAPI.probeMediaDuration(clipData.source);
+          } catch (e) {
+            // ignore
+          }
+        }
+        return {
+          ...clipData,
+          sourceDurationSeconds,
+        };
+      })
+    );
 
     set((state) => {
       const currentClips = state.config.backgroundClips || [];
-      const N = currentClips.length;
+      const isInitialVirginPreset =
+        currentClips.length === 1 && currentClips[0].id === 'clip-preset-1';
+
+      // If initial virgin preset exists, replace it cleanly with the new batch
+      const baseExisting = isInitialVirginPreset ? [] : currentClips;
+      const N = baseExisting.length;
+      const M = preparedClips.length;
+      const totalCount = N + M;
 
       let updatedClips: BackgroundClip[];
-      if (N === 0) {
-        updatedClips = [
-          {
-            id,
-            ...clipData,
-            percentage: 100,
-            durationRatio: 1.0,
-            autoFitSpeed: clipData.autoFitSpeed ?? true,
-            sourceDurationSeconds,
-          },
-        ];
-      } else {
-        // Equal share for the new clip: 1 / (N + 1)
-        const newClipShare = 100 / (N + 1);
-        const scaleFactor = N / (N + 1);
 
-        // Normalize existing clips and scale down by scaleFactor
-        const currentTotal = currentClips.reduce((sum, c) => sum + (c.percentage || 100 / N), 0);
+      if (N === 0) {
+        // All M clips share the timeline equally: 100 / M each
+        const sharePerClip = 100 / M;
+        updatedClips = preparedClips.map((clipData, idx) => ({
+          id: `clip_${Date.now()}_${idx}_${Math.random().toString(36).substr(2, 5)}`,
+          ...clipData,
+          percentage: Number(sharePerClip.toFixed(2)),
+          durationRatio: Number((sharePerClip / 100).toFixed(4)),
+          autoFitSpeed: clipData.autoFitSpeed ?? true,
+        }));
+      } else {
+        // Scale existing N clips proportionally down by scaleFactor
+        const scaleFactor = N / totalCount;
+        const currentTotal = baseExisting.reduce((sum, c) => sum + (c.percentage || 100 / N), 0);
         const normFactor = currentTotal > 0 ? 100 / currentTotal : 1;
 
-        const scaledExisting = currentClips.map((c) => {
+        const scaledExisting = baseExisting.map((c) => {
           const origPercent = (c.percentage || 100 / N) * normFactor;
           const scaledPercent = Number((origPercent * scaleFactor).toFixed(2));
           return {
@@ -174,24 +187,27 @@ export const useStudioStore = create<StudioState>((set, get) => ({
           };
         });
 
-        const newClip: BackgroundClip = {
-          id,
+        // Each of the M new clips gets 100 / totalCount
+        const newClipShare = 100 / totalCount;
+        const newClips: BackgroundClip[] = preparedClips.map((clipData, idx) => ({
+          id: `clip_${Date.now()}_${idx}_${Math.random().toString(36).substr(2, 5)}`,
           ...clipData,
           percentage: Number(newClipShare.toFixed(2)),
           durationRatio: Number((newClipShare / 100).toFixed(4)),
           autoFitSpeed: clipData.autoFitSpeed ?? true,
-          sourceDurationSeconds,
-        };
+        }));
 
-        updatedClips = [...scaledExisting, newClip];
+        // Placed one after another at the right!
+        updatedClips = [...scaledExisting, ...newClips];
+      }
 
-        const sum = updatedClips.reduce((s, c) => s + (c.percentage || 0), 0);
-        const diff = 100 - sum;
-        if (Math.abs(diff) > 0.001) {
-          const last = updatedClips[updatedClips.length - 1];
-          last.percentage = Number((last.percentage! + diff).toFixed(2));
-          last.durationRatio = Number((last.percentage! / 100).toFixed(4));
-        }
+      // Reconcile rounding diff
+      const sum = updatedClips.reduce((s, c) => s + (c.percentage || 0), 0);
+      const diff = 100 - sum;
+      if (Math.abs(diff) > 0.001 && updatedClips.length > 0) {
+        const last = updatedClips[updatedClips.length - 1];
+        last.percentage = Number((last.percentage! + diff).toFixed(2));
+        last.durationRatio = Number((last.percentage! / 100).toFixed(4));
       }
 
       return {
@@ -203,6 +219,10 @@ export const useStudioStore = create<StudioState>((set, get) => ({
         },
       };
     });
+  },
+
+  addBackgroundClip: async (clipData) => {
+    return get().addBackgroundClips([clipData]);
   },
 
   removeBackgroundClip: (id: string) => {

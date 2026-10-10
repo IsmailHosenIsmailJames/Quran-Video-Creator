@@ -2,7 +2,7 @@ import React from 'react';
 import { useStudioStore } from '../../store/studio-store';
 import { BACKGROUND_PRESETS } from '../../../shared/constants';
 import { getMediaUrl } from '../../../shared/media-url';
-import { TransitionType } from '../../../shared/types';
+import { TransitionType, BackgroundClip } from '../../../shared/types';
 import {
   Image,
   Video,
@@ -24,70 +24,51 @@ const TRANSITION_CYCLE: TransitionType[] = [
 ];
 
 export const VisualsTab: React.FC = () => {
-  const { config, updateConfig, addBackgroundClip } = useStudioStore();
+  const { config, updateConfig, addBackgroundClip, addBackgroundClips } = useStudioStore();
 
   const handleSelectMedia = async (type: 'video' | 'image') => {
     const api = window.electronAPI;
     if (!api) return;
-    const filePath = await api.selectMediaFile(type);
-    if (!filePath) return;
+    const filePaths = await api.selectMediaFiles(type);
+    if (!filePaths || filePaths.length === 0) return;
 
-    let sourceDurationSeconds: number | undefined = undefined;
-    if (type === 'video' && api.probeMediaDuration) {
-      try {
-        sourceDurationSeconds = await api.probeMediaDuration(filePath);
-      } catch (e) {
-        // ignore
-      }
-    }
-
-    const fileName = filePath.split(/[/\\]/).pop() || `${type} clip`;
     const currentClips = config.backgroundClips || [];
+    const baseTransitionIdx = currentClips.length;
+    const newClipItems: Array<Omit<BackgroundClip, 'id'>> = [];
 
-    // If there is only 1 virgin default preset, replace it cleanly
-    if (currentClips.length === 1 && currentClips[0].id === 'clip-preset-1') {
-      updateConfig({
-        backgroundType: type,
-        backgroundPath: filePath,
-        backgroundClips: [
-          {
-            id: `clip_${Date.now()}`,
-            type,
-            source: filePath,
-            name: fileName,
-            percentage: 100,
-            durationRatio: 1.0,
-            speed: 1.0,
-            autoFitSpeed: true,
-            sourceDurationSeconds,
-            trimStartSeconds: 0,
-            kenBurns: config.kenBurnsEffect,
-            transition: config.defaultTransition || 'zoom-fade',
-            transitionDurationFrames: 24,
-          },
-        ],
+    for (let i = 0; i < filePaths.length; i++) {
+      const filePath = filePaths[i];
+      const isVideoFile = type === 'video' || /\.(mp4|webm|mov|mkv)(\?.*)?$/i.test(filePath);
+      const actualType: 'video' | 'image' = isVideoFile ? 'video' : 'image';
+      const fileName = filePath.split(/[/\\]/).pop() || `${actualType} clip`;
+
+      let sourceDurationSeconds: number | undefined = undefined;
+      if (isVideoFile && api.probeMediaDuration) {
+        try {
+          sourceDurationSeconds = await api.probeMediaDuration(filePath);
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      const assignedTransition = TRANSITION_CYCLE[(baseTransitionIdx + i) % TRANSITION_CYCLE.length];
+
+      newClipItems.push({
+        type: actualType,
+        source: filePath,
+        name: fileName,
+        durationRatio: 1.0,
+        speed: 1.0,
+        autoFitSpeed: true,
+        sourceDurationSeconds,
+        trimStartSeconds: 0,
+        kenBurns: config.kenBurnsEffect,
+        transition: assignedTransition,
+        transitionDurationFrames: 24,
       });
-      return;
     }
 
-    // Otherwise, append to the end of the timeline
-    const assignedTransition = currentClips.length > 0
-      ? TRANSITION_CYCLE[(currentClips.length - 1) % TRANSITION_CYCLE.length]
-      : (config.defaultTransition || 'zoom-fade');
-
-    await addBackgroundClip({
-      type,
-      source: filePath,
-      name: fileName,
-      durationRatio: 1.0,
-      speed: 1.0,
-      autoFitSpeed: true,
-      sourceDurationSeconds,
-      trimStartSeconds: 0,
-      kenBurns: true,
-      transition: assignedTransition,
-      transitionDurationFrames: 24,
-    });
+    await addBackgroundClips(newClipItems);
   };
 
   const handleSelectPreset = async (preset: typeof BACKGROUND_PRESETS[0]) => {

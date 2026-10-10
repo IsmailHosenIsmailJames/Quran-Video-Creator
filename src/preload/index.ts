@@ -62,6 +62,8 @@ const api = {
   // File Dialogs
   selectMediaFile: (type: 'video' | 'audio' | 'image'): Promise<string | null> =>
     ipcRenderer.invoke('dialog:select-media-file', type),
+  selectMediaFiles: (type: 'video' | 'audio' | 'image' | 'media'): Promise<string[]> =>
+    ipcRenderer.invoke('dialog:select-media-files', type),
   selectSavePath: (defaultFileName: string): Promise<string | null> =>
     ipcRenderer.invoke('dialog:select-save-path', defaultFileName),
   showInFolder: (filePath: string): Promise<void> =>
