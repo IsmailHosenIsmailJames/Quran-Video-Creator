@@ -2,6 +2,7 @@ import React from 'react';
 import { useStudioStore } from '../../store/studio-store';
 import { BACKGROUND_PRESETS } from '../../../shared/constants';
 import { getMediaUrl } from '../../../shared/media-url';
+import { TransitionType } from '../../../shared/types';
 import {
   Image,
   Video,
@@ -10,6 +11,7 @@ import {
   Square,
   Check,
   Sliders,
+  Sparkles,
 } from 'lucide-react';
 
 export const VisualsTab: React.FC = () => {
@@ -21,9 +23,24 @@ export const VisualsTab: React.FC = () => {
     const filePath = await api.selectMediaFile(type);
     if (!filePath) return;
 
+    const fileName = filePath.split(/[/\\]/).pop() || `${type} clip`;
     updateConfig({
       backgroundType: type,
       backgroundPath: filePath,
+      backgroundClips: [
+        {
+          id: `clip_${Date.now()}`,
+          type,
+          source: filePath,
+          name: fileName,
+          durationRatio: 1.0,
+          speed: 1.0,
+          trimStartSeconds: 0,
+          kenBurns: config.kenBurnsEffect,
+          transition: config.defaultTransition || 'zoom-fade',
+          transitionDurationFrames: 24,
+        },
+      ],
     });
   };
 
@@ -98,6 +115,20 @@ export const VisualsTab: React.FC = () => {
                   updateConfig({
                     backgroundType: 'preset',
                     backgroundPath: preset.url,
+                    backgroundClips: [
+                      {
+                        id: `preset_${preset.id}`,
+                        type: 'preset',
+                        source: preset.url,
+                        name: preset.name,
+                        durationRatio: 1.0,
+                        speed: 1.0,
+                        trimStartSeconds: 0,
+                        kenBurns: config.kenBurnsEffect,
+                        transition: config.defaultTransition || 'zoom-fade',
+                        transitionDurationFrames: 24,
+                      },
+                    ],
                   })
                 }
                 className={`relative group rounded-xl overflow-hidden cursor-pointer border h-20 transition-all ${
@@ -147,7 +178,55 @@ export const VisualsTab: React.FC = () => {
         )}
       </div>
 
-      {/* 3. Cinematic Grading & Overlays */}
+      {/* 3. Transition Animation Style */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-semibold text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <span>Clip Transition Animation</span>
+          </label>
+          <span className="text-[10px] text-amber-400 font-mono capitalize">
+            {config.defaultTransition || 'zoom-fade'}
+          </span>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { id: 'zoom-fade' as TransitionType, label: 'Zoom Fade', desc: 'Cinematic scale zoom' },
+            { id: 'crossfade' as TransitionType, label: 'Crossfade', desc: 'Smooth dissolve' },
+            { id: 'blur-fade' as TransitionType, label: 'Blur Melt', desc: 'Gaussian defocus' },
+            { id: 'dip-black' as TransitionType, label: 'Dip Black', desc: 'Fade to darkness' },
+            { id: 'slide-left' as TransitionType, label: 'Slide Push', desc: 'Lateral push' },
+            { id: 'cut' as TransitionType, label: 'Hard Cut', desc: 'Instant switch' },
+          ].map((item) => {
+            const isSelected = (config.defaultTransition || 'zoom-fade') === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  updateConfig({ defaultTransition: item.id });
+                  if (config.backgroundClips && config.backgroundClips.length > 0) {
+                    const updated = config.backgroundClips.map((c) => ({
+                      ...c,
+                      transition: item.id,
+                    }));
+                    updateConfig({ backgroundClips: updated, defaultTransition: item.id });
+                  }
+                }}
+                className={`p-2 rounded-xl border text-left transition-all ${
+                  isSelected
+                    ? 'bg-amber-500/15 border-amber-500/80 text-amber-300 ring-1 ring-amber-500/30'
+                    : 'bg-gray-900 border-gray-800 text-gray-400 hover:text-gray-200 hover:border-gray-700'
+                }`}
+              >
+                <div className="text-xs font-bold truncate">{item.label}</div>
+                <div className="text-[10px] text-gray-500 truncate">{item.desc}</div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 4. Cinematic Grading & Overlays */}
       <div className="p-4 rounded-2xl bg-gray-900/60 border border-gray-800 space-y-4">
         <div className="flex items-center gap-2 pb-1 border-b border-gray-800 text-xs font-semibold text-amber-300 uppercase tracking-wider">
           <Sliders className="w-4 h-4 text-amber-400" />

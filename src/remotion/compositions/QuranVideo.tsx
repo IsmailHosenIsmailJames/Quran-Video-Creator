@@ -130,10 +130,12 @@ export const QuranVideo: React.FC<QuranVideoCompositionProps> = ({
       <BackgroundLayer
         type={config.backgroundType}
         source={config.backgroundPath}
+        clips={config.backgroundClips}
         overlayOpacity={config.overlayOpacity}
         vignetteIntensity={config.vignetteIntensity}
         kenBurnsEffect={config.kenBurnsEffect}
         totalDurationInFrames={totalDurationInFrames}
+        fps={config.fps}
       />
 
       {/* Sequential Ayah Audio & Typography Display */}
@@ -148,7 +150,12 @@ export const QuranVideo: React.FC<QuranVideoCompositionProps> = ({
                 durationInFrames={Math.max(1, ayahData.durationInFrames)}
               >
                 {/* Recitation Audio Track */}
-                {audioSrc && <Audio src={audioSrc} />}
+                {audioSrc && (
+                  <Audio
+                    src={audioSrc}
+                    playbackRate={config.recitationSpeed || 1.0}
+                  />
+                )}
 
                 {/* Layer 2: Audio-Reactive Waveform */}
                 {config.showWaveform && (

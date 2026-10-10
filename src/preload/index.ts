@@ -84,6 +84,13 @@ const api = {
       ipcRenderer.removeListener('render:progress', handler);
     };
   },
+  onMenuAction: (callback: (action: string, payload?: any) => void): (() => void) => {
+    const handler = (_: any, action: string, payload?: any) => callback(action, payload);
+    ipcRenderer.on('menu:action', handler);
+    return () => {
+      ipcRenderer.removeListener('menu:action', handler);
+    };
+  },
 };
 
 contextBridge.exposeInMainWorld('electronAPI', api);

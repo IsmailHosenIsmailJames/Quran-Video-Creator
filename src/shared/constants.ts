@@ -90,12 +90,28 @@ export const DEFAULT_TEMPLATE_CONFIG: VideoTemplateConfig = {
   aspectRatio: '16:9',
   backgroundType: 'preset',
   backgroundPath: BACKGROUND_PRESETS[0].url,
+  backgroundClips: [
+    {
+      id: 'clip-preset-1',
+      type: 'preset',
+      source: BACKGROUND_PRESETS[0].url,
+      name: BACKGROUND_PRESETS[0].name,
+      durationRatio: 1.0,
+      speed: 1.0,
+      trimStartSeconds: 0,
+      kenBurns: true,
+      transition: 'zoom-fade',
+      transitionDurationFrames: 24,
+    },
+  ],
+  defaultTransition: 'zoom-fade',
   overlayOpacity: 0.45,
   vignetteIntensity: 0.85,
   kenBurnsEffect: true,
 
   // Audio & Waveform
   reciterIndex: 0, // Mishary Rashid Alafasy
+  recitationSpeed: 1.0,
   showWaveform: true,
   waveformType: 'smooth-wave',
   waveformColor: '#F59E0B',

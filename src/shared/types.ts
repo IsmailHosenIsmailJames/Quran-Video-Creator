@@ -84,6 +84,28 @@ export interface AyahSequenceData {
   segments: WordSegment[];
 }
 
+export type TransitionType =
+  | 'crossfade'
+  | 'zoom-fade'
+  | 'blur-fade'
+  | 'slide-left'
+  | 'dip-black'
+  | 'cut';
+
+export interface BackgroundClip {
+  id: string;
+  type: 'image' | 'video' | 'preset';
+  source: string;
+  name: string;
+  durationRatio: number;
+  speed: number;
+  trimStartSeconds: number;
+  trimEndSeconds?: number;
+  kenBurns?: boolean;
+  transition: TransitionType;
+  transitionDurationFrames: number;
+}
+
 export interface VideoTemplateConfig {
   // Scripture Selection
   surahNumber: number;
@@ -116,12 +138,15 @@ export interface VideoTemplateConfig {
   aspectRatio: '16:9' | '9:16' | '1:1';
   backgroundType: 'video' | 'image' | 'preset';
   backgroundPath: string;
+  backgroundClips: BackgroundClip[];
+  defaultTransition: TransitionType;
   overlayOpacity: number;       // 0.2 to 0.85
   vignetteIntensity: number;    // 0.0 to 1.0
   kenBurnsEffect: boolean;
 
   // Audio & Waveform
   reciterIndex: number;
+  recitationSpeed: number;      // 0.75x to 1.25x (default 1.0)
   customAudioPath?: string;
   showWaveform: boolean;
   waveformType: 'smooth-wave' | 'mirrored-bars';

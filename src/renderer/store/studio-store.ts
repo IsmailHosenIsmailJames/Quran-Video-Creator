@@ -4,6 +4,9 @@ import {
   AyahSequenceData,
   ReciterInfo,
   ScriptType,
+  BackgroundClip,
+  TransitionType,
+  WordSegment,
 } from '../../shared/types';
 import {
   DEFAULT_TEMPLATE_CONFIG,
@@ -19,6 +22,10 @@ interface StudioState {
   isLoading: boolean;
   statusMessage: string;
 
+  // Playhead & Playback Sync
+  currentFrame: number;
+  isPlaying: boolean;
+
   availableLanguages: string[];
   translatorsPrimary: string[];
   translatorsSecondary: string[];
@@ -30,7 +37,14 @@ interface StudioState {
   // Actions
   setActiveTab: (tab: 'scripture' | 'subtitles' | 'visuals' | 'audio' | 'branding') => void;
   setExportModalOpen: (open: boolean) => void;
+  setCurrentFrame: (currentFrame: number) => void;
+  setIsPlaying: (isPlaying: boolean) => void;
   updateConfig: (partial: Partial<VideoTemplateConfig>) => void;
+  setRecitationSpeed: (speed: number) => Promise<void>;
+  addBackgroundClip: (clip: Omit<BackgroundClip, 'id'>) => void;
+  removeBackgroundClip: (id: string) => void;
+  updateBackgroundClip: (id: string, partial: Partial<BackgroundClip>) => void;
+  reorderBackgroundClips: (fromIndex: number, toIndex: number) => void;
   changeSurah: (surahNumber: number) => Promise<void>;
   changeAyahRange: (fromAyah: number, toAyah: number) => Promise<void>;
   changeScript: (script: ScriptType) => Promise<void>;
@@ -46,6 +60,9 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   isLoading: false,
   statusMessage: 'Ready',
 
+  currentFrame: 0,
+  isPlaying: false,
+
   availableLanguages: ['Bengali', 'English', 'Urdu', 'Hindi'],
   translatorsPrimary: ['Taisirul_Quran.json.txt'],
   translatorsSecondary: ['Saheeh_International.json.txt'],
@@ -56,13 +73,99 @@ export const useStudioStore = create<StudioState>((set, get) => ({
 
   setActiveTab: (activeTab) => set({ activeTab }),
   setExportModalOpen: (isExportModalOpen) => set({ isExportModalOpen }),
+  setCurrentFrame: (currentFrame) => set({ currentFrame }),
+  setIsPlaying: (isPlaying) => set({ isPlaying }),
 
   updateConfig: (partial) => {
     set((state) => ({ config: { ...state.config, ...partial } }));
-    // If FPS changed or duration needs recalculating:
-    if (partial.fps) {
+    // If FPS or recitation speed changed:
+    if (partial.fps || partial.recitationSpeed !== undefined) {
       get().refreshAyahSequence();
     }
+  },
+
+  setRecitationSpeed: async (speed: number) => {
+    const clamped = Math.max(0.5, Math.min(2.0, speed));
+    set((state) => ({ config: { ...state.config, recitationSpeed: clamped } }));
+    await get().refreshAyahSequence();
+  },
+
+  addBackgroundClip: (clipData) => {
+    const id = `clip_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+    const newClip: BackgroundClip = {
+      id,
+      ...clipData,
+    };
+    set((state) => {
+      const currentClips = state.config.backgroundClips || [];
+      const updatedClips = [...currentClips, newClip];
+      return {
+        config: {
+          ...state.config,
+          backgroundClips: updatedClips,
+          // Sync primary backgroundPath with the first clip
+          backgroundPath: updatedClips[0]?.source || state.config.backgroundPath,
+          backgroundType: updatedClips[0]?.type || state.config.backgroundType,
+        },
+      };
+    });
+  },
+
+  removeBackgroundClip: (id: string) => {
+    set((state) => {
+      const currentClips = state.config.backgroundClips || [];
+      if (currentClips.length <= 1) {
+        return state; // Keep at least one clip
+      }
+      const updatedClips = currentClips.filter((c) => c.id !== id);
+      return {
+        config: {
+          ...state.config,
+          backgroundClips: updatedClips,
+          backgroundPath: updatedClips[0]?.source || state.config.backgroundPath,
+          backgroundType: updatedClips[0]?.type || state.config.backgroundType,
+        },
+      };
+    });
+  },
+
+  updateBackgroundClip: (id: string, partial: Partial<BackgroundClip>) => {
+    set((state) => {
+      const currentClips = state.config.backgroundClips || [];
+      const updatedClips = currentClips.map((c) => (c.id === id ? { ...c, ...partial } : c));
+      return {
+        config: {
+          ...state.config,
+          backgroundClips: updatedClips,
+          backgroundPath: updatedClips[0]?.source || state.config.backgroundPath,
+          backgroundType: updatedClips[0]?.type || state.config.backgroundType,
+        },
+      };
+    });
+  },
+
+  reorderBackgroundClips: (fromIndex: number, toIndex: number) => {
+    set((state) => {
+      const currentClips = [...(state.config.backgroundClips || [])];
+      if (
+        fromIndex < 0 ||
+        fromIndex >= currentClips.length ||
+        toIndex < 0 ||
+        toIndex >= currentClips.length
+      ) {
+        return state;
+      }
+      const [moved] = currentClips.splice(fromIndex, 1);
+      currentClips.splice(toIndex, 0, moved);
+      return {
+        config: {
+          ...state.config,
+          backgroundClips: currentClips,
+          backgroundPath: currentClips[0]?.source || state.config.backgroundPath,
+          backgroundType: currentClips[0]?.type || state.config.backgroundType,
+        },
+      };
+    });
   },
 
   changeSurah: async (surahNumber: number) => {
@@ -177,12 +280,21 @@ export const useStudioStore = create<StudioState>((set, get) => ({
           segments: [],
         };
 
+        const speed = config.recitationSpeed || 1.0;
+        const durationInSeconds = (audioData.durationInSeconds || 5) / speed;
         const durationInFrames = Math.max(
           30,
-          Math.round((audioData.durationInSeconds || 5) * config.fps)
+          Math.round(durationInSeconds * config.fps)
         );
 
         totalFrames += durationInFrames;
+
+        // Scale word timestamps by recitationSpeed so karaoke highlights stay in sync:
+        const scaledSegments = (audioData.segments || []).map((seg: WordSegment) => ({
+          wordIndex: seg.wordIndex,
+          startMs: Math.round(seg.startMs / speed),
+          endMs: Math.round(seg.endMs / speed),
+        }));
 
         sequence.push({
           surah: config.surahNumber,
@@ -194,7 +306,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
           secondaryTranslation: secondaryTransMap[a] || '',
           audioUrl: config.customAudioPath || audioData.audioUrl,
           durationInFrames,
-          segments: audioData.segments || [],
+          segments: scaledSegments,
         });
       }
 

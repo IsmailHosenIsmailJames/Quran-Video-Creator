@@ -1,12 +1,58 @@
-import React, { useMemo } from 'react';
-import { Player } from '@remotion/player';
+import React, { useMemo, useRef, useState, useLayoutEffect, useEffect } from 'react';
+import { Player, PlayerRef } from '@remotion/player';
 import { QuranVideo } from '../../remotion/compositions/QuranVideo';
 import { useStudioStore } from '../store/studio-store';
 import { QuranVideoCompositionProps } from '../../shared/types';
-import { Loader2, Maximize2, Sparkles } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import { StudioTimeline } from './timeline/StudioTimeline';
 
 export const LivePreview: React.FC = () => {
   const { config, ayahs, totalDurationInFrames, isLoading, statusMessage } = useStudioStore();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const playerRef = useRef<PlayerRef>(null);
+  const currentFrameRef = useRef<number>(0);
+  const [currentFrame, setCurrentFrame] = useState<number>(0);
+  const [containerSize, setContainerSize] = useState<{ width: number; height: number }>({
+    width: 0,
+    height: 0,
+  });
+
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const updateSize = () => {
+      const rect = el.getBoundingClientRect();
+      setContainerSize({
+        width: rect.width,
+        height: rect.height,
+      });
+    };
+
+    updateSize();
+
+    const ro = new ResizeObserver(updateSize);
+    ro.observe(el);
+
+    return () => {
+      ro.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
+    const player = playerRef.current;
+    if (!player) return;
+
+    const onFrameUpdate = (e: { detail: { frame: number } }) => {
+      currentFrameRef.current = e.detail.frame;
+      setCurrentFrame(e.detail.frame);
+    };
+
+    player.addEventListener('frameupdate', onFrameUpdate);
+    return () => {
+      player.removeEventListener('frameupdate', onFrameUpdate);
+    };
+  }, [config.aspectRatio]);
 
   const inputProps: QuranVideoCompositionProps = useMemo(() => {
     return {
@@ -16,46 +62,76 @@ export const LivePreview: React.FC = () => {
     };
   }, [config, ayahs, totalDurationInFrames]);
 
-  const { compWidth, compHeight, aspectClass } = useMemo(() => {
+  const { compWidth, compHeight } = useMemo(() => {
     if (config.aspectRatio === '9:16') {
-      return { compWidth: 1080, compHeight: 1920, aspectClass: 'aspect-[9/16] max-h-[80vh]' };
+      return { compWidth: 1080, compHeight: 1920 };
     }
     if (config.aspectRatio === '1:1') {
-      return { compWidth: 1080, compHeight: 1080, aspectClass: 'aspect-square max-h-[80vh]' };
+      return { compWidth: 1080, compHeight: 1080 };
     }
-    return { compWidth: 1920, compHeight: 1080, aspectClass: 'aspect-video w-full' };
+    return { compWidth: 1920, compHeight: 1080 };
   }, [config.aspectRatio]);
 
-  const durationSec = (totalDurationInFrames / config.fps).toFixed(1);
+  const { playerWidth, playerHeight } = useMemo(() => {
+    if (containerSize.width <= 0 || containerSize.height <= 0) {
+      return { playerWidth: undefined, playerHeight: undefined };
+    }
+
+    // Leave comfortable padding around the canvas
+    const paddingX = 24;
+    const paddingY = 24;
+    const maxW = Math.max(100, containerSize.width - paddingX);
+    const maxH = Math.max(100, containerSize.height - paddingY);
+
+    const targetRatio = compWidth / compHeight;
+    const containerRatio = maxW / maxH;
+
+    let width: number;
+    let height: number;
+
+    if (containerRatio > targetRatio) {
+      // Container is wider than composition -> fit by height
+      height = maxH;
+      width = Math.round(maxH * targetRatio);
+    } else {
+      // Container is narrower than composition -> fit by width
+      width = maxW;
+      height = Math.round(maxW / targetRatio);
+    }
+
+    return { playerWidth: width, playerHeight: height };
+  }, [containerSize, compWidth, compHeight]);
 
   return (
-    <div className="flex flex-col h-full bg-[#070a12] p-6 relative select-none">
-      {/* Top Toolbar Above Canvas */}
-      <div className="flex items-center justify-between pb-4">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gray-900 border border-gray-800 text-xs">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-gray-300 font-medium">Real-Time Studio Canvas</span>
-          </div>
-
-          <div className="text-xs text-gray-400 font-mono">
-            {compWidth} × {compHeight} • {config.fps} FPS • {durationSec}s ({totalDurationInFrames}f)
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 text-xs text-amber-300/80 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-xl">
-          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-          <span>Karaoke Word Sync Enabled</span>
-        </div>
-      </div>
-
+    <div className="flex flex-col h-full bg-[#070a12] p-3 relative select-none">
       {/* Main Canvas Container */}
-      <div className="flex-1 flex items-center justify-center min-h-0 relative">
+      <div
+        ref={containerRef}
+        className="flex-1 flex items-center justify-center min-h-0 min-w-0 relative w-full h-full overflow-hidden"
+      >
         <div
-          className={`relative shadow-2xl rounded-2xl overflow-hidden ring-1 ring-white/10 bg-black flex items-center justify-center transition-all ${aspectClass}`}
+          style={
+            playerWidth && playerHeight
+              ? {
+                  width: `${playerWidth}px`,
+                  height: `${playerHeight}px`,
+                  aspectRatio: `${compWidth} / ${compHeight}`,
+                }
+              : {
+                  aspectRatio: `${compWidth} / ${compHeight}`,
+                  maxWidth: '100%',
+                  maxHeight: '100%',
+                  width: config.aspectRatio === '16:9' ? '100%' : 'auto',
+                  height: config.aspectRatio === '16:9' ? 'auto' : '100%',
+                }
+          }
+          className="relative shadow-2xl rounded-2xl overflow-hidden ring-1 ring-white/10 bg-black flex items-center justify-center transition-all duration-150"
         >
           {ayahs.length > 0 ? (
             <Player<any, QuranVideoCompositionProps>
+              key={`${config.aspectRatio}-${compWidth}x${compHeight}`}
+              ref={playerRef}
+              initialFrame={Math.min(currentFrameRef.current, Math.max(0, totalDurationInFrames - 1))}
               component={QuranVideo}
               inputProps={inputProps}
               durationInFrames={Math.max(30, totalDurationInFrames)}
@@ -86,6 +162,14 @@ export const LivePreview: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Interactive Video Studio Timeline */}
+      <StudioTimeline
+        playerRef={playerRef}
+        currentFrame={currentFrame}
+        totalDurationInFrames={totalDurationInFrames}
+        fps={config.fps}
+      />
     </div>
   );
 };
