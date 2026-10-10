@@ -1,5 +1,6 @@
 import { app, BrowserWindow, protocol, net, Menu, MenuItemConstructorOptions } from 'electron';
 import path from 'path';
+import fs from 'fs';
 import { pathToFileURL } from 'url';
 import { registerIpcHandlers } from './ipc-handlers';
 import { quranDbService } from './services/quran-db';
@@ -253,7 +254,16 @@ function createWindow(): void {
   if (process.env.VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
+    // In production build, Vite outputs frontend to dist/index.html
+    const appPath = app.getAppPath();
+    const primaryIndex = path.join(appPath, 'dist/index.html');
+    const fallbackIndex = path.join(__dirname, '../../dist/index.html');
+
+    if (fs.existsSync(primaryIndex)) {
+      mainWindow.loadFile(primaryIndex);
+    } else {
+      mainWindow.loadFile(fallbackIndex);
+    }
   }
 
   mainWindow.on('closed', () => {

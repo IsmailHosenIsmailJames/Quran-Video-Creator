@@ -32,6 +32,10 @@
     {
       "from": "recitations.json",
       "to": "recitations.json"
+    },
+    {
+      "from": "dist/remotion-bundle",
+      "to": "remotion-bundle"
     }
   ],
   "linux": {

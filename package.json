@@ -6,11 +6,12 @@
   "type": "commonjs",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build && electron-builder --dir",
+    "bundle:remotion": "node scripts/bundle-remotion.js",
     "build:vite": "tsc -b && vite build",
+    "build": "npm run build:vite && npm run bundle:remotion && electron-builder --dir",
     "lint": "tsc --noEmit",
-    "pack": "electron-builder --dir",
-    "dist": "electron-builder"
+    "pack": "npm run build:vite && npm run bundle:remotion && electron-builder --dir",
+    "dist": "npm run build:vite && npm run bundle:remotion && electron-builder"
   },
   "keywords": [
     "quran",

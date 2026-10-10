@@ -2,11 +2,28 @@ import path from 'path';
 import fs from 'fs';
 import { bundle } from '@remotion/bundler';
 import { renderMedia, selectComposition } from '@remotion/renderer';
-import { BrowserWindow } from 'electron';
+import { BrowserWindow, app } from 'electron';
 import { VideoTemplateConfig, AyahSequenceData, QuranVideoCompositionProps } from '../../shared/types';
 
 class RemotionRunnerService {
   private activeJobs = new Map<string, { cancel: () => void }>();
+
+  private getPrebundledPath(): string | null {
+    const candidates = [
+      // Packaged extraResources location
+      path.join(process.resourcesPath, 'remotion-bundle'),
+      // Packaged app.asar.unpacked / dist location
+      path.join(app ? app.getAppPath() : process.cwd(), 'dist/remotion-bundle'),
+      path.join(process.cwd(), 'dist/remotion-bundle'),
+    ];
+
+    for (const candidate of candidates) {
+      if (fs.existsSync(candidate) && fs.existsSync(path.join(candidate, 'index.html'))) {
+        return candidate;
+      }
+    }
+    return null;
+  }
 
   private resolveEntryPoint(): string {
     const devPath = path.join(process.cwd(), 'src/remotion/index.ts');
@@ -28,9 +45,6 @@ class RemotionRunnerService {
     outputPath: string,
     mainWindow: BrowserWindow
   ): Promise<void> {
-    const entryPoint = this.resolveEntryPoint();
-
-    // 1. Bundle Remotion Composition
     mainWindow.webContents.send('render:progress', {
       jobId,
       progress: 0.02,
@@ -52,18 +66,38 @@ class RemotionRunnerService {
     });
 
     try {
-      const bundleLocation = await bundle({
-        entryPoint,
-        publicDir: path.resolve('public'),
-        onProgress: (progress) => {
-          if (isCancelled) return;
-          mainWindow.webContents.send('render:progress', {
-            jobId,
-            progress: progress * 0.1, // First 10% is bundling
-            status: 'rendering',
-          });
-        },
-      });
+      const prebundled = this.getPrebundledPath();
+      let bundleLocation: string;
+
+      if (app?.isPackaged && prebundled) {
+        bundleLocation = prebundled;
+        mainWindow.webContents.send('render:progress', {
+          jobId,
+          progress: 0.1,
+          status: 'rendering',
+        });
+      } else if (prebundled && !fs.existsSync(path.join(process.cwd(), 'src/remotion/index.ts'))) {
+        bundleLocation = prebundled;
+        mainWindow.webContents.send('render:progress', {
+          jobId,
+          progress: 0.1,
+          status: 'rendering',
+        });
+      } else {
+        const entryPoint = this.resolveEntryPoint();
+        bundleLocation = await bundle({
+          entryPoint,
+          publicDir: path.resolve('public'),
+          onProgress: (progress) => {
+            if (isCancelled) return;
+            mainWindow.webContents.send('render:progress', {
+              jobId,
+              progress: progress * 0.1, // First 10% is bundling
+              status: 'rendering',
+            });
+          },
+        });
+      }
 
       if (isCancelled) {
         this.activeJobs.delete(jobId);
