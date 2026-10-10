@@ -12,10 +12,19 @@ import {
   Check,
   Sliders,
   Sparkles,
+  Plus,
 } from 'lucide-react';
 
+const TRANSITION_CYCLE: TransitionType[] = [
+  'zoom-fade',
+  'crossfade',
+  'blur-fade',
+  'slide-left',
+  'dip-black',
+];
+
 export const VisualsTab: React.FC = () => {
-  const { config, updateConfig } = useStudioStore();
+  const { config, updateConfig, addBackgroundClip } = useStudioStore();
 
   const handleSelectMedia = async (type: 'video' | 'image') => {
     const api = window.electronAPI;
@@ -33,26 +42,98 @@ export const VisualsTab: React.FC = () => {
     }
 
     const fileName = filePath.split(/[/\\]/).pop() || `${type} clip`;
-    updateConfig({
-      backgroundType: type,
-      backgroundPath: filePath,
-      backgroundClips: [
-        {
-          id: `clip_${Date.now()}`,
-          type,
-          source: filePath,
-          name: fileName,
-          percentage: 100,
-          durationRatio: 1.0,
-          speed: 1.0,
-          autoFitSpeed: true,
-          sourceDurationSeconds,
-          trimStartSeconds: 0,
-          kenBurns: config.kenBurnsEffect,
-          transition: config.defaultTransition || 'zoom-fade',
-          transitionDurationFrames: 24,
-        },
-      ],
+    const currentClips = config.backgroundClips || [];
+
+    // If there is only 1 virgin default preset, replace it cleanly
+    if (currentClips.length === 1 && currentClips[0].id === 'clip-preset-1') {
+      updateConfig({
+        backgroundType: type,
+        backgroundPath: filePath,
+        backgroundClips: [
+          {
+            id: `clip_${Date.now()}`,
+            type,
+            source: filePath,
+            name: fileName,
+            percentage: 100,
+            durationRatio: 1.0,
+            speed: 1.0,
+            autoFitSpeed: true,
+            sourceDurationSeconds,
+            trimStartSeconds: 0,
+            kenBurns: config.kenBurnsEffect,
+            transition: config.defaultTransition || 'zoom-fade',
+            transitionDurationFrames: 24,
+          },
+        ],
+      });
+      return;
+    }
+
+    // Otherwise, append to the end of the timeline
+    const assignedTransition = currentClips.length > 0
+      ? TRANSITION_CYCLE[(currentClips.length - 1) % TRANSITION_CYCLE.length]
+      : (config.defaultTransition || 'zoom-fade');
+
+    await addBackgroundClip({
+      type,
+      source: filePath,
+      name: fileName,
+      durationRatio: 1.0,
+      speed: 1.0,
+      autoFitSpeed: true,
+      sourceDurationSeconds,
+      trimStartSeconds: 0,
+      kenBurns: true,
+      transition: assignedTransition,
+      transitionDurationFrames: 24,
+    });
+  };
+
+  const handleSelectPreset = async (preset: typeof BACKGROUND_PRESETS[0]) => {
+    const currentClips = config.backgroundClips || [];
+
+    // If there is only 1 virgin default preset, replace it cleanly
+    if (currentClips.length === 1 && currentClips[0].id === 'clip-preset-1') {
+      updateConfig({
+        backgroundType: 'preset',
+        backgroundPath: preset.url,
+        backgroundClips: [
+          {
+            id: `preset_${preset.id}`,
+            type: 'preset',
+            source: preset.url,
+            name: preset.name,
+            percentage: 100,
+            durationRatio: 1.0,
+            speed: 1.0,
+            autoFitSpeed: true,
+            trimStartSeconds: 0,
+            kenBurns: config.kenBurnsEffect,
+            transition: config.defaultTransition || 'zoom-fade',
+            transitionDurationFrames: 24,
+          },
+        ],
+      });
+      return;
+    }
+
+    // Otherwise, append to the end of the background timeline
+    const assignedTransition = currentClips.length > 0
+      ? TRANSITION_CYCLE[(currentClips.length - 1) % TRANSITION_CYCLE.length]
+      : (config.defaultTransition || 'zoom-fade');
+
+    await addBackgroundClip({
+      type: 'preset',
+      source: preset.url,
+      name: preset.name,
+      durationRatio: 1.0,
+      speed: 1.0,
+      autoFitSpeed: true,
+      trimStartSeconds: 0,
+      kenBurns: config.kenBurnsEffect,
+      transition: assignedTransition,
+      transitionDurationFrames: 24,
     });
   };
 
@@ -119,37 +200,18 @@ export const VisualsTab: React.FC = () => {
         {/* Presets Grid */}
         <div className="grid grid-cols-2 gap-2 pt-1">
           {BACKGROUND_PRESETS.map((preset) => {
-            const isSelected = config.backgroundPath === preset.url;
+            const countInTimeline = config.backgroundClips?.filter((c) => c.source === preset.url).length || 0;
+            const isInTimeline = countInTimeline > 0;
             return (
               <div
                 key={preset.id}
-                onClick={() =>
-                  updateConfig({
-                    backgroundType: 'preset',
-                    backgroundPath: preset.url,
-                    backgroundClips: [
-                      {
-                        id: `preset_${preset.id}`,
-                        type: 'preset',
-                        source: preset.url,
-                        name: preset.name,
-                        percentage: 100,
-                        durationRatio: 1.0,
-                        speed: 1.0,
-                        autoFitSpeed: true,
-                        trimStartSeconds: 0,
-                        kenBurns: config.kenBurnsEffect,
-                        transition: config.defaultTransition || 'zoom-fade',
-                        transitionDurationFrames: 24,
-                      },
-                    ],
-                  })
-                }
+                onClick={() => handleSelectPreset(preset)}
                 className={`relative group rounded-xl overflow-hidden cursor-pointer border h-20 transition-all ${
-                  isSelected
-                    ? 'border-amber-400 ring-2 ring-amber-400/30'
+                  isInTimeline
+                    ? 'border-amber-400 ring-1 ring-amber-400/40 shadow-sm'
                     : 'border-gray-800 hover:border-gray-700'
                 }`}
+                title={`Click to add "${preset.name}" to the end of the timeline`}
               >
                 <img
                   src={preset.url}
@@ -161,11 +223,22 @@ export const VisualsTab: React.FC = () => {
                     {preset.name}
                   </span>
                 </div>
-                {isSelected && (
-                  <div className="absolute top-1.5 right-1.5 bg-amber-500 text-black rounded-full p-0.5">
-                    <Check className="w-3 h-3 stroke-[3]" />
+
+                {/* In-Timeline Badge */}
+                {isInTimeline && (
+                  <div className="absolute top-1.5 right-1.5 bg-amber-500 text-black rounded-full px-1.5 py-0.5 text-[9px] font-bold flex items-center gap-0.5 shadow-md">
+                    <Check className="w-2.5 h-2.5 stroke-[3]" />
+                    {countInTimeline > 1 && <span>×{countInTimeline}</span>}
                   </div>
                 )}
+
+                {/* Hover Overlay: Add to Timeline */}
+                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity backdrop-blur-[1px]">
+                  <span className="bg-amber-500 hover:bg-amber-400 text-black text-[10px] font-bold px-2 py-1 rounded-lg flex items-center gap-1 shadow-lg transform group-hover:scale-105 transition-transform">
+                    <Plus className="w-3 h-3 stroke-[3]" />
+                    <span>Add to Timeline</span>
+                  </span>
+                </div>
               </div>
             );
           })}

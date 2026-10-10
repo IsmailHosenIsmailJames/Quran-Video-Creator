@@ -313,6 +313,29 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
     if (!filePath) return;
 
     const fileName = filePath.split(/[/\\]/).pop() || `${type} clip`;
+
+    let sourceDurationSeconds: number | undefined = undefined;
+    if (type === 'video' && api.probeMediaDuration) {
+      try {
+        sourceDurationSeconds = await api.probeMediaDuration(filePath);
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    if (clips.length === 1 && clips[0].id === 'clip-preset-1') {
+      updateBackgroundClip(clips[0].id, {
+        type,
+        source: filePath,
+        name: fileName,
+        sourceDurationSeconds,
+        trimStartSeconds: 0,
+        percentage: 100,
+        durationRatio: 1.0,
+      });
+      return;
+    }
+
     // Cycle transitions so subsequent clips have distinct cinematic animations
     const assignedTransition = clips.length > 0
       ? TRANSITION_CYCLE[(clips.length - 1) % TRANSITION_CYCLE.length]
@@ -325,6 +348,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
       durationRatio: 1.0,
       speed: 1.0,
       autoFitSpeed: true,
+      sourceDurationSeconds,
       trimStartSeconds: 0,
       kenBurns: true,
       transition: assignedTransition,
