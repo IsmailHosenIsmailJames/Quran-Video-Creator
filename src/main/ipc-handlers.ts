@@ -3,6 +3,7 @@ import { quranDbService } from './services/quran-db';
 import { translationService } from './services/translation-service';
 import { recitationService } from './services/recitation-service';
 import { remotionRunner } from './services/remotion-runner';
+import { settingsService } from './services/settings-service';
 import { ScriptType, VideoTemplateConfig, AyahSequenceData } from '../shared/types';
 
 export function registerIpcHandlers(mainWindow: BrowserWindow): void {
@@ -170,5 +171,20 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
 
   ipcMain.handle('render:cancel', async (_, jobId: string) => {
     remotionRunner.cancelRender(jobId);
+  });
+
+  // 5. Settings Persistence
+  ipcMain.handle('settings:load', async () => {
+    return settingsService.loadSettings();
+  });
+
+  ipcMain.handle('settings:save', async (_, settings: Partial<VideoTemplateConfig>) => {
+    settingsService.saveSettings(settings);
+    return { success: true };
+  });
+
+  ipcMain.handle('settings:reset', async () => {
+    settingsService.resetSettings();
+    return { success: true };
   });
 }

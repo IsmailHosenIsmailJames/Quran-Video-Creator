@@ -56,6 +56,7 @@ interface StudioState {
   changeReciter: (reciterIndex: number) => Promise<void>;
   refreshAyahSequence: () => Promise<void>;
   initializeStudio: () => Promise<void>;
+  resetToDefault: () => Promise<void>;
 }
 
 export const useStudioStore = create<StudioState>((set, get) => ({
@@ -508,28 +509,122 @@ export const useStudioStore = create<StudioState>((set, get) => ({
     const api = window.electronAPI;
     if (!api) return;
 
+    isHydratingOrResetting = true;
     try {
-      // Load available languages
+      // 1. Load saved preferences from local database
+      let savedSettings: Partial<VideoTemplateConfig> = {};
+      if (api.loadSettings) {
+        try {
+          savedSettings = await api.loadSettings();
+        } catch (err) {
+          console.error('Failed to load saved settings:', err);
+        }
+      }
+
+      const initialConfig: VideoTemplateConfig = {
+        ...DEFAULT_TEMPLATE_CONFIG,
+        ...savedSettings,
+        // Start fresh with Surah 1 Al-Fatiha for new video creation sessions
+        surahNumber: DEFAULT_TEMPLATE_CONFIG.surahNumber,
+        fromAyah: DEFAULT_TEMPLATE_CONFIG.fromAyah,
+        toAyah: DEFAULT_TEMPLATE_CONFIG.toAyah,
+        customAudioPath: undefined,
+      };
+
+      // 2. Load available languages and reciters
       const languages = await api.getAvailableLanguages();
-      // Load reciters
       const reciters = await api.getReciters();
 
-      // Load translators for initial primary & secondary languages
-      const { config } = get();
-      const primaryTranslators = await api.getTranslatorsForLanguage(config.primaryTranslationLang);
-      const secondaryTranslators = await api.getTranslatorsForLanguage(config.secondaryTranslationLang);
+      // 3. Load translators for configured primary & secondary languages
+      const primaryTranslators = await api.getTranslatorsForLanguage(initialConfig.primaryTranslationLang);
+      const secondaryTranslators = await api.getTranslatorsForLanguage(initialConfig.secondaryTranslationLang);
+
+      // Verify that selected translation files are available
+      if (primaryTranslators.length > 0 && !primaryTranslators.includes(initialConfig.primaryTranslationFile)) {
+        initialConfig.primaryTranslationFile = primaryTranslators[0];
+      }
+      if (secondaryTranslators.length > 0 && !secondaryTranslators.includes(initialConfig.secondaryTranslationFile)) {
+        initialConfig.secondaryTranslationFile = secondaryTranslators[0];
+      }
 
       set({
+        config: initialConfig,
         availableLanguages: languages,
         reciters,
         translatorsPrimary: primaryTranslators,
         translatorsSecondary: secondaryTranslators,
       });
 
-      // Load initial sequence
+      // 4. Load initial sequence
       await get().refreshAyahSequence();
     } catch (err) {
       console.error('Failed to initialize studio:', err);
+    } finally {
+      setTimeout(() => {
+        isHydratingOrResetting = false;
+      }, 300);
+    }
+  },
+
+  resetToDefault: async () => {
+    const api = window.electronAPI;
+    set({ isLoading: true, statusMessage: 'Resetting settings to default...' });
+    isHydratingOrResetting = true;
+    if (autoSaveTimer) {
+      clearTimeout(autoSaveTimer);
+      autoSaveTimer = null;
+    }
+
+    try {
+      if (api?.resetSettings) {
+        await api.resetSettings();
+      }
+
+      let primaryTranslators = get().translatorsPrimary;
+      let secondaryTranslators = get().translatorsSecondary;
+
+      if (api) {
+        primaryTranslators = await api.getTranslatorsForLanguage(DEFAULT_TEMPLATE_CONFIG.primaryTranslationLang);
+        secondaryTranslators = await api.getTranslatorsForLanguage(DEFAULT_TEMPLATE_CONFIG.secondaryTranslationLang);
+      }
+
+      set({
+        config: { ...DEFAULT_TEMPLATE_CONFIG },
+        translatorsPrimary: primaryTranslators,
+        translatorsSecondary: secondaryTranslators,
+        statusMessage: 'Reset all settings to default',
+      });
+
+      await get().refreshAyahSequence();
+    } catch (err) {
+      console.error('Failed to reset settings to default:', err);
+    } finally {
+      setTimeout(() => {
+        isHydratingOrResetting = false;
+      }, 300);
     }
   },
 }));
+
+let autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
+let isHydratingOrResetting = false;
+
+export const triggerAutoSave = (config: VideoTemplateConfig) => {
+  if (isHydratingOrResetting) return;
+  if (autoSaveTimer) clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(async () => {
+    try {
+      if (window.electronAPI?.saveSettings) {
+        await window.electronAPI.saveSettings(config);
+      }
+    } catch (err) {
+      console.error('Failed to auto-save settings:', err);
+    }
+  }, 400);
+};
+
+useStudioStore.subscribe((state, prevState) => {
+  if (state.config !== prevState.config) {
+    triggerAutoSave(state.config);
+  }
+});

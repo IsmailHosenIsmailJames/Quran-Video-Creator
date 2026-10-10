@@ -92,6 +92,15 @@ export const App: React.FC = () => {
         case 'about':
           alert('Quran Video Studio v1.0\nDesktop Motion Graphics & Recitation Studio powered by Remotion');
           break;
+        case 'reset-to-default': {
+          const confirmed = window.confirm(
+            'Are you sure you want to reset all settings to default values? This will restore branding, typography, audio, and visual layout presets.'
+          );
+          if (confirmed) {
+            await store.resetToDefault();
+          }
+          break;
+        }
       }
     });
 

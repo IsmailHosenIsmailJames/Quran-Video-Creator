@@ -5,6 +5,7 @@ import { pathToFileURL } from 'url';
 import { registerIpcHandlers } from './ipc-handlers';
 import { quranDbService } from './services/quran-db';
 import { localMediaServer } from './services/local-media-server';
+import { settingsService } from './services/settings-service';
 
 // Register custom protocol for local media streaming
 protocol.registerSchemesAsPrivileged([
@@ -89,6 +90,14 @@ function createApplicationMenu(window: BrowserWindow): void {
       { role: 'copy' },
       { role: 'paste' },
       { role: 'selectAll' },
+      { type: 'separator' },
+      {
+        label: 'Reset to Default',
+        accelerator: 'CmdOrCtrl+Alt+R',
+        click: () => {
+          window.webContents.send('menu:action', 'reset-to-default');
+        },
+      },
     ],
   };
 
@@ -321,6 +330,7 @@ app.on('window-all-closed', () => {
 });
 
 app.on('will-quit', () => {
+  settingsService.close();
   quranDbService.closeAll();
   localMediaServer.stop();
 });

@@ -95,6 +95,14 @@ const api = {
       ipcRenderer.removeListener('menu:action', handler);
     };
   },
+
+  // Settings Persistence
+  loadSettings: (): Promise<Partial<VideoTemplateConfig>> =>
+    ipcRenderer.invoke('settings:load'),
+  saveSettings: (settings: Partial<VideoTemplateConfig>): Promise<{ success: boolean }> =>
+    ipcRenderer.invoke('settings:save', settings),
+  resetSettings: (): Promise<{ success: boolean }> =>
+    ipcRenderer.invoke('settings:reset'),
 };
 
 contextBridge.exposeInMainWorld('electronAPI', api);
