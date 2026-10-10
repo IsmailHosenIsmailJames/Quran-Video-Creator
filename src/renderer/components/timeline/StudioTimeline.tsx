@@ -40,6 +40,23 @@ const TRANSITION_LABELS: Record<TransitionType, string> = {
   'cut': 'Hard Cut',
 };
 
+const TRANSITION_COLORS: Record<TransitionType, { bg: string; text: string; border: string }> = {
+  'zoom-fade': { bg: 'bg-amber-500/20 hover:bg-amber-500/30', text: 'text-amber-400', border: 'border-amber-500/60' },
+  'crossfade': { bg: 'bg-sky-500/20 hover:bg-sky-500/30', text: 'text-sky-400', border: 'border-sky-500/60' },
+  'blur-fade': { bg: 'bg-purple-500/20 hover:bg-purple-500/30', text: 'text-purple-400', border: 'border-purple-500/60' },
+  'dip-black': { bg: 'bg-zinc-700/50 hover:bg-zinc-700/70', text: 'text-zinc-200', border: 'border-zinc-500' },
+  'slide-left': { bg: 'bg-emerald-500/20 hover:bg-emerald-500/30', text: 'text-emerald-400', border: 'border-emerald-500/60' },
+  'cut': { bg: 'bg-gray-800 hover:bg-gray-700', text: 'text-gray-400', border: 'border-gray-600' },
+};
+
+const TRANSITION_CYCLE: TransitionType[] = [
+  'zoom-fade',
+  'crossfade',
+  'blur-fade',
+  'slide-left',
+  'dip-black',
+];
+
 export const StudioTimeline: React.FC<StudioTimelineProps> = ({
   playerRef,
   currentFrame: propCurrentFrame,
@@ -296,6 +313,11 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
     if (!filePath) return;
 
     const fileName = filePath.split(/[/\\]/).pop() || `${type} clip`;
+    // Cycle transitions so subsequent clips have distinct cinematic animations
+    const assignedTransition = clips.length > 0
+      ? TRANSITION_CYCLE[(clips.length - 1) % TRANSITION_CYCLE.length]
+      : (config.defaultTransition || 'zoom-fade');
+
     await addBackgroundClip({
       type,
       source: filePath,
@@ -305,7 +327,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
       autoFitSpeed: true,
       trimStartSeconds: 0,
       kenBurns: true,
-      transition: config.defaultTransition || 'zoom-fade',
+      transition: assignedTransition,
       transitionDurationFrames: 24,
     });
   };
@@ -595,10 +617,15 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
                         e.stopPropagation();
                         setShowTransitionMenu(showTransitionMenu === clip.id ? null : clip.id);
                       }}
-                      className="absolute -left-2.5 top-1/2 -translate-y-1/2 z-20 w-5 h-5 rounded-full bg-gray-900 border border-amber-500/50 text-amber-400 hover:bg-amber-500 hover:text-black flex items-center justify-center text-[9px] shadow transition"
-                      title={`Transition: ${TRANSITION_LABELS[clip.transition || 'crossfade']}`}
+                      className={`absolute -left-3.5 top-1/2 -translate-y-1/2 z-30 px-2 py-0.5 rounded-full border shadow-lg flex items-center gap-1 text-[9px] font-medium transition cursor-pointer backdrop-blur-md hover:scale-105 active:scale-95 ${
+                        TRANSITION_COLORS[clip.transition || 'crossfade']?.bg || 'bg-amber-500/20'
+                      } ${TRANSITION_COLORS[clip.transition || 'crossfade']?.text || 'text-amber-400'} ${
+                        TRANSITION_COLORS[clip.transition || 'crossfade']?.border || 'border-amber-500/60'
+                      }`}
+                      title={`Click to change transition: ${TRANSITION_LABELS[clip.transition || 'crossfade']}`}
                     >
-                      ⧓
+                      <Sparkles className="w-2.5 h-2.5" />
+                      <span className="font-mono font-semibold">{TRANSITION_LABELS[clip.transition || 'crossfade']}</span>
                     </button>
                   )}
 
@@ -607,26 +634,40 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
                     <div
                       onMouseDown={(e) => e.stopPropagation()}
                       onClick={(e) => e.stopPropagation()}
-                      className="absolute left-0 bottom-full mb-2 w-40 bg-gray-900 border border-gray-800 rounded-xl shadow-2xl p-2 z-50 text-xs"
+                      className="absolute left-0 bottom-full mb-2 w-48 bg-gray-900/95 backdrop-blur-md border border-gray-700 rounded-xl shadow-2xl p-2 z-50 text-xs"
                     >
-                      <div className="flex justify-between items-center pb-1 mb-1 border-b border-gray-800 text-[10px] text-gray-400 font-semibold uppercase">
-                        <span>Transition Animation</span>
-                        <X className="w-3 h-3 cursor-pointer" onClick={() => setShowTransitionMenu(null)} />
+                      <div className="flex justify-between items-center pb-1.5 mb-1.5 border-b border-gray-800 text-[10px] text-gray-400 font-semibold uppercase tracking-wider">
+                        <span className="flex items-center gap-1">
+                          <Sparkles className="w-3 h-3 text-amber-400" />
+                          Transition In
+                        </span>
+                        <X className="w-3.5 h-3.5 cursor-pointer text-gray-400 hover:text-white" onClick={() => setShowTransitionMenu(null)} />
                       </div>
-                      {(Object.keys(TRANSITION_LABELS) as TransitionType[]).map((t) => (
-                        <button
-                          key={t}
-                          onClick={() => {
-                            updateBackgroundClip(clip.id, { transition: t });
-                            setShowTransitionMenu(null);
-                          }}
-                          className={`w-full text-left px-2 py-1 rounded text-[11px] hover:bg-gray-800 transition ${
-                            clip.transition === t ? 'text-amber-400 font-bold bg-amber-500/10' : 'text-gray-300'
-                          }`}
-                        >
-                          {TRANSITION_LABELS[t]}
-                        </button>
-                      ))}
+                      <div className="space-y-1">
+                        {(Object.keys(TRANSITION_LABELS) as TransitionType[]).map((t) => {
+                          const isCurrent = (clip.transition || 'crossfade') === t;
+                          const col = TRANSITION_COLORS[t];
+                          return (
+                            <button
+                              key={t}
+                              onClick={() => {
+                                updateBackgroundClip(clip.id, { transition: t });
+                                setShowTransitionMenu(null);
+                              }}
+                              className={`w-full text-left px-2 py-1.5 rounded-lg text-[11px] flex items-center justify-between transition ${
+                                isCurrent
+                                  ? 'bg-amber-500/15 border border-amber-500/40 text-amber-300 font-bold'
+                                  : 'hover:bg-gray-800 text-gray-300'
+                              }`}
+                            >
+                              <span>{TRANSITION_LABELS[t]}</span>
+                              <span className={`text-[9px] px-1.5 py-0.5 rounded border font-mono ${col.bg} ${col.text} ${col.border}`}>
+                                {t}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
 
@@ -838,6 +879,29 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
                   Ken Burns Zoom
                 </span>
               </label>
+            )}
+
+            {/* Per-Clip Transition In Selector */}
+            {clips.indexOf(selectedClip) > 0 && (
+              <div className="flex items-center gap-2 bg-gray-950 px-2.5 py-1.5 rounded-lg border border-gray-800">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <span className="text-gray-400 text-[11px]">Transition In:</span>
+                <select
+                  value={selectedClip.transition || 'crossfade'}
+                  onChange={(e) =>
+                    updateBackgroundClip(selectedClip.id, {
+                      transition: e.target.value as TransitionType,
+                    })
+                  }
+                  className="bg-gray-900 border border-gray-700 rounded px-2 py-0.5 text-amber-400 text-[11px] font-medium focus:ring-1 focus:ring-amber-400 focus:outline-none cursor-pointer"
+                >
+                  {(Object.keys(TRANSITION_LABELS) as TransitionType[]).map((t) => (
+                    <option key={t} value={t}>
+                      {TRANSITION_LABELS[t]}
+                    </option>
+                  ))}
+                </select>
+              </div>
             )}
           </div>
 

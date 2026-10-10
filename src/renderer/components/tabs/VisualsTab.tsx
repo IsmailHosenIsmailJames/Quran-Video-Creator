@@ -193,11 +193,11 @@ export const VisualsTab: React.FC = () => {
       </div>
 
       {/* 3. Transition Animation Style */}
-      <div className="space-y-2">
+      <div className="space-y-3">
         <div className="flex items-center justify-between">
           <label className="text-xs font-semibold text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>Clip Transition Animation</span>
+            <span>Default Transition (for new clips)</span>
           </label>
           <span className="text-[10px] text-amber-400 font-mono capitalize">
             {config.defaultTransition || 'zoom-fade'}
@@ -218,13 +218,6 @@ export const VisualsTab: React.FC = () => {
                 key={item.id}
                 onClick={() => {
                   updateConfig({ defaultTransition: item.id });
-                  if (config.backgroundClips && config.backgroundClips.length > 0) {
-                    const updated = config.backgroundClips.map((c) => ({
-                      ...c,
-                      transition: item.id,
-                    }));
-                    updateConfig({ backgroundClips: updated, defaultTransition: item.id });
-                  }
                 }}
                 className={`p-2 rounded-xl border text-left transition-all ${
                   isSelected
@@ -238,6 +231,63 @@ export const VisualsTab: React.FC = () => {
             );
           })}
         </div>
+
+        {/* Per-Clip Transitions Manager (Shown when multiple clips exist) */}
+        {config.backgroundClips && config.backgroundClips.length > 1 && (
+          <div className="p-3 rounded-xl bg-gray-900/80 border border-gray-800 space-y-2">
+            <div className="flex items-center justify-between text-xs font-semibold text-gray-300">
+              <span className="flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                Individual Clip Transitions:
+              </span>
+              <button
+                onClick={() => {
+                  const currentDefault = config.defaultTransition || 'zoom-fade';
+                  const updated = config.backgroundClips?.map((c) => ({
+                    ...c,
+                    transition: currentDefault,
+                  }));
+                  if (updated) updateConfig({ backgroundClips: updated });
+                }}
+                className="text-[10px] text-amber-400 hover:underline cursor-pointer"
+                title="Apply current default animation to all clips"
+              >
+                Apply "{config.defaultTransition || 'zoom-fade'}" to all
+              </button>
+            </div>
+            <div className="space-y-1.5 pt-1">
+              {config.backgroundClips.slice(1).map((clip, idx) => (
+                <div
+                  key={clip.id}
+                  className="flex items-center justify-between bg-gray-950 px-2.5 py-1.5 rounded-lg border border-gray-800/80 text-xs"
+                >
+                  <div className="flex items-center gap-1.5 truncate max-w-[180px]">
+                    <span className="text-gray-500 text-[10px] font-mono">Clip #{idx + 2}:</span>
+                    <span className="text-gray-300 truncate font-medium">{clip.name}</span>
+                  </div>
+                  <select
+                    value={clip.transition || 'crossfade'}
+                    onChange={(e) => {
+                      const newTransition = e.target.value as TransitionType;
+                      const updated = config.backgroundClips?.map((c) =>
+                        c.id === clip.id ? { ...c, transition: newTransition } : c
+                      );
+                      if (updated) updateConfig({ backgroundClips: updated });
+                    }}
+                    className="bg-gray-900 border border-gray-700 text-amber-400 rounded px-2 py-1 text-xs font-medium focus:ring-1 focus:ring-amber-500 focus:outline-none cursor-pointer"
+                  >
+                    <option value="zoom-fade">Zoom Fade</option>
+                    <option value="crossfade">Crossfade</option>
+                    <option value="blur-fade">Blur Melt</option>
+                    <option value="dip-black">Dip to Black</option>
+                    <option value="slide-left">Slide Push</option>
+                    <option value="cut">Hard Cut</option>
+                  </select>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 4. Cinematic Grading & Overlays */}
