@@ -150,12 +150,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
 
     set((state) => {
       const currentClips = state.config.backgroundClips || [];
-      const isInitialVirginPreset =
-        currentClips.length === 1 && currentClips[0].id === 'clip-preset-1';
-
-      // If initial virgin preset exists, replace it cleanly with the new batch
-      const baseExisting = isInitialVirginPreset ? [] : currentClips;
-      const N = baseExisting.length;
+      const N = currentClips.length;
       const M = preparedClips.length;
       const totalCount = N + M;
 
@@ -172,12 +167,12 @@ export const useStudioStore = create<StudioState>((set, get) => ({
           autoFitSpeed: clipData.autoFitSpeed ?? true,
         }));
       } else {
-        // Scale existing N clips proportionally down by scaleFactor
+        // Scale existing N clips proportionally down by scaleFactor (preserves all existing clips!)
         const scaleFactor = N / totalCount;
-        const currentTotal = baseExisting.reduce((sum, c) => sum + (c.percentage || 100 / N), 0);
+        const currentTotal = currentClips.reduce((sum, c) => sum + (c.percentage || 100 / N), 0);
         const normFactor = currentTotal > 0 ? 100 / currentTotal : 1;
 
-        const scaledExisting = baseExisting.map((c) => {
+        const scaledExisting = currentClips.map((c) => {
           const origPercent = (c.percentage || 100 / N) * normFactor;
           const scaledPercent = Number((origPercent * scaleFactor).toFixed(2));
           return {
