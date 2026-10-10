@@ -41,13 +41,17 @@ const TRANSITION_LABELS: Record<TransitionType, string> = {
 
 export const StudioTimeline: React.FC<StudioTimelineProps> = ({
   playerRef,
-  currentFrame,
+  currentFrame: propCurrentFrame,
   totalDurationInFrames,
   fps,
 }) => {
   const {
     config,
     ayahs,
+    currentFrame: storeCurrentFrame,
+    setCurrentFrame,
+    isPlaying,
+    setIsPlaying,
     updateConfig,
     addBackgroundClip,
     removeBackgroundClip,
@@ -57,14 +61,18 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
     setRecitationSpeed,
   } = useStudioStore();
 
-  const [isPlaying, setIsPlaying] = useState(false);
+  const currentFrame = storeCurrentFrame ?? propCurrentFrame ?? 0;
+
   const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [showTransitionMenu, setShowTransitionMenu] = useState<string | null>(null); // clipId for transition
 
   const timelineTrackRef = useRef<HTMLDivElement>(null);
 
-  // Dragging divider state
+  // Playhead scrubber dragging state
+  const [isScrubbing, setIsScrubbing] = useState(false);
+
+  // Dragging divider state between clips
   const [draggingDividerIndex, setDraggingDividerIndex] = useState<number | null>(null);
   const dragStartRef = useRef<{
     startX: number;
@@ -149,7 +157,43 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
   const selectedClip = clips.find((c) => c.id === selectedClipId) || null;
   const selectedLayout = clipLayouts.find((l) => l.clip.id === selectedClipId) || null;
 
-  // Global mouse listeners for divider dragging
+  // Global mouse handlers for playhead scrubber dragging
+  const handleSeekToClientX = useCallback(
+    (clientX: number) => {
+      if (!timelineTrackRef.current) return;
+      const rect = timelineTrackRef.current.getBoundingClientRect();
+      if (rect.width <= 0) return;
+      const clickX = clientX - rect.left;
+      const progress = Math.max(0, Math.min(1, clickX / rect.width));
+      const targetFrame = Math.round(progress * totalDurationInFrames);
+
+      setCurrentFrame(targetFrame);
+      playerRef.current?.seekTo(targetFrame);
+    },
+    [totalDurationInFrames, setCurrentFrame, playerRef]
+  );
+
+  useEffect(() => {
+    if (!isScrubbing) return;
+
+    const onMouseMove = (e: MouseEvent) => {
+      handleSeekToClientX(e.clientX);
+    };
+
+    const onMouseUp = () => {
+      setIsScrubbing(false);
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [isScrubbing, handleSeekToClientX]);
+
+  // Global mouse listeners for clip divider resizing
   useEffect(() => {
     if (draggingDividerIndex === null) return;
 
@@ -201,7 +245,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
   };
 
   // Toggle playback
-  const handleTogglePlay = () => {
+  const handleTogglePlay = useCallback(() => {
     const player = playerRef.current;
     if (!player) return;
     if (player.isPlaying()) {
@@ -211,17 +255,36 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
       player.play();
       setIsPlaying(true);
     }
-  };
+  }, [playerRef, setIsPlaying]);
 
-  // Seek handler when clicking or scrubbing the ruler
-  const handleRulerClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (draggingDividerIndex !== null || !timelineTrackRef.current) return;
-    const rect = timelineTrackRef.current.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const progress = Math.max(0, Math.min(1, clickX / rect.width));
-    const targetFrame = Math.round(progress * totalDurationInFrames);
-    playerRef.current?.seekTo(targetFrame);
-  };
+  // Keyboard shortcut listeners (Space: play/pause, Left/Right: step frame)
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (
+        document.activeElement?.tagName === 'INPUT' ||
+        document.activeElement?.tagName === 'TEXTAREA'
+      ) {
+        return;
+      }
+      if (e.code === 'Space') {
+        e.preventDefault();
+        handleTogglePlay();
+      } else if (e.code === 'ArrowLeft') {
+        e.preventDefault();
+        const prev = Math.max(0, currentFrame - (e.shiftKey ? fps : 1));
+        setCurrentFrame(prev);
+        playerRef.current?.seekTo(prev);
+      } else if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        const next = Math.min(totalDurationInFrames, currentFrame + (e.shiftKey ? fps : 1));
+        setCurrentFrame(next);
+        playerRef.current?.seekTo(next);
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [handleTogglePlay, currentFrame, totalDurationInFrames, fps, setCurrentFrame, playerRef]);
 
   // Add new media
   const handleAddMedia = async (type: 'video' | 'image') => {
@@ -342,27 +405,51 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
         {/* Right Scrubbable Timeline Area */}
         <div
           ref={timelineTrackRef}
-          onClick={handleRulerClick}
+          onMouseDown={(e) => {
+            if (draggingDividerIndex !== null || showTransitionMenu !== null) return;
+            setIsScrubbing(true);
+            handleSeekToClientX(e.clientX);
+          }}
           className="flex-1 relative cursor-pointer flex flex-col gap-1.5 min-w-0"
         >
-          {/* Playhead Needle Bar (Red / Amber Scrubber) */}
+          {/* Playhead Needle Bar & Draggable Scrubber */}
           <div
-            className="absolute top-0 bottom-0 w-[2px] bg-amber-400 shadow-[0_0_10px_#f59e0b] z-30 pointer-events-none transition-all duration-75"
+            className="absolute top-0 bottom-0 w-[2px] bg-amber-400 shadow-[0_0_12px_#f59e0b] z-40 cursor-ew-resize select-none"
             style={{ left: `${playheadPercent}%` }}
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              setIsScrubbing(true);
+            }}
           >
-            <div className="w-3 h-3 bg-amber-400 transform -translate-x-[5px] -translate-y-0.5 rounded-b-md shadow-md" />
+            {/* Draggable Scrubber Top Handle / Bookmark */}
+            <div
+              className="w-4 h-4 bg-amber-400 hover:bg-amber-300 transform -translate-x-[7px] -translate-y-1 rounded-sm shadow-md cursor-grab active:cursor-grabbing flex items-center justify-center hover:scale-125 transition-transform"
+              title="Drag to scrub timeline"
+            >
+              <div className="w-1 h-2 bg-black/60 rounded-full" />
+            </div>
           </div>
 
           {/* Track A: Ayahs / Scripture Audio Track */}
           <div className="h-6 w-full flex gap-1 relative overflow-hidden">
-            {ayahs.map((ayah) => {
+            {ayahs.map((ayah, index) => {
               const ayahPercent = (ayah.durationInFrames / Math.max(1, totalDurationInFrames)) * 100;
               return (
                 <div
                   key={`${ayah.surah}:${ayah.ayah}`}
                   style={{ width: `${ayahPercent}%` }}
-                  className="h-full rounded-md bg-amber-500/15 border border-amber-500/30 px-1.5 flex items-center justify-between text-[10px] text-amber-300 font-mono truncate"
-                  title={`Verse ${ayah.ayah} (${(ayah.durationInFrames / fps).toFixed(1)}s)`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    let startFrame = 0;
+                    for (let k = 0; k < index; k++) {
+                      startFrame += ayahs[k].durationInFrames;
+                    }
+                    setCurrentFrame(startFrame);
+                    playerRef.current?.seekTo(startFrame);
+                  }}
+                  className="h-full rounded-md bg-amber-500/15 hover:bg-amber-500/30 border border-amber-500/30 hover:border-amber-400/60 px-1.5 flex items-center justify-between text-[10px] text-amber-300 font-mono truncate cursor-pointer transition"
+                  title={`Jump to Verse ${ayah.ayah} (${(ayah.durationInFrames / fps).toFixed(1)}s)`}
                 >
                   <span className="truncate font-semibold">v.{ayah.ayah}</span>
                   <span className="text-[9px] text-amber-400/70 hidden sm:inline">
@@ -603,7 +690,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
 
             {/* In-Point Trim (Seconds for video) */}
             {selectedLayout.isVideo && (
-              <div className="flex items-center gap-1.5 text-[11px] bg-gray-950 px-2 py-1 rounded-lg border border-gray-800">
+              <div className="flex items-center gap-1.5 text-[11px] bg-gray-950 px-2.5 py-1.5 rounded-lg border border-gray-800">
                 <Scissors className="w-3 h-3 text-amber-400" />
                 <span className="text-gray-400">Trim:</span>
                 <input

@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState, useLayoutEffect, useEffect } from 'react';
+import React, { useMemo, useRef, useState, useLayoutEffect, useEffect, useCallback } from 'react';
 import { Player, PlayerRef } from '@remotion/player';
 import { QuranVideo } from '../../remotion/compositions/QuranVideo';
 import { useStudioStore } from '../store/studio-store';
@@ -7,11 +7,22 @@ import { Loader2 } from 'lucide-react';
 import { StudioTimeline } from './timeline/StudioTimeline';
 
 export const LivePreview: React.FC = () => {
-  const { config, ayahs, totalDurationInFrames, isLoading, statusMessage } = useStudioStore();
+  const {
+    config,
+    ayahs,
+    totalDurationInFrames,
+    isLoading,
+    statusMessage,
+    currentFrame,
+    setCurrentFrame,
+    isPlaying,
+    setIsPlaying,
+  } = useStudioStore();
+
   const containerRef = useRef<HTMLDivElement>(null);
-  const playerRef = useRef<PlayerRef>(null);
+  const playerRef = useRef<PlayerRef | null>(null);
   const currentFrameRef = useRef<number>(0);
-  const [currentFrame, setCurrentFrame] = useState<number>(0);
+
   const [containerSize, setContainerSize] = useState<{ width: number; height: number }>({
     width: 0,
     height: 0,
@@ -39,20 +50,47 @@ export const LivePreview: React.FC = () => {
     };
   }, []);
 
+  // Callback ref to guarantee immediate event attachment when Player mounts
+  const handlePlayerRef = useCallback(
+    (player: PlayerRef | null) => {
+      playerRef.current = player;
+      if (!player) return;
+
+      const onFrameUpdate = (e: { detail: { frame: number } }) => {
+        currentFrameRef.current = e.detail.frame;
+        setCurrentFrame(e.detail.frame);
+      };
+      const onPlay = () => setIsPlaying(true);
+      const onPause = () => setIsPlaying(false);
+      const onEnded = () => setIsPlaying(false);
+
+      player.addEventListener('frameupdate', onFrameUpdate);
+      player.addEventListener('seeked', onFrameUpdate);
+      player.addEventListener('play', onPlay);
+      player.addEventListener('pause', onPause);
+      player.addEventListener('ended', onEnded);
+
+      setCurrentFrame(player.getCurrentFrame());
+      setIsPlaying(player.isPlaying());
+    },
+    [setCurrentFrame, setIsPlaying]
+  );
+
+  // 60fps RequestAnimationFrame loop while video is actively playing
   useEffect(() => {
-    const player = playerRef.current;
-    if (!player) return;
-
-    const onFrameUpdate = (e: { detail: { frame: number } }) => {
-      currentFrameRef.current = e.detail.frame;
-      setCurrentFrame(e.detail.frame);
+    if (!isPlaying) return;
+    let animId: number;
+    const poll = () => {
+      if (playerRef.current) {
+        const frame = playerRef.current.getCurrentFrame();
+        currentFrameRef.current = frame;
+        setCurrentFrame(frame);
+      }
+      animId = requestAnimationFrame(poll);
     };
-
-    player.addEventListener('frameupdate', onFrameUpdate);
-    return () => {
-      player.removeEventListener('frameupdate', onFrameUpdate);
-    };
-  }, [config.aspectRatio]);
+    animId = requestAnimationFrame(poll);
+    return () => cancelAnimationFrame(animId);
+  }, [isPlaying, setCurrentFrame]);
 
   const inputProps: QuranVideoCompositionProps = useMemo(() => {
     return {
@@ -77,7 +115,6 @@ export const LivePreview: React.FC = () => {
       return { playerWidth: undefined, playerHeight: undefined };
     }
 
-    // Leave comfortable padding around the canvas
     const paddingX = 24;
     const paddingY = 24;
     const maxW = Math.max(100, containerSize.width - paddingX);
@@ -90,11 +127,9 @@ export const LivePreview: React.FC = () => {
     let height: number;
 
     if (containerRatio > targetRatio) {
-      // Container is wider than composition -> fit by height
       height = maxH;
       width = Math.round(maxH * targetRatio);
     } else {
-      // Container is narrower than composition -> fit by width
       width = maxW;
       height = Math.round(maxW / targetRatio);
     }
@@ -130,7 +165,7 @@ export const LivePreview: React.FC = () => {
           {ayahs.length > 0 ? (
             <Player<any, QuranVideoCompositionProps>
               key={`${config.aspectRatio}-${compWidth}x${compHeight}`}
-              ref={playerRef}
+              ref={handlePlayerRef}
               initialFrame={Math.min(currentFrameRef.current, Math.max(0, totalDurationInFrames - 1))}
               component={QuranVideo}
               inputProps={inputProps}
