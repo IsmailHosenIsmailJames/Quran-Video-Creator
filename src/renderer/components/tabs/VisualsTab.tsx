@@ -23,6 +23,15 @@ export const VisualsTab: React.FC = () => {
     const filePath = await api.selectMediaFile(type);
     if (!filePath) return;
 
+    let sourceDurationSeconds: number | undefined = undefined;
+    if (type === 'video' && api.probeMediaDuration) {
+      try {
+        sourceDurationSeconds = await api.probeMediaDuration(filePath);
+      } catch (e) {
+        // ignore
+      }
+    }
+
     const fileName = filePath.split(/[/\\]/).pop() || `${type} clip`;
     updateConfig({
       backgroundType: type,
@@ -33,8 +42,11 @@ export const VisualsTab: React.FC = () => {
           type,
           source: filePath,
           name: fileName,
+          percentage: 100,
           durationRatio: 1.0,
           speed: 1.0,
+          autoFitSpeed: true,
+          sourceDurationSeconds,
           trimStartSeconds: 0,
           kenBurns: config.kenBurnsEffect,
           transition: config.defaultTransition || 'zoom-fade',
@@ -121,8 +133,10 @@ export const VisualsTab: React.FC = () => {
                         type: 'preset',
                         source: preset.url,
                         name: preset.name,
+                        percentage: 100,
                         durationRatio: 1.0,
                         speed: 1.0,
+                        autoFitSpeed: true,
                         trimStartSeconds: 0,
                         kenBurns: config.kenBurnsEffect,
                         transition: config.defaultTransition || 'zoom-fade',

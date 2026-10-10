@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { PlayerRef } from '@remotion/player';
 import { useStudioStore } from '../../store/studio-store';
 import { BackgroundClip, TransitionType } from '../../../shared/types';
@@ -19,6 +19,8 @@ import {
   ChevronDown,
   Gauge,
   X,
+  Percent,
+  Check,
 } from 'lucide-react';
 
 interface StudioTimelineProps {
@@ -50,6 +52,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
     addBackgroundClip,
     removeBackgroundClip,
     updateBackgroundClip,
+    updateClipPercentage,
     reorderBackgroundClips,
     setRecitationSpeed,
   } = useStudioStore();
@@ -61,6 +64,16 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
 
   const timelineTrackRef = useRef<HTMLDivElement>(null);
 
+  // Dragging divider state
+  const [draggingDividerIndex, setDraggingDividerIndex] = useState<number | null>(null);
+  const dragStartRef = useRef<{
+    startX: number;
+    leftId: string;
+    rightId: string;
+    leftStartPct: number;
+    rightStartPct: number;
+  } | null>(null);
+
   const clips = config.backgroundClips && config.backgroundClips.length > 0
     ? config.backgroundClips
     : [
@@ -69,8 +82,10 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
           type: config.backgroundType,
           source: config.backgroundPath,
           name: 'Primary Background',
+          percentage: 100,
           durationRatio: 1.0,
           speed: 1.0,
+          autoFitSpeed: true,
           trimStartSeconds: 0,
           kenBurns: config.kenBurnsEffect,
           transition: 'zoom-fade' as TransitionType,
@@ -78,31 +93,104 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
         },
       ];
 
-  // Calculate proportional frames and percentages for each clip
-  const totalRatio = useMemo(() => {
-    return clips.reduce((sum, c) => sum + (c.durationRatio || 1.0), 0);
-  }, [clips]);
-
+  // Calculate normalized percentages and duration in seconds for each clip
   const clipLayouts = useMemo(() => {
-    const validTotal = totalRatio > 0 ? totalRatio : clips.length;
+    const totalClips = clips.length;
+    const totalWeight = clips.reduce(
+      (sum, c) => sum + (c.percentage !== undefined ? c.percentage : (c.durationRatio || 1.0) * 100),
+      0
+    );
+    const norm = totalWeight > 0 ? 100 / totalWeight : 1;
+
     let accumulatedPercent = 0;
-    return clips.map((clip) => {
-      const ratio = clip.durationRatio || 1.0;
-      const percent = (ratio / validTotal) * 100;
+    return clips.map((clip, index) => {
+      const isLast = index === totalClips - 1;
+      const rawPct = (clip.percentage !== undefined ? clip.percentage : (clip.durationRatio || 1.0) * 100) * norm;
+      const percent = isLast ? Math.max(2, 100 - accumulatedPercent) : Math.max(2, Number(rawPct.toFixed(2)));
       const startPercent = accumulatedPercent;
       accumulatedPercent += percent;
-      const durationSec = ((ratio / validTotal) * (totalDurationInFrames / fps)).toFixed(1);
+
+      const durationSec = Number(((percent / 100) * (totalDurationInFrames / fps)).toFixed(1));
+
+      // Calculate effective speed for display
+      const isVideo = clip.type === 'video' || /\.(mp4|webm|mov|mkv)(\?.*)?$/i.test(clip.source);
+      let displaySpeed = `${clip.speed || 1.0}×`;
+      let isAutoSlowed = false;
+
+      if (isVideo && clip.autoFitSpeed !== false) {
+        const slotSec = Math.max(0.1, durationSec);
+        const trimStart = clip.trimStartSeconds || 0;
+        let available = clip.sourceDurationSeconds ? clip.sourceDurationSeconds - trimStart : undefined;
+        if (clip.trimEndSeconds && clip.trimEndSeconds > trimStart && available !== undefined) {
+          available = Math.min(available, clip.trimEndSeconds - trimStart);
+        }
+        if (available !== undefined && slotSec > available) {
+          const fitSpeed = Math.max(0.05, Math.min(1.0, available / slotSec));
+          displaySpeed = `${fitSpeed.toFixed(2)}×`;
+          isAutoSlowed = true;
+        } else if (available !== undefined) {
+          displaySpeed = `1.0×`;
+        }
+      }
+
       return {
         clip,
         percent,
         startPercent,
         durationSec,
+        displaySpeed,
+        isAutoSlowed,
+        isVideo,
       };
     });
-  }, [clips, totalRatio, totalDurationInFrames, fps]);
+  }, [clips, totalDurationInFrames, fps]);
 
   // Selected clip object for inspector
   const selectedClip = clips.find((c) => c.id === selectedClipId) || null;
+  const selectedLayout = clipLayouts.find((l) => l.clip.id === selectedClipId) || null;
+
+  // Global mouse listeners for divider dragging
+  useEffect(() => {
+    if (draggingDividerIndex === null) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!dragStartRef.current || !timelineTrackRef.current) return;
+      const trackWidth = timelineTrackRef.current.clientWidth;
+      if (trackWidth <= 0) return;
+
+      const dx = e.clientX - dragStartRef.current.startX;
+      const deltaPct = (dx / trackWidth) * 100;
+
+      const { leftId, rightId, leftStartPct, rightStartPct } = dragStartRef.current;
+      const minPct = 2.0;
+      const combined = leftStartPct + rightStartPct;
+
+      const newLeft = Math.max(minPct, Math.min(combined - minPct, leftStartPct + deltaPct));
+      const newRight = combined - newLeft;
+
+      updateBackgroundClip(leftId, {
+        percentage: Number(newLeft.toFixed(2)),
+        durationRatio: Number((newLeft / 100).toFixed(4)),
+      });
+      updateBackgroundClip(rightId, {
+        percentage: Number(newRight.toFixed(2)),
+        durationRatio: Number((newRight / 100).toFixed(4)),
+      });
+    };
+
+    const handleMouseUp = () => {
+      setDraggingDividerIndex(null);
+      dragStartRef.current = null;
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [draggingDividerIndex, updateBackgroundClip]);
 
   // Format timecode (e.g. 01:23.4)
   const formatTime = (frame: number): string => {
@@ -127,7 +215,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
 
   // Seek handler when clicking or scrubbing the ruler
   const handleRulerClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!timelineTrackRef.current) return;
+    if (draggingDividerIndex !== null || !timelineTrackRef.current) return;
     const rect = timelineTrackRef.current.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const progress = Math.max(0, Math.min(1, clickX / rect.width));
@@ -143,12 +231,13 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
     if (!filePath) return;
 
     const fileName = filePath.split(/[/\\]/).pop() || `${type} clip`;
-    addBackgroundClip({
+    await addBackgroundClip({
       type,
       source: filePath,
       name: fileName,
       durationRatio: 1.0,
       speed: 1.0,
+      autoFitSpeed: true,
       trimStartSeconds: 0,
       kenBurns: true,
       transition: config.defaultTransition || 'zoom-fade',
@@ -278,10 +367,10 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
         {/* Track B: Multi-Media Background Sequence Track */}
         <div className="flex items-center gap-1 h-12 w-full relative">
           <span className="text-[10px] font-mono text-gray-500 w-12 flex-shrink-0">Media:</span>
-          <div className="flex-1 h-full flex gap-1 relative">
-            {clipLayouts.map(({ clip, percent, durationSec }, index) => {
+          <div className="flex-1 h-full flex relative">
+            {clipLayouts.map(({ clip, percent, durationSec, displaySpeed, isAutoSlowed, isVideo }, index) => {
               const isSelected = clip.id === selectedClipId;
-              const isVideo = clip.type === 'video' || clip.source.endsWith('.mp4');
+              const nextLayout = clipLayouts[index + 1];
 
               return (
                 <div
@@ -291,9 +380,9 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
                     e.stopPropagation();
                     setSelectedClipId(clip.id === selectedClipId ? null : clip.id);
                   }}
-                  className={`h-full relative rounded-lg overflow-hidden border cursor-pointer transition-all flex items-center justify-between px-2 text-[10px] ${
+                  className={`h-full relative rounded-lg border cursor-pointer transition-all flex items-center justify-between px-2 text-[10px] mr-1 last:mr-0 ${
                     isSelected
-                      ? 'border-amber-400 ring-2 ring-amber-400/40 bg-amber-500/20'
+                      ? 'border-amber-400 ring-2 ring-amber-400/40 bg-amber-500/20 z-10'
                       : 'border-gray-800 bg-gray-950/80 hover:border-gray-700 hover:bg-gray-900/60'
                   }`}
                 >
@@ -307,14 +396,24 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
                     <span className="truncate font-medium text-gray-200">{clip.name}</span>
                   </div>
 
-                  {/* Duration & Speed Pills */}
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    {clip.speed && clip.speed !== 1 && (
-                      <span className="px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 font-mono text-[9px]">
-                        {clip.speed}×
+                  {/* Percentage, Duration & Speed Badges */}
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <span className="px-1 py-0.5 rounded bg-gray-800/90 text-amber-300 font-mono text-[9px] border border-gray-700">
+                      {percent.toFixed(0)}%
+                    </span>
+                    <span className="font-mono text-gray-400 text-[10px]">{durationSec}s</span>
+                    {isVideo && (
+                      <span
+                        className={`px-1 py-0.5 rounded font-mono text-[9px] ${
+                          isAutoSlowed
+                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                            : 'bg-gray-800 text-gray-400'
+                        }`}
+                        title={isAutoSlowed ? 'Auto-slowed to fit slot without repeating' : 'Manual speed'}
+                      >
+                        {displaySpeed}
                       </span>
                     )}
-                    <span className="font-mono text-gray-400 text-[10px]">{durationSec}s</span>
                   </div>
 
                   {/* Transition Badge between adjacent clips */}
@@ -357,6 +456,27 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
                       ))}
                     </div>
                   )}
+
+                  {/* Interactive Draggable Divider between this clip and next clip */}
+                  {nextLayout && (
+                    <div
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                        setDraggingDividerIndex(index);
+                        dragStartRef.current = {
+                          startX: e.clientX,
+                          leftId: clip.id,
+                          rightId: nextLayout.clip.id,
+                          leftStartPct: percent,
+                          rightStartPct: nextLayout.percent,
+                        };
+                      }}
+                      className="absolute -right-1.5 top-0 bottom-0 w-3 cursor-col-resize z-20 flex items-center justify-center group"
+                      title="Drag to adjust time between clips"
+                    >
+                      <div className="w-1 h-4 rounded-full bg-gray-600 group-hover:bg-amber-400 group-hover:h-6 transition-all" />
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -365,66 +485,120 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
       </div>
 
       {/* 3. Selected Clip Inspector Popover Bar */}
-      {selectedClip && (
-        <div className="p-2.5 rounded-xl bg-gray-900 border border-gray-800 flex items-center justify-between text-xs animate-fade-in">
-          <div className="flex items-center gap-3">
-            <span className="font-semibold text-amber-400 truncate max-w-[150px]">
-              {selectedClip.name}
-            </span>
+      {selectedClip && selectedLayout && (
+        <div className="p-3 rounded-xl bg-gray-900 border border-gray-800 flex flex-wrap items-center justify-between gap-3 text-xs animate-fade-in">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Clip Identifier */}
+            <div className="flex items-center gap-1.5 font-semibold text-amber-400">
+              {selectedLayout.isVideo ? <Film className="w-4 h-4" /> : <ImageIcon className="w-4 h-4 text-emerald-400" />}
+              <span className="truncate max-w-[140px]" title={selectedClip.name}>
+                {selectedClip.name}
+              </span>
+            </div>
 
-            {/* Duration Ratio Adjuster */}
-            <div className="flex items-center gap-1.5 text-[11px] bg-gray-950 px-2 py-1 rounded-lg border border-gray-800">
-              <span className="text-gray-400">Duration Ratio:</span>
+            {/* Manual Percentage / Visualization Time Adjustment */}
+            <div className="flex items-center gap-2 bg-gray-950 px-2.5 py-1.5 rounded-lg border border-gray-800">
+              <span className="text-gray-400 text-[11px]">Visualization Time:</span>
               <button
                 onClick={() =>
-                  updateBackgroundClip(selectedClip.id, {
-                    durationRatio: Math.max(0.2, (selectedClip.durationRatio || 1.0) - 0.2),
-                  })
+                  updateClipPercentage(
+                    selectedClip.id,
+                    Math.max(2, (selectedClip.percentage ?? selectedLayout.percent) - 5)
+                  )
                 }
-                className="w-4 h-4 rounded bg-gray-800 hover:bg-gray-700 text-white flex items-center justify-center font-bold"
+                className="w-5 h-5 rounded bg-gray-800 hover:bg-gray-700 text-white flex items-center justify-center font-bold text-xs"
+                title="Decrease visualization time (-5%)"
               >
                 -
               </button>
-              <span className="font-mono text-amber-300 font-medium">
-                {(selectedClip.durationRatio || 1.0).toFixed(1)}×
-              </span>
+              <input
+                type="range"
+                min="2"
+                max={Math.max(2, 100 - (clips.length - 1) * 2)}
+                step="0.5"
+                value={selectedClip.percentage ?? selectedLayout.percent}
+                onChange={(e) => updateClipPercentage(selectedClip.id, Number(e.target.value))}
+                className="w-20 accent-amber-500 cursor-pointer h-1.5 bg-gray-800 rounded-lg"
+              />
               <button
                 onClick={() =>
-                  updateBackgroundClip(selectedClip.id, {
-                    durationRatio: Math.min(5.0, (selectedClip.durationRatio || 1.0) + 0.2),
-                  })
+                  updateClipPercentage(
+                    selectedClip.id,
+                    Math.min(100 - (clips.length - 1) * 2, (selectedClip.percentage ?? selectedLayout.percent) + 5)
+                  )
                 }
-                className="w-4 h-4 rounded bg-gray-800 hover:bg-gray-700 text-white flex items-center justify-center font-bold"
+                className="w-5 h-5 rounded bg-gray-800 hover:bg-gray-700 text-white flex items-center justify-center font-bold text-xs"
+                title="Increase visualization time (+5%)"
               >
                 +
               </button>
+              <span className="font-mono text-amber-300 font-semibold text-[11px]">
+                {(selectedClip.percentage ?? selectedLayout.percent).toFixed(1)}% ({selectedLayout.durationSec}s)
+              </span>
             </div>
 
-            {/* Video Speed Selector (for video clips) */}
-            {(selectedClip.type === 'video' || selectedClip.source.endsWith('.mp4')) && (
-              <div className="flex items-center gap-1.5 text-[11px] bg-gray-950 px-2 py-1 rounded-lg border border-gray-800">
-                <span className="text-gray-400">Video Speed:</span>
-                {[0.5, 1.0, 1.5, 2.0].map((spd) => (
-                  <button
-                    key={spd}
-                    onClick={() => updateBackgroundClip(selectedClip.id, { speed: spd })}
-                    className={`px-1.5 py-0.5 rounded text-[10px] font-mono transition ${
-                      (selectedClip.speed || 1.0) === spd
-                        ? 'bg-amber-500 text-black font-bold'
-                        : 'text-gray-400 hover:text-white'
-                    }`}
+            {/* Video Auto Slow-Down (Fill Slot, No Repeating) Toggle */}
+            {selectedLayout.isVideo && (
+              <div className="flex items-center gap-2 bg-gray-950 px-2.5 py-1.5 rounded-lg border border-gray-800">
+                <label className="flex items-center gap-1.5 cursor-pointer text-[11px]">
+                  <input
+                    type="checkbox"
+                    checked={selectedClip.autoFitSpeed !== false}
+                    onChange={(e) =>
+                      updateBackgroundClip(selectedClip.id, {
+                        autoFitSpeed: e.target.checked,
+                      })
+                    }
+                    className="accent-amber-500 rounded cursor-pointer"
+                  />
+                  <span className={selectedClip.autoFitSpeed !== false ? 'text-amber-400 font-semibold' : 'text-gray-400'}>
+                    Auto Slow-Down (No Repeat)
+                  </span>
+                </label>
+
+                {selectedClip.autoFitSpeed !== false ? (
+                  <span
+                    className="text-[10px] text-gray-400 font-mono bg-gray-900 px-1.5 py-0.5 rounded border border-gray-800"
+                    title={
+                      selectedClip.sourceDurationSeconds
+                        ? `Video source: ${selectedClip.sourceDurationSeconds.toFixed(1)}s -> Stretched to ${selectedLayout.durationSec}s at ${selectedLayout.displaySpeed}`
+                        : 'Video will play slower to reach the end of this slot without repeating'
+                    }
                   >
-                    {spd}×
-                  </button>
-                ))}
+                    {selectedLayout.isAutoSlowed
+                      ? `🐢 ${selectedLayout.displaySpeed} (${selectedClip.sourceDurationSeconds ? selectedClip.sourceDurationSeconds.toFixed(1) + 's' : 'short'} ➔ ${selectedLayout.durationSec}s)`
+                      : `⏱ 1.0× (fits slot)`}
+                  </span>
+                ) : (
+                  <div className="flex items-center gap-1">
+                    {[0.5, 0.75, 1.0, 1.5, 2.0].map((spd) => (
+                      <button
+                        key={spd}
+                        onClick={() =>
+                          updateBackgroundClip(selectedClip.id, {
+                            speed: spd,
+                            autoFitSpeed: false,
+                          })
+                        }
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-mono transition ${
+                          (selectedClip.speed || 1.0) === spd
+                            ? 'bg-amber-500 text-black font-bold'
+                            : 'text-gray-400 hover:text-white bg-gray-900'
+                        }`}
+                      >
+                        {spd}×
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
-            {/* In-Point Trim (Seconds) */}
-            {(selectedClip.type === 'video' || selectedClip.source.endsWith('.mp4')) && (
+            {/* In-Point Trim (Seconds for video) */}
+            {selectedLayout.isVideo && (
               <div className="flex items-center gap-1.5 text-[11px] bg-gray-950 px-2 py-1 rounded-lg border border-gray-800">
                 <Scissors className="w-3 h-3 text-amber-400" />
-                <span className="text-gray-400">Trim Start:</span>
+                <span className="text-gray-400">Trim:</span>
                 <input
                   type="number"
                   min={0}
@@ -433,7 +607,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
                   value={selectedClip.trimStartSeconds || 0}
                   onChange={(e) =>
                     updateBackgroundClip(selectedClip.id, {
-                      trimStartSeconds: Number(e.target.value),
+                      trimStartSeconds: Math.max(0, Number(e.target.value)),
                     })
                   }
                   className="w-12 bg-gray-900 border border-gray-700 rounded px-1 text-[11px] text-white font-mono"
@@ -441,9 +615,28 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
                 <span className="text-gray-500">s</span>
               </div>
             )}
+
+            {/* Ken Burns subtle zoom for images */}
+            {!selectedLayout.isVideo && (
+              <label className="flex items-center gap-1.5 cursor-pointer text-[11px] bg-gray-950 px-2.5 py-1.5 rounded-lg border border-gray-800">
+                <input
+                  type="checkbox"
+                  checked={selectedClip.kenBurns !== false}
+                  onChange={(e) =>
+                    updateBackgroundClip(selectedClip.id, {
+                      kenBurns: e.target.checked,
+                    })
+                  }
+                  className="accent-amber-500 rounded cursor-pointer"
+                />
+                <span className={selectedClip.kenBurns !== false ? 'text-emerald-400 font-semibold' : 'text-gray-400'}>
+                  Ken Burns Zoom
+                </span>
+              </label>
+            )}
           </div>
 
-          {/* Reorder and Delete Controls */}
+          {/* Reorder, Delete, Close Controls */}
           <div className="flex items-center gap-1.5">
             {clips.indexOf(selectedClip) > 0 && (
               <button

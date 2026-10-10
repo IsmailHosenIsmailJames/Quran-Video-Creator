@@ -41,9 +41,10 @@ interface StudioState {
   setIsPlaying: (isPlaying: boolean) => void;
   updateConfig: (partial: Partial<VideoTemplateConfig>) => void;
   setRecitationSpeed: (speed: number) => Promise<void>;
-  addBackgroundClip: (clip: Omit<BackgroundClip, 'id'>) => void;
+  addBackgroundClip: (clip: Omit<BackgroundClip, 'id'>) => Promise<void> | void;
   removeBackgroundClip: (id: string) => void;
   updateBackgroundClip: (id: string, partial: Partial<BackgroundClip>) => void;
+  updateClipPercentage: (id: string, percentage: number) => void;
   reorderBackgroundClips: (fromIndex: number, toIndex: number) => void;
   changeSurah: (surahNumber: number) => Promise<void>;
   changeAyahRange: (fromAyah: number, toAyah: number) => Promise<void>;
@@ -90,20 +91,78 @@ export const useStudioStore = create<StudioState>((set, get) => ({
     await get().refreshAyahSequence();
   },
 
-  addBackgroundClip: (clipData) => {
+  addBackgroundClip: async (clipData) => {
     const id = `clip_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-    const newClip: BackgroundClip = {
-      id,
-      ...clipData,
-    };
+
+    // Auto-probe natural duration if it's a video and not provided
+    let sourceDurationSeconds = clipData.sourceDurationSeconds;
+    if (clipData.type === 'video' && !sourceDurationSeconds && window.electronAPI?.probeMediaDuration) {
+      try {
+        sourceDurationSeconds = await window.electronAPI.probeMediaDuration(clipData.source);
+      } catch (e) {
+        // ignore
+      }
+    }
+
     set((state) => {
       const currentClips = state.config.backgroundClips || [];
-      const updatedClips = [...currentClips, newClip];
+      const N = currentClips.length;
+
+      let updatedClips: BackgroundClip[];
+      if (N === 0) {
+        updatedClips = [
+          {
+            id,
+            ...clipData,
+            percentage: 100,
+            durationRatio: 1.0,
+            autoFitSpeed: clipData.autoFitSpeed ?? true,
+            sourceDurationSeconds,
+          },
+        ];
+      } else {
+        // Equal share for the new clip: 1 / (N + 1)
+        const newClipShare = 100 / (N + 1);
+        const scaleFactor = N / (N + 1);
+
+        // Normalize existing clips and scale down by scaleFactor
+        const currentTotal = currentClips.reduce((sum, c) => sum + (c.percentage || 100 / N), 0);
+        const normFactor = currentTotal > 0 ? 100 / currentTotal : 1;
+
+        const scaledExisting = currentClips.map((c) => {
+          const origPercent = (c.percentage || 100 / N) * normFactor;
+          const scaledPercent = Number((origPercent * scaleFactor).toFixed(2));
+          return {
+            ...c,
+            percentage: scaledPercent,
+            durationRatio: Number((scaledPercent / 100).toFixed(4)),
+          };
+        });
+
+        const newClip: BackgroundClip = {
+          id,
+          ...clipData,
+          percentage: Number(newClipShare.toFixed(2)),
+          durationRatio: Number((newClipShare / 100).toFixed(4)),
+          autoFitSpeed: clipData.autoFitSpeed ?? true,
+          sourceDurationSeconds,
+        };
+
+        updatedClips = [...scaledExisting, newClip];
+
+        const sum = updatedClips.reduce((s, c) => s + (c.percentage || 0), 0);
+        const diff = 100 - sum;
+        if (Math.abs(diff) > 0.001) {
+          const last = updatedClips[updatedClips.length - 1];
+          last.percentage = Number((last.percentage! + diff).toFixed(2));
+          last.durationRatio = Number((last.percentage! / 100).toFixed(4));
+        }
+      }
+
       return {
         config: {
           ...state.config,
           backgroundClips: updatedClips,
-          // Sync primary backgroundPath with the first clip
           backgroundPath: updatedClips[0]?.source || state.config.backgroundPath,
           backgroundType: updatedClips[0]?.type || state.config.backgroundType,
         },
@@ -117,13 +176,86 @@ export const useStudioStore = create<StudioState>((set, get) => ({
       if (currentClips.length <= 1) {
         return state; // Keep at least one clip
       }
-      const updatedClips = currentClips.filter((c) => c.id !== id);
+      const remaining = currentClips.filter((c) => c.id !== id);
+      const remainingSum = remaining.reduce((sum, c) => sum + (c.percentage || 100 / remaining.length), 0);
+      const factor = remainingSum > 0 ? 100 / remainingSum : 1;
+
+      const updatedClips = remaining.map((c) => {
+        const scaled = Number(((c.percentage || 100 / remaining.length) * factor).toFixed(2));
+        return {
+          ...c,
+          percentage: scaled,
+          durationRatio: Number((scaled / 100).toFixed(4)),
+        };
+      });
+
+      const sum = updatedClips.reduce((s, c) => s + (c.percentage || 0), 0);
+      const diff = 100 - sum;
+      if (Math.abs(diff) > 0.001 && updatedClips.length > 0) {
+        const last = updatedClips[updatedClips.length - 1];
+        last.percentage = Number((last.percentage! + diff).toFixed(2));
+        last.durationRatio = Number((last.percentage! / 100).toFixed(4));
+      }
+
       return {
         config: {
           ...state.config,
           backgroundClips: updatedClips,
           backgroundPath: updatedClips[0]?.source || state.config.backgroundPath,
           backgroundType: updatedClips[0]?.type || state.config.backgroundType,
+        },
+      };
+    });
+  },
+
+  updateClipPercentage: (id: string, newPercentage: number) => {
+    set((state) => {
+      const currentClips = state.config.backgroundClips || [];
+      const clipIndex = currentClips.findIndex((c) => c.id === id);
+      if (clipIndex === -1 || currentClips.length <= 1) return state;
+
+      const totalClips = currentClips.length;
+      const minPercentage = 2.0;
+      const maxPercentage = 100 - (totalClips - 1) * minPercentage;
+      const clampedTarget = Math.max(minPercentage, Math.min(maxPercentage, newPercentage));
+
+      const oldClip = currentClips[clipIndex];
+      const oldPercentage = oldClip.percentage || 100 / totalClips;
+      const delta = clampedTarget - oldPercentage;
+
+      // Other clips share the absorption of -delta proportionally
+      const otherClips = currentClips.filter((c) => c.id !== id);
+      const otherTotal = otherClips.reduce((sum, c) => sum + (c.percentage || 100 / totalClips), 0);
+
+      const updatedClips = currentClips.map((c) => {
+        if (c.id === id) {
+          return {
+            ...c,
+            percentage: Number(clampedTarget.toFixed(2)),
+            durationRatio: Number((clampedTarget / 100).toFixed(4)),
+          };
+        }
+        const proportion = otherTotal > 0 ? (c.percentage || 100 / totalClips) / otherTotal : 1 / otherClips.length;
+        const adjusted = Math.max(minPercentage, (c.percentage || 100 / totalClips) - delta * proportion);
+        return {
+          ...c,
+          percentage: Number(adjusted.toFixed(2)),
+          durationRatio: Number((adjusted / 100).toFixed(4)),
+        };
+      });
+
+      const currentSum = updatedClips.reduce((s, c) => s + (c.percentage || 0), 0);
+      const diff = 100 - currentSum;
+      if (Math.abs(diff) > 0.001) {
+        const adjustIdx = clipIndex === 0 ? 1 : 0;
+        updatedClips[adjustIdx].percentage = Number((updatedClips[adjustIdx].percentage! + diff).toFixed(2));
+        updatedClips[adjustIdx].durationRatio = Number((updatedClips[adjustIdx].percentage! / 100).toFixed(4));
+      }
+
+      return {
+        config: {
+          ...state.config,
+          backgroundClips: updatedClips,
         },
       };
     });

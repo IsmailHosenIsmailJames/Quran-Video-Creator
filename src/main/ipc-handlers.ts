@@ -84,6 +84,21 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
     }
   });
 
+  ipcMain.handle('media:probe-duration', async (_, filePath: string) => {
+    try {
+      const { Input, FilePathSource, ALL_FORMATS } = require('mediabunny');
+      const input = new Input({
+        formats: ALL_FORMATS,
+        source: new FilePathSource(filePath),
+      });
+      const duration = await input.computeDuration();
+      return typeof duration === 'number' && !isNaN(duration) ? duration : 0;
+    } catch (err) {
+      console.error('Failed to probe media duration:', err);
+      return 0;
+    }
+  });
+
   // 5. Video Rendering
   ipcMain.handle(
     'render:start',

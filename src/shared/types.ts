@@ -97,8 +97,11 @@ export interface BackgroundClip {
   type: 'image' | 'video' | 'preset';
   source: string;
   name: string;
-  durationRatio: number;
+  percentage?: number; // Visualization time percentage (0 to 100), sums to 100% across all clips
+  durationRatio: number; // Proportional ratio (kept in sync with percentage)
   speed: number;
+  autoFitSpeed?: boolean; // When true (default: true for video), slows down video to reach from start to end without repeating
+  sourceDurationSeconds?: number; // Probed natural duration of source video file (in seconds)
   trimStartSeconds: number;
   trimEndSeconds?: number;
   kenBurns?: boolean;

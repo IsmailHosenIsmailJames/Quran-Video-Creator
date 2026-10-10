@@ -104,7 +104,40 @@ const ClipItem: React.FC<ClipItemProps> = ({
   }
 
   const startFromFrame = Math.max(0, Math.round((clip.trimStartSeconds || 0) * fps));
-  const playbackRate = clip.speed && clip.speed > 0 ? clip.speed : 1.0;
+  const slotDurationSeconds = Math.max(0.1, durationInFrames / fps);
+
+  // Dynamic probe if sourceDurationSeconds was not pre-saved
+  const [probedDuration, setProbedDuration] = React.useState<number | undefined>(
+    clip.sourceDurationSeconds
+  );
+  const naturalDuration = clip.sourceDurationSeconds || probedDuration;
+
+  // Calculate playback rate:
+  // If autoFitSpeed is enabled (default true) and slotDurationSeconds > available source duration,
+  // slow down the video so it stretches across the entire slot without repeating.
+  let effectivePlaybackRate = clip.speed && clip.speed > 0 ? clip.speed : 1.0;
+
+  if (isVideo) {
+    const trimStart = clip.trimStartSeconds || 0;
+    let availableSource: number | undefined = undefined;
+
+    if (naturalDuration && naturalDuration > trimStart) {
+      availableSource = naturalDuration - trimStart;
+      if (clip.trimEndSeconds && clip.trimEndSeconds > trimStart) {
+        availableSource = Math.min(availableSource, clip.trimEndSeconds - trimStart);
+      }
+      availableSource = Math.max(0.1, availableSource);
+    }
+
+    const shouldAutoFit = clip.autoFitSpeed !== false;
+
+    if (shouldAutoFit && availableSource !== undefined && slotDurationSeconds > availableSource) {
+      // Calculate slow down rate: source duration / slot duration
+      effectivePlaybackRate = Math.max(0.05, Math.min(1.0, availableSource / slotDurationSeconds));
+    } else if (clip.speed && clip.speed > 0) {
+      effectivePlaybackRate = clip.speed;
+    }
+  }
 
   return (
     <div
@@ -125,10 +158,15 @@ const ClipItem: React.FC<ClipItemProps> = ({
           <Video
             src={mediaSrc}
             startFrom={startFromFrame}
-            playbackRate={playbackRate}
+            playbackRate={effectivePlaybackRate}
             pauseWhenBuffering
-            loop
             muted
+            onLoadedMetadata={(e) => {
+              const dur = e.currentTarget.duration;
+              if (dur && isFinite(dur) && dur > 0 && !probedDuration) {
+                setProbedDuration(dur);
+              }
+            }}
             style={{
               width: '100%',
               height: '100%',
@@ -170,22 +208,25 @@ export const BackgroundLayer: React.FC<BackgroundLayerProps> = ({
 }) => {
   const activeClips = clips && clips.length > 0 ? clips : null;
 
-  // Calculate proportional frame distribution for multi-media clips
+  // Calculate proportional frame distribution for multi-media clips using percentage
   const clipSequences = React.useMemo(() => {
     if (!activeClips || activeClips.length === 0) return [];
 
-    const totalRatio = activeClips.reduce((sum, c) => sum + (c.durationRatio || 1.0), 0);
-    const validTotalRatio = totalRatio > 0 ? totalRatio : activeClips.length;
+    const totalWeight = activeClips.reduce(
+      (sum, c) => sum + (c.percentage !== undefined ? c.percentage : (c.durationRatio || 1.0) * 100),
+      0
+    );
+    const validTotalWeight = totalWeight > 0 ? totalWeight : activeClips.length;
 
     let currentStart = 0;
     const items: Array<{ clip: BackgroundClip; startFrame: number; durationFrames: number }> = [];
 
     activeClips.forEach((clip, index) => {
       const isLast = index === activeClips.length - 1;
-      const ratio = clip.durationRatio || 1.0;
+      const weight = clip.percentage !== undefined ? clip.percentage : (clip.durationRatio || 1.0) * 100;
       const proportionalFrames = Math.max(
         15,
-        Math.round((ratio / validTotalRatio) * totalDurationInFrames)
+        Math.round((weight / validTotalWeight) * totalDurationInFrames)
       );
 
       const durationFrames = isLast
@@ -246,8 +287,10 @@ export const BackgroundLayer: React.FC<BackgroundLayerProps> = ({
               type,
               source,
               name: 'Single Background',
+              percentage: 100,
               durationRatio: 1,
               speed: 1,
+              autoFitSpeed: true,
               trimStartSeconds: 0,
               kenBurns: kenBurnsEffect,
               transition: 'cut',

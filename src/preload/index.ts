@@ -66,6 +66,8 @@ const api = {
     ipcRenderer.invoke('dialog:select-save-path', defaultFileName),
   showInFolder: (filePath: string): Promise<void> =>
     ipcRenderer.invoke('file:show-in-folder', filePath),
+  probeMediaDuration: (filePath: string): Promise<number> =>
+    ipcRenderer.invoke('media:probe-duration', filePath),
 
   // Video Rendering
   startRender: (
