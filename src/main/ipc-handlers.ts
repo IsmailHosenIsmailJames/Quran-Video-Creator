@@ -1,4 +1,6 @@
 import { ipcMain, dialog, BrowserWindow, shell } from 'electron';
+import path from 'path';
+import fs from 'fs';
 import { quranDbService } from './services/quran-db';
 import { translationService } from './services/translation-service';
 import { recitationService } from './services/recitation-service';
@@ -47,6 +49,28 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
   });
 
   // 4. File dialogs
+  const resolveDefaultMediaDir = (type: string): string | undefined => {
+    let defaultDir = settingsService.getLastDirectory(type);
+    if (!defaultDir && (type === 'video' || type === 'image' || type === 'media')) {
+      defaultDir =
+        settingsService.getLastDirectory('media') ||
+        settingsService.getLastDirectory('video') ||
+        settingsService.getLastDirectory('image');
+    }
+    return defaultDir || undefined;
+  };
+
+  const rememberMediaDir = (type: string, filePath: string) => {
+    if (!filePath) return;
+    const dir = path.dirname(filePath);
+    if (dir && fs.existsSync(dir)) {
+      settingsService.setLastDirectory(type, dir);
+      if (type === 'video' || type === 'image' || type === 'media') {
+        settingsService.setLastDirectory('media', dir);
+      }
+    }
+  };
+
   ipcMain.handle('dialog:select-media-file', async (_, type: 'video' | 'audio' | 'image') => {
     const filters = {
       video: [
@@ -63,16 +87,21 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
       ],
     }[type];
 
+    const defaultPath = resolveDefaultMediaDir(type);
+
     const result = await dialog.showOpenDialog(mainWindow, {
       title: `Select ${type.toUpperCase()} File`,
       properties: ['openFile'],
       filters,
+      defaultPath,
     });
 
     if (result.canceled || result.filePaths.length === 0) {
       return null;
     }
-    return result.filePaths[0];
+    const chosen = result.filePaths[0];
+    rememberMediaDir(type, chosen);
+    return chosen;
   });
 
   ipcMain.handle(
@@ -100,28 +129,42 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
         ],
       }[type];
 
+      const defaultPath = resolveDefaultMediaDir(type);
+
       const result = await dialog.showOpenDialog(mainWindow, {
         title: `Select ${type.toUpperCase()} Files (Multiple Allowed)`,
         properties: ['openFile', 'multiSelections'],
         filters,
+        defaultPath,
       });
 
       if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
         return [];
       }
+      rememberMediaDir(type, result.filePaths[0]);
       return result.filePaths;
     }
   );
 
   ipcMain.handle('dialog:select-save-path', async (_, defaultFileName: string) => {
+    const lastExportDir = settingsService.getLastDirectory('export');
+    let defaultPath = defaultFileName || 'Quran_Video_Export.mp4';
+    if (lastExportDir && fs.existsSync(lastExportDir)) {
+      defaultPath = path.join(lastExportDir, path.basename(defaultPath));
+    }
+
     const result = await dialog.showSaveDialog(mainWindow, {
       title: 'Save Video Export',
-      defaultPath: defaultFileName || 'Quran_Video_Export.mp4',
+      defaultPath,
       filters: [{ name: 'MP4 Video', extensions: ['mp4'] }],
     });
 
     if (result.canceled || !result.filePath) {
       return null;
+    }
+    const chosenDir = path.dirname(result.filePath);
+    if (chosenDir && fs.existsSync(chosenDir)) {
+      settingsService.setLastDirectory('export', chosenDir);
     }
     return result.filePath;
   });

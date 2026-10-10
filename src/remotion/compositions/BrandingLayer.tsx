@@ -36,6 +36,10 @@ export const BrandingLayer: React.FC<BrandingLayerProps> = ({
   };
 
   const resolvedLogoSrc = getMediaUrl(logoPath);
+  const isPuppeteer = typeof window !== 'undefined' && !(window as any).electronAPI;
+  const isLoadable = Boolean(
+    resolvedLogoSrc && (!isPuppeteer || !resolvedLogoSrc.startsWith('app-media://'))
+  );
 
   return (
     <AbsoluteFill style={{ pointerEvents: 'none', userSelect: 'none' }}>
@@ -57,7 +61,7 @@ export const BrandingLayer: React.FC<BrandingLayerProps> = ({
           ...positionStyles[position],
         }}
       >
-        {resolvedLogoSrc ? (
+        {isLoadable ? (
           <Img
             src={resolvedLogoSrc}
             style={{

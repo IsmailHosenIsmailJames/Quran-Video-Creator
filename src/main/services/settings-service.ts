@@ -35,6 +35,12 @@ export const PERSISTABLE_CONFIG_KEYS: Array<keyof VideoTemplateConfig> = [
   'verticalCustomOffset',
   'showSurahHeader',
 
+  // Scripture & Subtitle In/Out Motion Animations
+  'animationIn',
+  'animationOut',
+  'animationDurationFrames',
+  'staggerSubtitles',
+
   // Layout & Background
   'aspectRatio',
   'backgroundType',
@@ -172,9 +178,42 @@ export class SettingsService {
   public resetSettings(): void {
     try {
       const db = this.getDb();
-      db.prepare('DELETE FROM settings').run();
+      const placeholders = PERSISTABLE_CONFIG_KEYS.map(() => '?').join(',');
+      db.prepare(`DELETE FROM settings WHERE key IN (${placeholders})`).run(...PERSISTABLE_CONFIG_KEYS);
     } catch (err) {
       console.error('Failed to reset settings in database:', err);
+    }
+  }
+
+  public getLastDirectory(category: string): string | null {
+    try {
+      const db = this.getDb();
+      const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(`last_dir_${category}`) as
+        | { value: string }
+        | undefined;
+      if (row && row.value) {
+        const parsed = JSON.parse(row.value);
+        if (typeof parsed === 'string' && fs.existsSync(parsed)) {
+          return parsed;
+        }
+      }
+    } catch (err) {
+      console.error(`Failed to get last directory for ${category}:`, err);
+    }
+    return null;
+  }
+
+  public setLastDirectory(category: string, dirPath: string): void {
+    try {
+      if (!dirPath || typeof dirPath !== 'string') return;
+      const db = this.getDb();
+      const now = Date.now();
+      db.prepare(`
+        INSERT OR REPLACE INTO settings (key, value, updated_at)
+        VALUES (?, ?, ?)
+      `).run(`last_dir_${category}`, JSON.stringify(dirPath), now);
+    } catch (err) {
+      console.error(`Failed to set last directory for ${category}:`, err);
     }
   }
 

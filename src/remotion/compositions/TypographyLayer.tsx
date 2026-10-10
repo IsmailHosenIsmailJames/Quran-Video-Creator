@@ -1,6 +1,6 @@
 import React from 'react';
-import { AbsoluteFill, useCurrentFrame, spring } from 'remotion';
-import { VideoTemplateConfig, AyahSequenceData, QuranWord, ScriptBlockType } from '../../shared/types';
+import { AbsoluteFill, useCurrentFrame, interpolate, Easing } from 'remotion';
+import { VideoTemplateConfig, AyahSequenceData, QuranWord, ScriptBlockType, TextAnimationIn, TextAnimationOut } from '../../shared/types';
 
 interface TypographyLayerProps {
   config: VideoTemplateConfig;
@@ -15,12 +15,113 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
 }) => {
   const frame = useCurrentFrame();
 
-  // Entrance Transition: 15-frame cross-dissolve & slight vertical slide
-  const entranceProgress = spring({
-    frame,
-    fps,
-    config: { damping: 14, stiffness: 80 },
+  // Per-Ayah In/Out Animation Overrides (with fallback to global config)
+  const ayahKey = `${ayahData.surah}:${ayahData.ayah}`;
+  const override = config.ayahFontOverrides?.[ayahKey];
+
+  const animIn: TextAnimationIn =
+    override?.animationIn && override.animationIn !== 'inherit'
+      ? override.animationIn
+      : (config.animationIn || 'float-up');
+
+  const animOut: TextAnimationOut =
+    override?.animationOut && override.animationOut !== 'inherit'
+      ? override.animationOut
+      : (config.animationOut || 'fade');
+
+  // Timeline & Transition Duration Calculations
+  const totalFrames = Math.max(1, ayahData.durationInFrames);
+  const maxAnimFrames = Math.max(4, Math.floor(totalFrames / 2.5));
+  const configuredAnimFrames = config.animationDurationFrames || 18;
+  const inDuration = Math.min(configuredAnimFrames, maxAnimFrames);
+  const outDuration = Math.min(configuredAnimFrames, maxAnimFrames);
+  const exitStartFrame = Math.max(inDuration, totalFrames - outDuration);
+
+  // Stagger calculation: subtitles glide in slightly after Arabic
+  const staggerFrames =
+    config.staggerSubtitles !== false && animIn !== 'none'
+      ? Math.min(5, Math.floor(inDuration / 3))
+      : 0;
+
+  // Entrance animation values
+  const computeInValues = (startFrame: number, animType: TextAnimationIn) => {
+    if (animType === 'none') {
+      return { opacity: 1, translateY: 0, scale: 1, blur: 0 };
+    }
+    const endFrame = startFrame + inDuration;
+    const p = interpolate(frame, [startFrame, endFrame], [0, 1], {
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+      easing: Easing.out(Easing.cubic),
+    });
+
+    let translateY = 0;
+    let scale = 1;
+    let blur = 0;
+
+    if (animType === 'float-up') {
+      translateY = (1 - p) * 24;
+    } else if (animType === 'blur-fade') {
+      blur = (1 - p) * 10;
+    } else if (animType === 'scale-up') {
+      scale = 0.92 + p * 0.08;
+    }
+
+    return { opacity: p, translateY, scale, blur };
+  };
+
+  // Exit animation values
+  const computeOutValues = (animType: TextAnimationOut) => {
+    if (animType === 'none' || frame < exitStartFrame) {
+      return { opacity: 1, translateY: 0, scale: 1, blur: 0 };
+    }
+    const p = interpolate(frame, [exitStartFrame, totalFrames], [0, 1], {
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+      easing: Easing.in(Easing.cubic),
+    });
+
+    const opacity = 1 - p;
+    let translateY = 0;
+    let scale = 1;
+    let blur = 0;
+
+    if (animType === 'float-up') {
+      translateY = -p * 24;
+    } else if (animType === 'float-down') {
+      translateY = p * 24;
+    } else if (animType === 'blur-fade') {
+      blur = p * 10;
+    } else if (animType === 'scale-down') {
+      scale = 1 - p * 0.08;
+    }
+
+    return { opacity, translateY, scale, blur };
+  };
+
+  const arabicIn = computeInValues(0, animIn);
+  const subIn = computeInValues(staggerFrames, animIn);
+  const outValues = computeOutValues(animOut);
+
+  const arabicOpacity = Number((arabicIn.opacity * outValues.opacity).toFixed(4));
+  const arabicTranslateY = arabicIn.translateY + outValues.translateY;
+  const arabicScale = arabicIn.scale * outValues.scale;
+  const arabicTransform = `translateY(${arabicTranslateY.toFixed(2)}px) scale(${arabicScale.toFixed(4)})`;
+  const arabicBlur = arabicIn.blur + outValues.blur;
+  const arabicFilter = arabicBlur > 0.1 ? `blur(${arabicBlur.toFixed(1)}px)` : undefined;
+
+  const subOpacity = Number((subIn.opacity * outValues.opacity).toFixed(4));
+  const subTranslateY = subIn.translateY + outValues.translateY;
+  const subScale = subIn.scale * outValues.scale;
+  const subTransform = `translateY(${subTranslateY.toFixed(2)}px) scale(${subScale.toFixed(4)})`;
+  const subBlur = subIn.blur + outValues.blur;
+  const subFilter = subBlur > 0.1 ? `blur(${subBlur.toFixed(1)}px)` : undefined;
+
+  const headerProgress = interpolate(frame, [0, inDuration], [0, 1], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
   });
+  const headerOpacity = Number((headerProgress * outValues.opacity).toFixed(4));
 
   const currentMs = (frame / fps) * 1000;
 
@@ -34,8 +135,6 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
   const surahLigatureCode = `surah${String(ayahData.surah).padStart(3, '0')}`;
 
   // Per-Ayah Custom Font Size Overrides (with fallback to global config)
-  const ayahKey = `${ayahData.surah}:${ayahData.ayah}`;
-  const override = config.ayahFontOverrides?.[ayahKey];
   const arabicFontSize = override?.arabicFontSize ?? config.arabicFontSize;
   const primaryFontSize = override?.primaryFontSize ?? config.primaryFontSize;
   const secondaryFontSize = override?.secondaryFontSize ?? config.secondaryFontSize;
@@ -69,6 +168,10 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
         display: 'flex',
         flexDirection: 'column',
         alignItems: flexAlignItems,
+        opacity: arabicOpacity,
+        transform: arabicTransform,
+        filter: arabicFilter,
+        WebkitFilter: arabicFilter,
       }}
     >
       <div
@@ -181,6 +284,10 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
         boxShadow: showContainer ? '0 10px 25px -5px rgba(0, 0, 0, 0.5)' : 'none',
         flexShrink: 0,
         boxSizing: 'border-box',
+        opacity: subOpacity,
+        transform: subTransform,
+        filter: subFilter,
+        WebkitFilter: subFilter,
       }}
     >
       {englishFirst ? (
@@ -237,8 +344,6 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
         alignItems: 'center',
         padding: '0',
         userSelect: 'none',
-        opacity: entranceProgress,
-        transform: `translateY(${(1 - entranceProgress) * 20}px)`,
         width: '100%',
         height: '100%',
         boxSizing: 'border-box',
@@ -258,6 +363,7 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
             display: 'flex',
             alignItems: 'center',
             gap: '16px',
+            opacity: headerOpacity,
             backgroundColor: 'rgba(0, 0, 0, 0.55)',
             backdropFilter: 'blur(16px)',
             WebkitBackdropFilter: 'blur(16px)',

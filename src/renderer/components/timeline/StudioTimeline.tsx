@@ -1,7 +1,8 @@
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { PlayerRef } from '@remotion/player';
 import { useStudioStore } from '../../store/studio-store';
-import { BackgroundClip, TransitionType } from '../../../shared/types';
+import { BackgroundClip, TransitionType, TextAnimationIn, TextAnimationOut } from '../../../shared/types';
+import { TEXT_ANIMATION_IN_OPTIONS, TEXT_ANIMATION_OUT_OPTIONS } from '../../../shared/constants';
 import { getMediaUrl } from '../../../shared/media-url';
 import {
   Play,
@@ -196,13 +197,17 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
   const currentEnglishSize = ayahOverride?.secondaryFontSize ?? config.secondaryFontSize;
   const currentSubtitleSize = ayahOverride?.primaryFontSize ?? config.primaryFontSize;
   const currentVerticalOffset = ayahOverride?.verticalOffset ?? config.verticalCustomOffset ?? 0;
+  const currentAnimationIn = ayahOverride?.animationIn ?? 'inherit';
+  const currentAnimationOut = ayahOverride?.animationOut ?? 'inherit';
   const hasAyahOverride =
     ayahOverride !== undefined &&
     (ayahOverride.arabicFontSize !== undefined ||
       ayahOverride.secondaryFontSize !== undefined ||
       ayahOverride.primaryFontSize !== undefined ||
       ayahOverride.verticalOffset !== undefined ||
-      ayahOverride.verticalAlignment !== undefined);
+      ayahOverride.verticalAlignment !== undefined ||
+      ayahOverride.animationIn !== undefined ||
+      ayahOverride.animationOut !== undefined);
 
   // Global mouse handlers for playhead scrubber dragging
   const handleSeekToClientX = useCallback(
@@ -1049,7 +1054,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
             {/* Verse Identifier */}
             <div className="flex items-center gap-1.5 font-semibold text-amber-400 bg-amber-500/10 px-2.5 py-1.5 rounded-lg border border-amber-500/20">
               <Type className="w-4 h-4 text-amber-400" />
-              <span>Verse {selectedAyah.ayah} Font Sizes</span>
+              <span>Verse {selectedAyah.ayah} Styling</span>
               {hasAyahOverride && (
                 <span className="text-[10px] bg-amber-500/30 text-amber-300 px-1.5 py-0.5 rounded font-normal">
                   Custom
@@ -1167,6 +1172,48 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
                 {currentVerticalOffset > 0 ? `+${currentVerticalOffset}` : currentVerticalOffset}px
               </span>
             </div>
+
+            {/* Motion In Animation */}
+            <div className="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1.5 rounded-lg border border-gray-800">
+              <span className="text-gray-400 text-[11px] font-medium">In:</span>
+              <select
+                value={currentAnimationIn}
+                onChange={(e) =>
+                  updateAyahFontOverride(selectedAyah.surah, selectedAyah.ayah, {
+                    animationIn: e.target.value as TextAnimationIn | 'inherit',
+                  })
+                }
+                className="bg-gray-900 border border-gray-700 rounded px-1.5 py-0.5 text-[11px] text-amber-300 cursor-pointer focus:outline-none"
+              >
+                <option value="inherit">Default ({config.animationIn || 'float-up'})</option>
+                {TEXT_ANIMATION_IN_OPTIONS.map((opt) => (
+                  <option key={opt.id} value={opt.id}>
+                    {opt.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Motion Out Animation */}
+            <div className="flex items-center gap-1.5 bg-gray-950 px-2.5 py-1.5 rounded-lg border border-gray-800">
+              <span className="text-gray-400 text-[11px] font-medium">Out:</span>
+              <select
+                value={currentAnimationOut}
+                onChange={(e) =>
+                  updateAyahFontOverride(selectedAyah.surah, selectedAyah.ayah, {
+                    animationOut: e.target.value as TextAnimationOut | 'inherit',
+                  })
+                }
+                className="bg-gray-900 border border-gray-700 rounded px-1.5 py-0.5 text-[11px] text-amber-300 cursor-pointer focus:outline-none"
+              >
+                <option value="inherit">Default ({config.animationOut || 'fade'})</option>
+                {TEXT_ANIMATION_OUT_OPTIONS.map((opt) => (
+                  <option key={opt.id} value={opt.id}>
+                    {opt.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Reset and Close */}
@@ -1175,7 +1222,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
               <button
                 onClick={() => resetAyahFontOverride(selectedAyah.surah, selectedAyah.ayah)}
                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white transition text-[11px] border border-gray-700"
-                title="Reset this verse to global font sizes"
+                title="Reset this verse to global font size and animation defaults"
               >
                 <RotateCcw className="w-3.5 h-3.5 text-gray-400" />
                 <span>Reset to Default</span>

@@ -172,9 +172,30 @@ class RemotionRunnerService {
         });
       }
 
+      // Sanitize logo path if present
+      let sanitizedLogoPath: string | undefined = undefined;
+      if (config.logoPath) {
+        let cleanLogo = config.logoPath;
+        if (cleanLogo.startsWith('app-media://local/')) {
+          cleanLogo = cleanLogo.slice('app-media://local/'.length);
+        } else if (cleanLogo.startsWith('app-media://')) {
+          cleanLogo = cleanLogo.replace(/^app-media:\/\/(\/)?/, '');
+        }
+        cleanLogo = decodeURIComponent(cleanLogo);
+        if (cleanLogo.startsWith('http://') || cleanLogo.startsWith('https://') || cleanLogo.startsWith('data:')) {
+          sanitizedLogoPath = cleanLogo;
+        } else if (fs.existsSync(cleanLogo)) {
+          sanitizedLogoPath = localMediaServer.getMediaUrl(cleanLogo);
+        } else {
+          console.warn(`[RemotionRunner] Logo file not found on disk, ignoring: ${cleanLogo}`);
+          sanitizedLogoPath = undefined;
+        }
+      }
+
       // Convert any local filesystem or app-media paths into HTTP streaming URLs for Headless Chrome
       const sanitizedConfig: VideoTemplateConfig = {
         ...config,
+        logoPath: sanitizedLogoPath,
         backgroundPath: localMediaServer.getMediaUrl(config.backgroundPath),
         backgroundClips: preparedClips,
         customAudioPath: config.customAudioPath

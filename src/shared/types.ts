@@ -113,12 +113,17 @@ export type ScriptBlockType = 'arabic' | 'primary' | 'secondary';
 
 export type VerticalAlignmentType = 'middle' | 'top' | 'bottom' | 'split';
 
+export type TextAnimationIn = 'float-up' | 'fade' | 'blur-fade' | 'scale-up' | 'none';
+export type TextAnimationOut = 'fade' | 'float-up' | 'float-down' | 'blur-fade' | 'scale-down' | 'none';
+
 export interface AyahFontOverride {
   arabicFontSize?: number;
   primaryFontSize?: number;
   secondaryFontSize?: number;
   verticalAlignment?: VerticalAlignmentType;
   verticalOffset?: number; // In pixels (-150 to +150)
+  animationIn?: TextAnimationIn | 'inherit';
+  animationOut?: TextAnimationOut | 'inherit';
 }
 
 export interface VideoTemplateConfig {
@@ -159,6 +164,12 @@ export interface VideoTemplateConfig {
   verticalAlignment?: VerticalAlignmentType;
   verticalCustomOffset?: number; // In pixels (-150 to +150, default 0)
   showSurahHeader?: boolean;
+
+  // Scripture & Subtitle In/Out Motion Animations
+  animationIn: TextAnimationIn;
+  animationOut: TextAnimationOut;
+  animationDurationFrames: number; // e.g. 10 to 30 frames (default 18)
+  staggerSubtitles?: boolean; // When true, subtitles glide in 4 frames after Arabic text
 
   // Layout & Background
   aspectRatio: '16:9' | '9:16' | '1:1';

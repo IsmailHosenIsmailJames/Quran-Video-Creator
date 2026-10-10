@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useStudioStore } from '../../store/studio-store';
 import { VerseSelector } from '../VerseSelector';
-import { FONT_OPTIONS } from '../../../shared/constants';
+import { FONT_OPTIONS, TEXT_ANIMATION_IN_OPTIONS, TEXT_ANIMATION_OUT_OPTIONS } from '../../../shared/constants';
 import { ScriptBlockType } from '../../../shared/types';
 import {
   Type,
@@ -354,7 +354,91 @@ export const ScriptureTab: React.FC = () => {
         </div>
       </div>
 
-      {/* 4. Per-Ayah Custom Font Sizing */}
+      {/* 4. Verse Motion & Transitions (In / Out) */}
+      <div className="p-4 rounded-2xl bg-gray-900/60 border border-gray-800 space-y-4">
+        <div className="flex items-center justify-between pb-1 border-b border-gray-800">
+          <div className="flex items-center gap-2 text-xs font-semibold text-amber-300 uppercase tracking-wider">
+            <Sparkles className="w-4 h-4 text-amber-400" />
+            Verse Motion & Transitions (In & Out)
+          </div>
+        </div>
+
+        {/* Entrance & Exit Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          {/* In Animation (Entrance) */}
+          <div className="space-y-1.5">
+            <label className="text-xs text-gray-300 font-medium">Entrance Animation (In)</label>
+            <select
+              value={config.animationIn || 'float-up'}
+              onChange={(e) => updateConfig({ animationIn: e.target.value as any })}
+              className="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2 text-white text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none cursor-pointer"
+            >
+              {TEXT_ANIMATION_IN_OPTIONS.map((opt) => (
+                <option key={opt.id} value={opt.id}>
+                  {opt.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-[10px] text-gray-500">
+              {TEXT_ANIMATION_IN_OPTIONS.find((o) => o.id === (config.animationIn || 'float-up'))?.description}
+            </p>
+          </div>
+
+          {/* Out Animation (Exit) */}
+          <div className="space-y-1.5">
+            <label className="text-xs text-gray-300 font-medium">Exit Animation (Out)</label>
+            <select
+              value={config.animationOut || 'fade'}
+              onChange={(e) => updateConfig({ animationOut: e.target.value as any })}
+              className="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2 text-white text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none cursor-pointer"
+            >
+              {TEXT_ANIMATION_OUT_OPTIONS.map((opt) => (
+                <option key={opt.id} value={opt.id}>
+                  {opt.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-[10px] text-gray-500">
+              {TEXT_ANIMATION_OUT_OPTIONS.find((o) => o.id === (config.animationOut || 'fade'))?.description}
+            </p>
+          </div>
+        </div>
+
+        {/* Transition Duration Slider */}
+        <div className="space-y-1.5 pt-1">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-gray-400">Transition Duration</span>
+            <span className="font-mono text-amber-300 font-semibold">
+              {config.animationDurationFrames || 18} frames (~{(((config.animationDurationFrames || 18) / (config.fps || 30))).toFixed(2)}s)
+            </span>
+          </div>
+          <input
+            type="range"
+            min={6}
+            max={36}
+            step={2}
+            value={config.animationDurationFrames || 18}
+            onChange={(e) => updateConfig({ animationDurationFrames: Number(e.target.value) })}
+            className="w-full accent-amber-500 cursor-pointer h-1.5 bg-gray-800 rounded-lg"
+          />
+        </div>
+
+        {/* Stagger Subtitles Checkbox */}
+        <div className="flex items-center justify-between pt-1">
+          <div>
+            <div className="text-xs text-gray-300 font-medium">Stagger Subtitles</div>
+            <div className="text-[10px] text-gray-500">Translations glide in 4 frames after Arabic script</div>
+          </div>
+          <input
+            type="checkbox"
+            checked={config.staggerSubtitles !== false}
+            onChange={(e) => updateConfig({ staggerSubtitles: e.target.checked })}
+            className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+          />
+        </div>
+      </div>
+
+      {/* 5. Per-Ayah Custom Font Sizing & Motion */}
       {ayahs && ayahs.length > 0 && (
         <div className="p-4 rounded-2xl bg-gray-900/60 border border-gray-800 space-y-3">
           <div
@@ -381,7 +465,11 @@ export const ScriptureTab: React.FC = () => {
                 const key = `${ayah.surah}:${ayah.ayah}`;
                 const override = config.ayahFontOverrides?.[key];
                 const activeSize = override?.arabicFontSize ?? config.arabicFontSize;
-                const isOverridden = override?.arabicFontSize !== undefined;
+                const isOverridden = Boolean(
+                  override?.arabicFontSize !== undefined ||
+                  (override?.animationIn && override.animationIn !== 'inherit') ||
+                  (override?.animationOut && override.animationOut !== 'inherit')
+                );
 
                 return (
                   <div
@@ -411,7 +499,7 @@ export const ScriptureTab: React.FC = () => {
                           <button
                             onClick={() => resetAyahFontOverride(ayah.surah, ayah.ayah)}
                             className="p-1 rounded hover:bg-gray-800 text-gray-400 hover:text-white transition"
-                            title="Reset to global font size"
+                            title="Reset to global font size and animation defaults"
                           >
                             <RotateCcw className="w-3 h-3 text-amber-400" />
                           </button>
@@ -444,6 +532,49 @@ export const ScriptureTab: React.FC = () => {
                         }
                         className="w-12 bg-gray-900 border border-gray-700 rounded px-1.5 py-0.5 text-amber-300 font-mono text-xs text-right"
                       />
+                    </div>
+
+                    {/* Per-Ayah In & Out Motion Override */}
+                    <div className="grid grid-cols-2 gap-2 pt-2 mt-2 border-t border-gray-900 text-[11px]">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-gray-500 text-[10px] w-6">In:</span>
+                        <select
+                          value={override?.animationIn || 'inherit'}
+                          onChange={(e) =>
+                            updateAyahFontOverride(ayah.surah, ayah.ayah, {
+                              animationIn: e.target.value as any,
+                            })
+                          }
+                          className="flex-1 bg-gray-900 border border-gray-800 rounded px-1.5 py-1 text-gray-300 text-[10px] focus:outline-none cursor-pointer"
+                        >
+                          <option value="inherit">Default ({config.animationIn || 'float-up'})</option>
+                          {TEXT_ANIMATION_IN_OPTIONS.map((opt) => (
+                            <option key={opt.id} value={opt.id}>
+                              {opt.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-gray-500 text-[10px] w-6">Out:</span>
+                        <select
+                          value={override?.animationOut || 'inherit'}
+                          onChange={(e) =>
+                            updateAyahFontOverride(ayah.surah, ayah.ayah, {
+                              animationOut: e.target.value as any,
+                            })
+                          }
+                          className="flex-1 bg-gray-900 border border-gray-800 rounded px-1.5 py-1 text-gray-300 text-[10px] focus:outline-none cursor-pointer"
+                        >
+                          <option value="inherit">Default ({config.animationOut || 'fade'})</option>
+                          {TEXT_ANIMATION_OUT_OPTIONS.map((opt) => (
+                            <option key={opt.id} value={opt.id}>
+                              {opt.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                   </div>
                 );

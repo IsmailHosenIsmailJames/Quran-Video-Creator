@@ -7,7 +7,6 @@ import {
   Download,
   CheckCircle2,
   AlertCircle,
-  Loader2,
   FolderOpen,
   RotateCcw,
 } from 'lucide-react';
@@ -241,9 +240,6 @@ export const ExportDialog: React.FC = () => {
             <div className="space-y-2.5 p-4 rounded-2xl bg-gray-950 border border-gray-800">
               <div className="flex items-center justify-between text-xs">
                 <span className="flex items-center gap-1.5 font-medium text-white">
-                  {renderProgress.status === 'rendering' && (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" />
-                  )}
                   {renderProgress.status === 'completed' && (
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                   )}

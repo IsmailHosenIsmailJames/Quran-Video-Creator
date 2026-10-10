@@ -97,6 +97,12 @@ export const DEFAULT_TEMPLATE_CONFIG: VideoTemplateConfig = {
   verticalCustomOffset: 0,
   showSurahHeader: true,
 
+  // Scripture & Subtitle In/Out Motion Animations
+  animationIn: 'float-up',
+  animationOut: 'fade',
+  animationDurationFrames: 18,
+  staggerSubtitles: true,
+
   // Layout & Background
   aspectRatio: '16:9',
   backgroundType: 'preset',
@@ -143,3 +149,20 @@ export const DEFAULT_TEMPLATE_CONFIG: VideoTemplateConfig = {
   fps: 30,
   resolution: '1080p',
 };
+
+export const TEXT_ANIMATION_IN_OPTIONS = [
+  { id: 'float-up' as const, name: 'Soft Float Up', description: 'Fade in with a gentle upward rise' },
+  { id: 'fade' as const, name: 'Pure Fade', description: 'Peaceful zero-motion cross-dissolve' },
+  { id: 'blur-fade' as const, name: 'Defocus Blur', description: 'Cinematic blur transition into focus' },
+  { id: 'scale-up' as const, name: 'Subtle Zoom In', description: 'Gentle depth scale from 92% to 100%' },
+  { id: 'none' as const, name: 'Instant Cut', description: 'Instant appearance with zero delay' },
+];
+
+export const TEXT_ANIMATION_OUT_OPTIONS = [
+  { id: 'fade' as const, name: 'Pure Fade', description: 'Gentle peaceful dissolve into transparency' },
+  { id: 'float-up' as const, name: 'Float Up & Fade', description: 'Continues floating upward while fading out' },
+  { id: 'float-down' as const, name: 'Float Down & Fade', description: 'Softly sinks downward while fading out' },
+  { id: 'blur-fade' as const, name: 'Defocus Blur', description: 'Cinematic blur into transparency' },
+  { id: 'scale-down' as const, name: 'Subtle Zoom Out', description: 'Gentle scale down while fading out' },
+  { id: 'none' as const, name: 'Instant Cut', description: 'Instant disappearance with zero delay' },
+];
