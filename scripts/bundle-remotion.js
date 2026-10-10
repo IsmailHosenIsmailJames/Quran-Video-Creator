@@ -8,6 +8,9 @@ async function buildRemotionBundle() {
   const publicDir = path.resolve(__dirname, '../public');
 
   console.log('📦 Pre-bundling Remotion composition for production...');
+  if (fs.existsSync(outDir)) {
+    fs.rmSync(outDir, { recursive: true, force: true });
+  }
   const location = await bundle({
     entryPoint,
     outDir,

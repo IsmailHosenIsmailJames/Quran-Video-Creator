@@ -1,5 +1,5 @@
 import React from 'react';
-import { AbsoluteFill, interpolate, useCurrentFrame, Video, Img, Sequence } from 'remotion';
+import { AbsoluteFill, interpolate, useCurrentFrame, OffthreadVideo, Img, Sequence } from 'remotion';
 import { BackgroundClip, TransitionType } from '../../shared/types';
 import { getMediaUrl } from '../../shared/media-url';
 
@@ -106,11 +106,8 @@ const ClipItem: React.FC<ClipItemProps> = ({
   const startFromFrame = Math.max(0, Math.round((clip.trimStartSeconds || 0) * fps));
   const slotDurationSeconds = Math.max(0.1, durationInFrames / fps);
 
-  // Dynamic probe if sourceDurationSeconds was not pre-saved
-  const [probedDuration, setProbedDuration] = React.useState<number | undefined>(
-    clip.sourceDurationSeconds
-  );
-  const naturalDuration = clip.sourceDurationSeconds || probedDuration;
+  // Deterministic playback rate calculated purely from clip props
+  const naturalDuration = clip.sourceDurationSeconds;
 
   // Calculate playback rate:
   // If autoFitSpeed is enabled (default true) and slotDurationSeconds > available source duration,
@@ -155,22 +152,17 @@ const ClipItem: React.FC<ClipItemProps> = ({
     >
       {mediaSrc ? (
         isVideo ? (
-          <Video
+          <OffthreadVideo
             src={mediaSrc}
             startFrom={startFromFrame}
             playbackRate={effectivePlaybackRate}
             pauseWhenBuffering
             muted
-            onLoadedMetadata={(e) => {
-              const dur = e.currentTarget.duration;
-              if (dur && isFinite(dur) && dur > 0 && !probedDuration) {
-                setProbedDuration(dur);
-              }
-            }}
             style={{
               width: '100%',
               height: '100%',
               objectFit: 'cover',
+              objectPosition: 'center center',
             }}
           />
         ) : (
@@ -291,6 +283,7 @@ export const BackgroundLayer: React.FC<BackgroundLayerProps> = ({
               durationRatio: 1,
               speed: 1,
               autoFitSpeed: true,
+              sourceDurationSeconds: clips?.[0]?.sourceDurationSeconds,
               trimStartSeconds: 0,
               kenBurns: kenBurnsEffect,
               transition: 'cut',
