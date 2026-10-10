@@ -94,4 +94,9 @@ const api = {
 };
 
 contextBridge.exposeInMainWorld('electronAPI', api);
+
+const portArg = process.argv.find((arg) => arg.startsWith('--media-server-port='));
+const mediaServerPort = portArg ? parseInt(portArg.split('=')[1], 10) : 0;
+contextBridge.exposeInMainWorld('__MEDIA_SERVER_PORT__', mediaServerPort);
+
 export type ElectronAPI = typeof api;

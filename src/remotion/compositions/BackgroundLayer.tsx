@@ -34,9 +34,8 @@ const ClipItem: React.FC<ClipItemProps> = ({
 
   const isVideo =
     clip.type === 'video' ||
-    mediaSrc.endsWith('.mp4') ||
-    mediaSrc.endsWith('.webm') ||
-    mediaSrc.endsWith('.mov');
+    /\.(mp4|webm|mov|mkv)(\?.*)?$/i.test(clip.source) ||
+    /\.(mp4|webm|mov|mkv)(\?.*)?$/i.test(mediaSrc);
 
   const transitionFrames = Math.max(
     1,
@@ -127,6 +126,7 @@ const ClipItem: React.FC<ClipItemProps> = ({
             src={mediaSrc}
             startFrom={startFromFrame}
             playbackRate={playbackRate}
+            pauseWhenBuffering
             loop
             muted
             style={{

@@ -77,11 +77,22 @@ class LocalMediaServer {
           // Handle HTTP 206 Partial Content for video seeking
           const range = req.headers.range;
           if (range && range.startsWith('bytes=')) {
-            const parts = range.replace(/bytes=/, '').split('-');
-            const start = parseInt(parts[0], 10) || 0;
-            const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+            const rawRange = range.replace(/bytes=/, '').trim();
+            const parts = rawRange.split('-');
+            let start = 0;
+            let end = fileSize - 1;
 
-            if (start >= fileSize || end >= fileSize) {
+            if (parts[0] === '') {
+              // Suffix range: bytes=-500 (last 500 bytes)
+              start = Math.max(0, fileSize - (parseInt(parts[1], 10) || 0));
+            } else {
+              start = parseInt(parts[0], 10) || 0;
+              if (parts[1]) {
+                end = Math.min(fileSize - 1, parseInt(parts[1], 10));
+              }
+            }
+
+            if (start >= fileSize || end >= fileSize || start > end) {
               res.writeHead(416, {
                 'Content-Range': `bytes */${fileSize}`,
               });
@@ -98,13 +109,26 @@ class LocalMediaServer {
               'Content-Type': contentType,
             });
             stream.pipe(res);
+
+            const cleanup = () => {
+              stream.destroy();
+            };
+            req.on('close', cleanup);
+            res.on('close', cleanup);
           } else {
             res.writeHead(200, {
               'Content-Length': fileSize,
               'Accept-Ranges': 'bytes',
               'Content-Type': contentType,
             });
-            fs.createReadStream(filePath).pipe(res);
+            const stream = fs.createReadStream(filePath);
+            stream.pipe(res);
+
+            const cleanup = () => {
+              stream.destroy();
+            };
+            req.on('close', cleanup);
+            res.on('close', cleanup);
           }
         } catch (err: any) {
           console.error('[LocalMediaServer] Error serving file:', err);
@@ -152,6 +176,10 @@ class LocalMediaServer {
     cleanPath = decodeURIComponent(cleanPath);
 
     return `http://127.0.0.1:${this.port}/media?path=${encodeURIComponent(cleanPath)}`;
+  }
+
+  public getPort(): number {
+    return this.port;
   }
 
   public stop(): void {

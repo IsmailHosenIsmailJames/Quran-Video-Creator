@@ -231,7 +231,7 @@ function createApplicationMenu(window: BrowserWindow): void {
   Menu.setApplicationMenu(menu);
 }
 
-function createWindow(): void {
+function createWindow(mediaServerPort: number): void {
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -245,6 +245,7 @@ function createWindow(): void {
       nodeIntegration: false,
       contextIsolation: true,
       webSecurity: true,
+      additionalArguments: [`--media-server-port=${mediaServerPort}`],
     },
   });
 
@@ -273,28 +274,30 @@ function createWindow(): void {
 }
 
 app.whenReady().then(async () => {
-  // Start local streaming server for media
-  await localMediaServer.start();
+  // Start local streaming server for media with Range 206 support
+  const port = await localMediaServer.start();
 
   // Protocol handler for app-media://
-  // Allows loading local disk files like video/audio/images cleanly into Remotion Player and img/video elements
+  // Forwards to localMediaServer so Chromium receives full HTTP 206 Byte-Range streaming
   protocol.handle('app-media', async (request) => {
     try {
       const parsed = new URL(request.url);
       let filePath = decodeURIComponent(parsed.pathname);
+      // Strip leading hostname 'local' if present
+      if (filePath.startsWith('/local/')) {
+        filePath = filePath.slice('/local'.length);
+      } else if (filePath.startsWith('local/')) {
+        filePath = '/' + filePath.slice('local/'.length);
+      }
       // On Windows or if path begins with /C:, remove the leading slash
       if (/^\/[a-zA-Z]:/.test(filePath)) {
         filePath = filePath.slice(1);
       }
-      const fileUrl = pathToFileURL(filePath).toString();
-      const response = await net.fetch(fileUrl);
-      const headers = new Headers(response.headers);
-      headers.set('Access-Control-Allow-Origin', '*');
-      headers.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
-      return new Response(response.body, {
-        status: response.status,
-        statusText: response.statusText,
-        headers,
+
+      const streamUrl = localMediaServer.getMediaUrl(filePath);
+      return await net.fetch(streamUrl, {
+        headers: request.headers,
+        method: request.method,
       });
     } catch (err) {
       console.error('Failed to load app-media:', request.url, err);
@@ -302,11 +305,11 @@ app.whenReady().then(async () => {
     }
   });
 
-  createWindow();
+  createWindow(port);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+      createWindow(localMediaServer.getPort());
     }
   });
 });
