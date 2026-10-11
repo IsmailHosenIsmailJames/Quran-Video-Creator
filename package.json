@@ -10,6 +10,7 @@
     "build:vite": "tsc -b && vite build",
     "build": "npm run build:vite && npm run bundle:remotion && electron-builder --dir",
     "lint": "tsc --noEmit",
+    "loc": "node scripts/count-loc.js",
     "pack": "npm run build:vite && npm run bundle:remotion && electron-builder --dir",
     "dist": "npm run build:vite && npm run bundle:remotion && electron-builder"
   },
