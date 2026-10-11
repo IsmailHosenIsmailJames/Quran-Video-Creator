@@ -26,6 +26,9 @@ import {
   RefreshCw,
   Type,
   RotateCcw,
+  ZoomIn,
+  ZoomOut,
+  Magnet,
 } from 'lucide-react';
 
 interface StudioTimelineProps {
@@ -95,9 +98,25 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
   const [showTransitionMenu, setShowTransitionMenu] = useState<string | null>(null); // clipId for transition
 
   const timelineTrackRef = useRef<HTMLDivElement>(null);
+  const timelineScrollRef = useRef<HTMLDivElement>(null);
 
   // Playhead scrubber dragging state
   const [isScrubbing, setIsScrubbing] = useState(false);
+
+  // Horizontal Timeline Zoom state (1 = Fit window, up to 10x magnification)
+  const defaultZoom = useMemo(() => {
+    if (ayahs.length >= 60) return 4.0;
+    if (ayahs.length >= 30) return 2.5;
+    if (ayahs.length >= 15) return 1.5;
+    return 1.0;
+  }, [ayahs.length]);
+
+  const [zoomLevel, setZoomLevel] = useState<number>(defaultZoom);
+
+  useEffect(() => {
+    if (ayahs.length >= 60) setZoomLevel((z) => Math.max(z, 4.0));
+    else if (ayahs.length >= 30) setZoomLevel((z) => Math.max(z, 2.5));
+  }, [ayahs.length]);
 
   // Dragging divider state between clips
   const [draggingDividerIndex, setDraggingDividerIndex] = useState<number | null>(null);
@@ -137,7 +156,22 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
     ? Math.max(1, Math.round((config.introVideoDurationSeconds || 4) * fps))
     : 0;
 
-  // Calculate normalized percentages and duration in seconds for each clip
+  // Precalculate start frame and duration for each ayah in sequence
+  const ayahTimeMap = useMemo(() => {
+    let currentStart = isIntroActive ? introDurationInFrames : 0;
+    return ayahs.map((ayah) => {
+      const startFrame = currentStart;
+      const endFrame = startFrame + ayah.durationInFrames;
+      currentStart = endFrame;
+      return {
+        ayah,
+        startFrame,
+        endFrame,
+      };
+    });
+  }, [ayahs, isIntroActive, introDurationInFrames]);
+
+  // Calculate normalized percentages, duration, and Ayah verse coverage for each clip
   const clipLayouts = useMemo(() => {
     const totalClips = clips.length;
     const totalWeight = clips.reduce(
@@ -178,6 +212,24 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
         }
       }
 
+      // Calculate which ayahs this clip spans in the audio timeline
+      const clipStartRecitation = (startPercent / 100) * recitationFrames;
+      const clipEndRecitation = ((startPercent + percent) / 100) * recitationFrames;
+      const clipStartTotal = (isIntroActive ? introDurationInFrames : 0) + clipStartRecitation;
+      const clipEndTotal = (isIntroActive ? introDurationInFrames : 0) + clipEndRecitation;
+
+      const overlapping = ayahTimeMap.filter((item) => {
+        return item.endFrame > clipStartTotal && item.startFrame < clipEndTotal;
+      });
+
+      const firstAyah = overlapping[0]?.ayah;
+      const lastAyah = overlapping[overlapping.length - 1]?.ayah;
+      const ayahRangeLabel = firstAyah && lastAyah
+        ? (firstAyah.ayah === lastAyah.ayah
+            ? (firstAyah.ayah === 0 ? 'Bism.' : `v.${firstAyah.ayah}`)
+            : (firstAyah.ayah === 0 ? `Bism.–v.${lastAyah.ayah}` : `v.${firstAyah.ayah}–v.${lastAyah.ayah}`))
+        : '';
+
       return {
         clip,
         percent,
@@ -186,9 +238,13 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
         displaySpeed,
         isAutoSlowed,
         isVideo,
+        ayahRangeLabel,
+        overlappingAyahs: overlapping,
+        clipStartTotal,
+        clipEndTotal,
       };
     });
-  }, [clips, totalDurationInFrames, introDurationInFrames, fps]);
+  }, [clips, totalDurationInFrames, introDurationInFrames, fps, ayahTimeMap]);
 
   // Selected clip object for inspector
   const selectedClip = clips.find((c) => c.id === selectedClipId) || null;
@@ -280,7 +336,32 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
       const minPct = 2.0;
       const combined = leftStartPct + rightStartPct;
 
-      const newLeft = Math.max(minPct, Math.min(combined - minPct, leftStartPct + deltaPct));
+      let newLeft = Math.max(minPct, Math.min(combined - minPct, leftStartPct + deltaPct));
+
+      // Magnetic Snapping to Ayah boundaries:
+      if (ayahs && ayahs.length > 0) {
+        const leftIndex = clips.findIndex((c) => c.id === leftId);
+        let leftClipStartPct = 0;
+        for (let i = 0; i < leftIndex; i++) {
+          leftClipStartPct += clipLayouts[i]?.percent || 0;
+        }
+        const recitationFrames = Math.max(1, totalDurationInFrames - introDurationInFrames);
+        const dividerRecitationFrame = ((leftClipStartPct + newLeft) / 100) * recitationFrames;
+
+        for (const item of ayahTimeMap) {
+          const ayahEndRecitationFrame = item.endFrame - (isIntroActive ? introDurationInFrames : 0);
+          const diffFrames = Math.abs(dividerRecitationFrame - ayahEndRecitationFrame);
+          // Snap threshold: ~20 frames (~0.7s)
+          if (diffFrames < 20) {
+            const snappedLeftPct = (ayahEndRecitationFrame / recitationFrames) * 100 - leftClipStartPct;
+            if (snappedLeftPct >= minPct && snappedLeftPct <= combined - minPct) {
+              newLeft = snappedLeftPct;
+              break;
+            }
+          }
+        }
+      }
+
       const newRight = combined - newLeft;
 
       updateBackgroundClip(leftId, {
@@ -433,10 +514,106 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
   // Calculate current playhead percentage
   const playheadPercent = Math.min(100, Math.max(0, (currentFrame / Math.max(1, totalDurationInFrames)) * 100));
 
-  // Time ruler tick intervals (e.g. 5 ticks across video duration)
+  // Horizontal mouse wheel scrolling for the timeline track
+  const handleWheelScroll = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+    if (e.currentTarget) {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && !e.ctrlKey) {
+        e.currentTarget.scrollLeft += e.deltaY;
+      }
+    }
+  }, []);
+
+  // Playback Auto-Scroll: keep playhead visible in timeline viewport during playback
+  useEffect(() => {
+    if (!isPlaying || !timelineScrollRef.current || !timelineTrackRef.current) return;
+    const scrollContainer = timelineScrollRef.current;
+    const track = timelineTrackRef.current;
+    const playheadPx = (playheadPercent / 100) * track.clientWidth;
+    const visibleLeft = scrollContainer.scrollLeft;
+    const visibleRight = visibleLeft + scrollContainer.clientWidth;
+
+    if (playheadPx > visibleRight - 80 || playheadPx < visibleLeft) {
+      scrollContainer.scrollLeft = Math.max(0, playheadPx - 100);
+    }
+  }, [isPlaying, currentFrame, playheadPercent]);
+
+  // Evenly distribute all background clips across whole Ayah verse boundaries
+  const handleMatchClipsToAyahsEvenly = useCallback(() => {
+    if (!clips || clips.length === 0 || !ayahs || ayahs.length === 0) return;
+    const totalClips = clips.length;
+    const totalAyahs = ayahs.length;
+    const recitationFrames = Math.max(1, totalDurationInFrames - introDurationInFrames);
+
+    const ayahsPerClip = totalAyahs / totalClips;
+    const updatedClips = clips.map((clip, idx) => {
+      const fromIdx = Math.floor(idx * ayahsPerClip);
+      const toIdx = idx === totalClips - 1 ? totalAyahs - 1 : Math.floor((idx + 1) * ayahsPerClip) - 1;
+
+      const bucketAyahs = ayahs.slice(fromIdx, toIdx + 1);
+      const bucketFrames = bucketAyahs.reduce((sum, a) => sum + a.durationInFrames, 0);
+      const pct = Number(((bucketFrames / recitationFrames) * 100).toFixed(2));
+
+      return {
+        ...clip,
+        percentage: Math.max(2, pct),
+        durationRatio: Number((pct / 100).toFixed(4)),
+      };
+    });
+
+    const sum = updatedClips.reduce((s, c) => s + (c.percentage || 0), 0);
+    const diff = 100 - sum;
+    if (Math.abs(diff) > 0.001 && updatedClips.length > 0) {
+      const last = updatedClips[updatedClips.length - 1];
+      last.percentage = Number((last.percentage! + diff).toFixed(2));
+      last.durationRatio = Number((last.percentage! / 100).toFixed(4));
+    }
+
+    updateConfig({ backgroundClips: updatedClips });
+  }, [clips, ayahs, totalDurationInFrames, introDurationInFrames, updateConfig]);
+
+  // Snap a single selected clip to nearest Ayah verse boundaries
+  const handleSnapClipToNearestAyahs = useCallback(
+    (clipId: string) => {
+      const layout = clipLayouts.find((l) => l.clip.id === clipId);
+      if (!layout || !ayahTimeMap.length) return;
+      const recitationFrames = Math.max(1, totalDurationInFrames - introDurationInFrames);
+
+      let bestStartFrame = ayahTimeMap[0].startFrame;
+      let minStartDiff = Math.abs(layout.clipStartTotal - bestStartFrame);
+      for (const item of ayahTimeMap) {
+        const diff = Math.abs(layout.clipStartTotal - item.startFrame);
+        if (diff < minStartDiff) {
+          minStartDiff = diff;
+          bestStartFrame = item.startFrame;
+        }
+      }
+
+      let bestEndFrame = ayahTimeMap[ayahTimeMap.length - 1].endFrame;
+      let minEndDiff = Math.abs(layout.clipEndTotal - bestEndFrame);
+      for (const item of ayahTimeMap) {
+        const diff = Math.abs(layout.clipEndTotal - item.endFrame);
+        if (diff < minEndDiff) {
+          minEndDiff = diff;
+          bestEndFrame = item.endFrame;
+        }
+      }
+
+      if (bestEndFrame <= bestStartFrame) {
+        bestEndFrame = bestStartFrame + 30;
+      }
+
+      const snappedDuration = bestEndFrame - bestStartFrame;
+      const newPct = Math.max(2, Number(((snappedDuration / recitationFrames) * 100).toFixed(2)));
+      updateClipPercentage(clipId, newPct);
+    },
+    [clipLayouts, ayahTimeMap, totalDurationInFrames, introDurationInFrames, updateClipPercentage]
+  );
+
+  // Time ruler tick intervals scaled dynamically by zoom level
   const totalSeconds = totalDurationInFrames / fps;
   const timeTicks = useMemo(() => {
-    const count = 5;
+    const baseCount = 6;
+    const count = Math.max(baseCount, Math.min(80, Math.round(baseCount * zoomLevel)));
     return Array.from({ length: count + 1 }, (_, i) => {
       const sec = (i / count) * totalSeconds;
       const mins = Math.floor(sec / 60);
@@ -446,7 +623,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
         label: `${String(mins).padStart(2, '0')}:${String(s).padStart(2, '0')}`,
       };
     });
-  }, [totalSeconds]);
+  }, [totalSeconds, zoomLevel]);
 
   return (
     <div className="w-full flex-shrink-0 bg-gray-950/95 border-t border-gray-800/90 rounded-2xl p-3 shadow-2xl flex flex-col gap-2.5 backdrop-blur-md select-none mt-2 relative z-20">
@@ -506,8 +683,63 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
           </div>
         </div>
 
-        {/* Right Action: Add Media to Background */}
-        <div className="flex items-center gap-2">
+        {/* Center / Right Actions: Zoom & Media Alignment & Add Media */}
+        <div className="flex items-center gap-2.5">
+          {/* Timeline Zoom Controls */}
+          <div className="flex items-center gap-1.5 bg-gray-900 border border-gray-800 px-2 py-1 rounded-lg text-xs shadow-inner">
+            <button
+              onClick={() => setZoomLevel((z) => Math.max(1, Number((z - 0.5).toFixed(1))))}
+              disabled={zoomLevel <= 1}
+              className="p-1 rounded hover:bg-gray-800 text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition"
+              title="Zoom Out (-)"
+            >
+              <ZoomOut className="w-3.5 h-3.5" />
+            </button>
+            <input
+              type="range"
+              min="1"
+              max="10"
+              step="0.5"
+              value={zoomLevel}
+              onChange={(e) => setZoomLevel(Number(e.target.value))}
+              className="w-20 accent-amber-500 cursor-pointer h-1.5 bg-gray-800 rounded-lg"
+              title={`Timeline Zoom: ${zoomLevel}×`}
+            />
+            <button
+              onClick={() => setZoomLevel((z) => Math.min(10, Number((z + 0.5).toFixed(1))))}
+              disabled={zoomLevel >= 10}
+              className="p-1 rounded hover:bg-gray-800 text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition"
+              title="Zoom In (+)"
+            >
+              <ZoomIn className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setZoomLevel(1)}
+              className={`px-1.5 py-0.5 rounded text-[10px] font-mono transition ${
+                zoomLevel === 1
+                  ? 'bg-amber-500/25 text-amber-300 font-bold border border-amber-500/40'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-800'
+              }`}
+              title="Fit entire timeline into window (100%)"
+            >
+              Fit
+            </button>
+            <span className="font-mono text-amber-300 text-[10px] min-w-[28px] text-right font-medium">
+              {zoomLevel.toFixed(1)}×
+            </span>
+          </div>
+
+          {/* Match All Media to Verses Button */}
+          <button
+            onClick={handleMatchClipsToAyahsEvenly}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 hover:text-amber-200 transition text-[11px] font-medium shadow-sm"
+            title="Automatically align all background clips evenly to verse boundaries"
+          >
+            <Sparkles className="w-3 h-3 text-amber-400" />
+            <span>Match Media to Verses</span>
+          </button>
+
+          {/* Add Video / Image Buttons */}
           <button
             onClick={() => handleAddMedia('video')}
             className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 hover:text-white transition text-[11px]"
@@ -536,7 +768,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
             Ruler:
           </div>
           {/* Ayahs Track Label */}
-          <div className="h-6 flex items-center font-semibold text-gray-400">
+          <div className="h-7 flex items-center font-semibold text-gray-400">
             Ayahs:
           </div>
           {/* Media Track Label */}
@@ -545,321 +777,331 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
           </div>
         </div>
 
-        {/* Right Timeline Area */}
+        {/* Right Scrollable Timeline Viewport */}
         <div
-          ref={timelineTrackRef}
-          className="flex-1 relative flex flex-col gap-1.5 min-w-0"
+          ref={timelineScrollRef}
+          onWheel={handleWheelScroll}
+          className="flex-1 relative overflow-x-auto overflow-y-hidden rounded-lg min-w-0 pb-1 scrollbar-thin scrollbar-thumb-gray-700/80 scrollbar-track-gray-950/80"
         >
-          {/* TOP TIME RULER & SCRUBBER BAR: Dedicated scrubbing region */}
+          {/* Inner Scalable / Zoomed Timeline Canvas */}
           <div
-            onMouseDown={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              setIsScrubbing(true);
-              handleSeekToClientX(e.clientX);
-            }}
-            className="h-4 w-full relative bg-gray-950/60 rounded border border-gray-800/50 cursor-ew-resize flex items-center justify-between px-1 text-[9px] font-mono text-gray-500"
-            title="Click or drag anywhere on ruler to scrub timeline"
+            ref={timelineTrackRef}
+            style={{ width: `${zoomLevel * 100}%`, minWidth: '100%' }}
+            className="relative flex flex-col gap-1.5 min-w-full"
           >
-            {timeTicks.map((tick, i) => (
-              <span
-                key={i}
-                style={{
-                  position: 'absolute',
-                  left: `${tick.percent}%`,
-                  transform: i === 0 ? 'none' : i === timeTicks.length - 1 ? 'translateX(-100%)' : 'translateX(-50%)',
-                }}
-                className="select-none pointer-events-none"
-              >
-                {tick.label}
-              </span>
-            ))}
-          </div>
-
-          {/* Playhead Needle Bar & Draggable Scrubber */}
-          <div
-            className="absolute top-0 bottom-0 w-[2px] bg-amber-400 shadow-[0_0_12px_#f59e0b] z-40 cursor-ew-resize select-none pointer-events-auto"
-            style={{ left: `${playheadPercent}%` }}
-            onMouseDown={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              setIsScrubbing(true);
-            }}
-          >
-            {/* Draggable Scrubber Top Handle in Ruler */}
+            {/* TOP TIME RULER & SCRUBBER BAR: Dedicated scrubbing region */}
             <div
-              className="w-4 h-4 bg-amber-400 hover:bg-amber-300 transform -translate-x-[7px] -translate-y-0.5 rounded-sm shadow-md cursor-grab active:cursor-grabbing flex items-center justify-center hover:scale-125 transition-transform"
-              title="Drag to scrub timeline"
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                setIsScrubbing(true);
+                handleSeekToClientX(e.clientX);
+              }}
+              className="h-4 w-full relative bg-gray-950/80 rounded border border-gray-800/60 cursor-ew-resize flex items-center justify-between px-1 text-[9px] font-mono text-gray-500 overflow-hidden"
+              title="Click or drag anywhere on ruler to scrub timeline"
             >
-              <div className="w-1 h-2 bg-black/60 rounded-full" />
+              {timeTicks.map((tick, i) => (
+                <span
+                  key={i}
+                  style={{
+                    position: 'absolute',
+                    left: `${tick.percent}%`,
+                    transform: i === 0 ? 'none' : i === timeTicks.length - 1 ? 'translateX(-100%)' : 'translateX(-50%)',
+                  }}
+                  className="select-none pointer-events-none whitespace-nowrap"
+                >
+                  {tick.label}
+                </span>
+              ))}
             </div>
-          </div>
 
-          {/* Track A: Ayahs / Scripture Audio Track */}
-          <div className="h-6 w-full flex gap-1 relative overflow-hidden">
-            {isIntroActive && (
+            {/* Playhead Needle Bar & Draggable Scrubber */}
+            <div
+              className="absolute top-0 bottom-0 w-[2px] bg-amber-400 shadow-[0_0_12px_#f59e0b] z-40 cursor-ew-resize select-none pointer-events-auto"
+              style={{ left: `${playheadPercent}%` }}
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                setIsScrubbing(true);
+              }}
+            >
+              {/* Draggable Scrubber Top Handle in Ruler */}
               <div
-                style={{ width: `${(introDurationInFrames / Math.max(1, totalDurationInFrames)) * 100}%` }}
-                onMouseDown={(e) => {
-                  e.stopPropagation();
-                  setCurrentFrame(0);
-                  playerRef.current?.seekTo(0);
-                  setSelectedAyahNumber(null);
-                  setSelectedClipId(null);
-                }}
-                className="h-full rounded-md px-1.5 flex items-center justify-between text-[10px] font-mono truncate cursor-pointer transition select-none bg-purple-500/25 hover:bg-purple-500/35 border border-purple-500/40 text-purple-200"
-                title={`Intro Bumper (${(introDurationInFrames / fps).toFixed(1)}s) - Click to seek to start`}
+                className="w-4 h-4 bg-amber-400 hover:bg-amber-300 transform -translate-x-[7px] -translate-y-0.5 rounded-sm shadow-md cursor-grab active:cursor-grabbing flex items-center justify-center hover:scale-125 transition-transform"
+                title="Drag to scrub timeline"
               >
-                <span className="truncate font-semibold flex items-center gap-1">
-                  <Film className="w-2.5 h-2.5 text-purple-400" />
-                  <span>Intro</span>
-                </span>
-                <span className="text-[9px] text-purple-300/80 hidden sm:inline">
-                  {(introDurationInFrames / fps).toFixed(1)}s
-                </span>
+                <div className="w-1 h-2 bg-black/60 rounded-full" />
               </div>
-            )}
-            {ayahs.map((ayah, index) => {
-              const ayahPercent = (ayah.durationInFrames / Math.max(1, totalDurationInFrames)) * 100;
-              const isAyahSelected = selectedAyahNumber === ayah.ayah;
-              const ayahKey = `${ayah.surah}:${ayah.ayah}`;
-              const hasOverride = config.ayahFontOverrides?.[ayahKey] !== undefined;
+            </div>
 
-              return (
+            {/* Track A: Ayahs / Scripture Audio Track */}
+            <div className="h-7 w-full flex relative rounded-md overflow-hidden bg-gray-950/80 border border-gray-800/80">
+              {isIntroActive && (
                 <div
-                  key={ayahKey}
-                  style={{ width: `${ayahPercent}%` }}
+                  style={{ width: `${(introDurationInFrames / Math.max(1, totalDurationInFrames)) * 100}%` }}
                   onMouseDown={(e) => {
                     e.stopPropagation();
-                    let startFrame = isIntroActive ? introDurationInFrames : 0;
-                    for (let k = 0; k < index; k++) {
-                      startFrame += ayahs[k].durationInFrames;
-                    }
-                    setCurrentFrame(startFrame);
-                    playerRef.current?.seekTo(startFrame);
-                    setSelectedAyahNumber(ayah.ayah);
+                    setCurrentFrame(0);
+                    playerRef.current?.seekTo(0);
+                    setSelectedAyahNumber(null);
                     setSelectedClipId(null);
                   }}
-                  className={`h-full rounded-md px-1.5 flex items-center justify-between text-[10px] font-mono truncate cursor-pointer transition select-none ${
-                    isAyahSelected
-                      ? 'bg-amber-500/40 border-2 border-amber-400 text-amber-200 shadow-[0_0_8px_rgba(245,158,11,0.5)]'
-                      : hasOverride
-                      ? 'bg-amber-500/25 hover:bg-amber-500/35 border border-amber-500/50 text-amber-300'
-                      : 'bg-amber-500/15 hover:bg-amber-500/30 border border-amber-500/30 hover:border-amber-400/60 text-amber-300'
-                  }`}
-                  title={
-                    ayah.ayah === 0
-                      ? `Bismillah (${(ayah.durationInFrames / fps).toFixed(1)}s) - Click to inspect styling`
-                      : `Verse ${ayah.ayah} (${(ayah.durationInFrames / fps).toFixed(1)}s) - Click to inspect styling`
-                  }
+                  className="h-full border-r border-black/50 px-1.5 flex items-center justify-between text-[10px] font-mono truncate cursor-pointer transition select-none bg-purple-500/25 hover:bg-purple-500/35 border-purple-500/40 text-purple-200 flex-shrink-0"
+                  title={`Intro Bumper (${(introDurationInFrames / fps).toFixed(1)}s) - Click to seek to start`}
                 >
                   <span className="truncate font-semibold flex items-center gap-1">
-                    {ayah.ayah === 0 ? 'Bism.' : `v.${ayah.ayah}`}
-                    {hasOverride && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" title="Custom styling set" />
-                    )}
+                    <Film className="w-2.5 h-2.5 text-purple-400" />
+                    <span>Intro</span>
                   </span>
-                  <span className="text-[9px] text-amber-400/70 hidden sm:inline">
-                    {(ayah.durationInFrames / fps).toFixed(1)}s
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Track B: Multi-Media Background Sequence Track */}
-          <div className="h-12 w-full flex relative">
-            {isIntroActive && (
-              <div
-                style={{ width: `${(introDurationInFrames / Math.max(1, totalDurationInFrames)) * 100}%` }}
-                onMouseDown={(e) => {
-                  e.stopPropagation();
-                  setCurrentFrame(0);
-                  playerRef.current?.seekTo(0);
-                  setSelectedClipId(null);
-                  setSelectedAyahNumber(null);
-                }}
-                className="h-full relative rounded-lg border border-purple-500/50 bg-purple-950/40 hover:bg-purple-900/50 cursor-pointer transition-all flex items-center justify-between px-2 text-[10px] mr-1 select-none"
-                title={`Channel Intro Video Bumper (${(introDurationInFrames / fps).toFixed(1)}s) - Click to seek to start`}
-              >
-                <div className="flex items-center gap-1.5 truncate">
-                  <Film className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
-                  <span className="truncate font-medium text-purple-200">Intro Video</span>
-                </div>
-                <div className="flex items-center gap-1.5 flex-shrink-0">
-                  <span className="font-mono text-purple-300 text-[9px] bg-purple-900/60 px-1 py-0.5 rounded border border-purple-700/60">
-                    {((introDurationInFrames / Math.max(1, totalDurationInFrames)) * 100).toFixed(0)}%
-                  </span>
-                  <span className="font-mono text-purple-400/80 text-[10px]">
+                  <span className="text-[9px] text-purple-300/80 hidden sm:inline">
                     {(introDurationInFrames / fps).toFixed(1)}s
                   </span>
                 </div>
-              </div>
-            )}
-            {clipLayouts.map(({ clip, percent, durationSec, displaySpeed, isAutoSlowed, isVideo }, index) => {
-              const isSelected = clip.id === selectedClipId;
-              const nextLayout = clipLayouts[index + 1];
-              const displayWidthPercent = isIntroActive
-                ? (percent * (totalDurationInFrames - introDurationInFrames)) / Math.max(1, totalDurationInFrames)
-                : percent;
+              )}
+              {ayahs.map((ayah, index) => {
+                const ayahPercent = (ayah.durationInFrames / Math.max(1, totalDurationInFrames)) * 100;
+                const isAyahSelected = selectedAyahNumber === ayah.ayah;
+                const ayahKey = `${ayah.surah}:${ayah.ayah}`;
+                const hasOverride = config.ayahFontOverrides?.[ayahKey] !== undefined;
 
-              return (
+                return (
+                  <div
+                    key={ayahKey}
+                    style={{ width: `${ayahPercent}%` }}
+                    onMouseDown={(e) => {
+                      e.stopPropagation();
+                      let startFrame = isIntroActive ? introDurationInFrames : 0;
+                      for (let k = 0; k < index; k++) {
+                        startFrame += ayahs[k].durationInFrames;
+                      }
+                      setCurrentFrame(startFrame);
+                      playerRef.current?.seekTo(startFrame);
+                      setSelectedAyahNumber(ayah.ayah);
+                      setSelectedClipId(null);
+                    }}
+                    className={`h-full border-r border-black/40 last:border-r-0 px-1 flex items-center justify-between text-[10px] font-mono truncate cursor-pointer transition select-none ${
+                      isAyahSelected
+                        ? 'bg-amber-500/40 text-amber-200 ring-2 ring-inset ring-amber-400 z-10 shadow-[0_0_8px_rgba(245,158,11,0.5)] font-bold'
+                        : hasOverride
+                        ? 'bg-amber-500/25 hover:bg-amber-500/35 text-amber-300'
+                        : 'bg-amber-500/15 hover:bg-amber-500/30 text-amber-300 hover:text-amber-200'
+                    }`}
+                    title={
+                      ayah.ayah === 0
+                        ? `Bismillah (${(ayah.durationInFrames / fps).toFixed(1)}s) - Click to inspect styling`
+                        : `Verse ${ayah.ayah} (${(ayah.durationInFrames / fps).toFixed(1)}s) - Click to inspect styling`
+                    }
+                  >
+                    <span className="truncate font-semibold flex items-center gap-1 min-w-0">
+                      <span>{ayah.ayah === 0 ? 'Bism.' : `v.${ayah.ayah}`}</span>
+                      {hasOverride && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse flex-shrink-0" title="Custom styling set" />
+                      )}
+                    </span>
+                    <span className="text-[9px] text-amber-400/70 hidden sm:inline ml-1 font-mono flex-shrink-0">
+                      {(ayah.durationInFrames / fps).toFixed(1)}s
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Track B: Multi-Media Background Sequence Track */}
+            <div className="h-12 w-full flex relative rounded-lg overflow-hidden bg-gray-950/80 border border-gray-800/80">
+              {isIntroActive && (
                 <div
-                  key={clip.id}
-                  style={{ width: `${displayWidthPercent}%` }}
+                  style={{ width: `${(introDurationInFrames / Math.max(1, totalDurationInFrames)) * 100}%` }}
                   onMouseDown={(e) => {
                     e.stopPropagation();
-                    // Select this clip immediately on mouse down without seeking playhead
-                    setSelectedClipId(clip.id);
+                    setCurrentFrame(0);
+                    playerRef.current?.seekTo(0);
+                    setSelectedClipId(null);
                     setSelectedAyahNumber(null);
                   }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedClipId(clip.id);
-                    setSelectedAyahNumber(null);
-                  }}
-                  className={`h-full relative rounded-lg border cursor-pointer transition-all flex items-center justify-between px-2 text-[10px] mr-1 last:mr-0 ${
-                    isSelected
-                      ? 'border-amber-400 ring-2 ring-amber-400/50 bg-amber-500/25 z-10 shadow-lg shadow-amber-500/10'
-                      : 'border-gray-800 bg-gray-950/80 hover:border-amber-500/40 hover:bg-gray-900/80'
-                  }`}
-                  title={`Click to select and edit ${clip.name}`}
+                  className="h-full relative border-r border-purple-500/40 bg-purple-950/50 hover:bg-purple-900/60 cursor-pointer transition-all flex items-center justify-between px-2 text-[10px] select-none flex-shrink-0"
+                  title={`Channel Intro Video Bumper (${(introDurationInFrames / fps).toFixed(1)}s) - Click to seek to start`}
                 >
-                  {/* Clip Thumbnail / Icon */}
                   <div className="flex items-center gap-1.5 truncate">
-                    {isVideo ? (
-                      <Film className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
-                    ) : (
-                      <ImageIcon className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-                    )}
-                    <span className="truncate font-medium text-gray-200">{clip.name}</span>
+                    <Film className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
+                    <span className="truncate font-medium text-purple-200">Intro Video</span>
                   </div>
-
-                  {/* Percentage, Duration & Speed Badges */}
                   <div className="flex items-center gap-1.5 flex-shrink-0">
-                    <span className="px-1 py-0.5 rounded bg-gray-800/90 text-amber-300 font-mono text-[9px] border border-gray-700">
-                      {percent.toFixed(0)}%
+                    <span className="font-mono text-purple-400/80 text-[10px]">
+                      {(introDurationInFrames / fps).toFixed(1)}s
                     </span>
-                    <span className="font-mono text-gray-400 text-[10px]">{durationSec}s</span>
-                    {isVideo && (
-                      <span
-                        className={`px-1 py-0.5 rounded font-mono text-[9px] ${
-                          isAutoSlowed
-                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                            : 'bg-gray-800 text-gray-400'
-                        }`}
-                        title={isAutoSlowed ? 'Auto-slowed to fit slot without repeating' : 'Manual speed'}
-                      >
-                        {displaySpeed}
-                      </span>
-                    )}
                   </div>
+                </div>
+              )}
+              {clipLayouts.map(
+                ({ clip, percent, durationSec, displaySpeed, isAutoSlowed, isVideo, ayahRangeLabel }, index) => {
+                  const isSelected = clip.id === selectedClipId;
+                  const nextLayout = clipLayouts[index + 1];
+                  const displayWidthPercent = isIntroActive
+                    ? (percent * (totalDurationInFrames - introDurationInFrames)) / Math.max(1, totalDurationInFrames)
+                    : percent;
 
-                  {/* Transition Badge between adjacent clips */}
-                  {index > 0 && (
-                    <div className="absolute -left-3.5 top-1/2 -translate-y-1/2 z-30">
-                      <button
-                        onMouseDown={(e) => e.stopPropagation()}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowTransitionMenu(showTransitionMenu === clip.id ? null : clip.id);
-                        }}
-                        className={`px-2 py-0.5 rounded-full border shadow-lg flex items-center gap-1 text-[9px] font-medium transition cursor-pointer backdrop-blur-md hover:scale-105 active:scale-95 whitespace-nowrap ${
-                          TRANSITION_COLORS[clip.transition || 'crossfade']?.bg || 'bg-amber-500/20'
-                        } ${TRANSITION_COLORS[clip.transition || 'crossfade']?.text || 'text-amber-400'} ${
-                          TRANSITION_COLORS[clip.transition || 'crossfade']?.border || 'border-amber-500/60'
-                        }`}
-                        title={`Click to change transition: ${TRANSITION_LABELS[clip.transition || 'crossfade']}`}
-                      >
-                        <Sparkles className="w-2.5 h-2.5" />
-                        <span className="font-mono font-semibold">{TRANSITION_LABELS[clip.transition || 'crossfade']}</span>
-                      </button>
-
-                      {/* Transition Picker Menu */}
-                      {showTransitionMenu === clip.id && (
-                        <>
-                          {/* Invisible backdrop to close menu when clicking anywhere outside */}
-                          <div
-                            className="fixed inset-0 z-40"
-                            onMouseDown={(e) => {
-                              e.stopPropagation();
-                              setShowTransitionMenu(null);
-                            }}
-                          />
-
-                          <div
-                            onMouseDown={(e) => e.stopPropagation()}
-                            onClick={(e) => e.stopPropagation()}
-                            className={`absolute bottom-full mb-2 w-52 bg-gray-900/98 backdrop-blur-xl border border-gray-700/80 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] p-2 z-50 text-xs ${
-                              index === 1 ? 'left-0' : index === clips.length - 1 && clips.length > 2 ? 'right-0' : 'left-1/2 -translate-x-1/2'
-                            }`}
-                          >
-                            <div className="flex justify-between items-center pb-1.5 mb-1.5 border-b border-gray-800 text-[10px] text-gray-400 font-semibold uppercase tracking-wider">
-                              <span className="flex items-center gap-1 text-amber-400 font-bold">
-                                <Sparkles className="w-3 h-3" />
-                                Transition Effect
-                              </span>
-                              <button
-                                onClick={() => setShowTransitionMenu(null)}
-                                className="p-0.5 rounded hover:bg-gray-800 text-gray-400 hover:text-white"
-                              >
-                                <X className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                            <div className="space-y-1 max-h-60 overflow-y-auto">
-                              {(Object.keys(TRANSITION_LABELS) as TransitionType[]).map((t) => {
-                                const isCurrent = (clip.transition || 'crossfade') === t;
-                                const col = TRANSITION_COLORS[t];
-                                return (
-                                  <button
-                                    key={t}
-                                    onClick={() => {
-                                      updateBackgroundClip(clip.id, { transition: t });
-                                      setShowTransitionMenu(null);
-                                    }}
-                                    className={`w-full text-left px-2.5 py-1.5 rounded-lg text-[11px] flex items-center justify-between transition cursor-pointer ${
-                                      isCurrent
-                                        ? 'bg-amber-500/20 border border-amber-500/50 text-amber-300 font-bold shadow-sm'
-                                        : 'hover:bg-gray-800 text-gray-300'
-                                    }`}
-                                  >
-                                    <span>{TRANSITION_LABELS[t]}</span>
-                                    <span className={`text-[9px] px-1.5 py-0.5 rounded border font-mono ${col.bg} ${col.text} ${col.border}`}>
-                                      {t}
-                                    </span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Interactive Draggable Divider between this clip and next clip */}
-                  {nextLayout && (
+                  return (
                     <div
+                      key={clip.id}
+                      style={{ width: `${displayWidthPercent}%` }}
                       onMouseDown={(e) => {
                         e.stopPropagation();
-                        setDraggingDividerIndex(index);
-                        dragStartRef.current = {
-                          startX: e.clientX,
-                          leftId: clip.id,
-                          rightId: nextLayout.clip.id,
-                          leftStartPct: percent,
-                          rightStartPct: nextLayout.percent,
-                        };
+                        setSelectedClipId(clip.id);
+                        setSelectedAyahNumber(null);
                       }}
-                      className="absolute -right-1.5 top-0 bottom-0 w-3 cursor-col-resize z-20 flex items-center justify-center group"
-                      title="Drag boundary to adjust time split between clips"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedClipId(clip.id);
+                        setSelectedAyahNumber(null);
+                      }}
+                      className={`h-full relative border-r border-black/50 last:border-r-0 cursor-pointer transition-all flex items-center justify-between px-2 text-[10px] ${
+                        isSelected
+                          ? 'bg-amber-500/25 ring-2 ring-inset ring-amber-400 z-10 shadow-lg'
+                          : 'bg-gray-900/90 hover:bg-gray-800/90 text-gray-300 hover:text-white'
+                      }`}
+                      title={`Click to select ${clip.name} (Covers ${ayahRangeLabel || 'verses'})`}
                     >
-                      <div className="w-1 h-4 rounded-full bg-gray-600 group-hover:bg-amber-400 group-hover:h-6 transition-all" />
+                      {/* Clip Thumbnail / Icon & Ayah Coverage Badge */}
+                      <div className="flex items-center gap-1.5 truncate min-w-0">
+                        {isVideo ? (
+                          <Film className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                        ) : (
+                          <ImageIcon className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                        )}
+                        <span className="truncate font-medium text-gray-200">{clip.name}</span>
+                        {ayahRangeLabel && (
+                          <span
+                            className="bg-amber-500/20 text-amber-300 px-1 py-0.5 rounded font-mono text-[9px] border border-amber-500/30 flex-shrink-0 font-semibold"
+                            title={`Covers ${ayahRangeLabel}`}
+                          >
+                            {ayahRangeLabel}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Clip Meta Info */}
+                      <div className="flex items-center gap-1.5 flex-shrink-0 ml-1">
+                        {isVideo && (
+                          <span
+                            className={`font-mono text-[9px] px-1 py-0.5 rounded border ${
+                              isAutoSlowed
+                                ? 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+                                : 'bg-gray-800 text-gray-400 border-gray-700'
+                            }`}
+                            title={isAutoSlowed ? 'Auto-slowed to fit slot without repeating' : 'Manual speed'}
+                          >
+                            {displaySpeed}
+                          </span>
+                        )}
+                        <span className="font-mono text-gray-400 text-[9px]">{durationSec}s</span>
+                      </div>
+
+                      {/* Transition Badge between adjacent clips */}
+                      {index > 0 && (
+                        <div className="absolute -left-3.5 top-1/2 -translate-y-1/2 z-30">
+                          <button
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowTransitionMenu(showTransitionMenu === clip.id ? null : clip.id);
+                            }}
+                            className={`px-2 py-0.5 rounded-full border shadow-lg flex items-center gap-1 text-[9px] font-medium transition cursor-pointer backdrop-blur-md hover:scale-105 active:scale-95 whitespace-nowrap ${
+                              TRANSITION_COLORS[clip.transition || 'crossfade']?.bg || 'bg-amber-500/20'
+                            } ${TRANSITION_COLORS[clip.transition || 'crossfade']?.text || 'text-amber-400'} ${
+                              TRANSITION_COLORS[clip.transition || 'crossfade']?.border || 'border-amber-500/60'
+                            }`}
+                            title={`Click to change transition: ${TRANSITION_LABELS[clip.transition || 'crossfade']}`}
+                          >
+                            <Sparkles className="w-2.5 h-2.5" />
+                            <span className="font-mono font-semibold">{TRANSITION_LABELS[clip.transition || 'crossfade']}</span>
+                          </button>
+
+                          {/* Transition Picker Menu */}
+                          {showTransitionMenu === clip.id && (
+                            <>
+                              <div
+                                className="fixed inset-0 z-40"
+                                onMouseDown={(e) => {
+                                  e.stopPropagation();
+                                  setShowTransitionMenu(null);
+                                }}
+                              />
+
+                              <div
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onClick={(e) => e.stopPropagation()}
+                                className={`absolute bottom-full mb-2 w-52 bg-gray-900/98 backdrop-blur-xl border border-gray-700/80 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] p-2 z-50 text-xs ${
+                                  index === 1 ? 'left-0' : index === clips.length - 1 && clips.length > 2 ? 'right-0' : 'left-1/2 -translate-x-1/2'
+                                }`}
+                              >
+                                <div className="flex justify-between items-center pb-1.5 mb-1.5 border-b border-gray-800 text-[10px] text-gray-400 font-semibold uppercase tracking-wider">
+                                  <span className="flex items-center gap-1 text-amber-400 font-bold">
+                                    <Sparkles className="w-3 h-3" />
+                                    Transition Effect
+                                  </span>
+                                  <button
+                                    onClick={() => setShowTransitionMenu(null)}
+                                    className="p-0.5 rounded hover:bg-gray-800 text-gray-400 hover:text-white"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                                <div className="space-y-1 max-h-60 overflow-y-auto">
+                                  {(Object.keys(TRANSITION_LABELS) as TransitionType[]).map((t) => {
+                                    const isCurrent = (clip.transition || 'crossfade') === t;
+                                    const col = TRANSITION_COLORS[t];
+                                    return (
+                                      <button
+                                        key={t}
+                                        onClick={() => {
+                                          updateBackgroundClip(clip.id, { transition: t });
+                                          setShowTransitionMenu(null);
+                                        }}
+                                        className={`w-full text-left px-2.5 py-1.5 rounded-lg text-[11px] flex items-center justify-between transition cursor-pointer ${
+                                          isCurrent
+                                            ? 'bg-amber-500/20 border border-amber-500/50 text-amber-300 font-bold shadow-sm'
+                                            : 'hover:bg-gray-800 text-gray-300'
+                                        }`}
+                                      >
+                                        <span>{TRANSITION_LABELS[t]}</span>
+                                        <span className={`text-[9px] px-1.5 py-0.5 rounded border font-mono ${col.bg} ${col.text} ${col.border}`}>
+                                          {t}
+                                        </span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Interactive Draggable Divider between this clip and next clip */}
+                      {nextLayout && (
+                        <div
+                          onMouseDown={(e) => {
+                            e.stopPropagation();
+                            setDraggingDividerIndex(index);
+                            dragStartRef.current = {
+                              startX: e.clientX,
+                              leftId: clip.id,
+                              rightId: nextLayout.clip.id,
+                              leftStartPct: percent,
+                              rightStartPct: nextLayout.percent,
+                            };
+                          }}
+                          className="absolute -right-1.5 top-0 bottom-0 w-3 cursor-col-resize z-20 flex items-center justify-center group"
+                          title="Drag boundary to adjust time split between clips (Magnetic snap to verses)"
+                        >
+                          <div className="w-1 h-4 rounded-full bg-gray-600 group-hover:bg-amber-400 group-hover:h-6 transition-all" />
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              );
-            })}
+                  );
+                }
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -875,6 +1117,24 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
                 {selectedClip.name}
               </span>
             </div>
+
+            {/* Ayah Verse Coverage Badge */}
+            {selectedLayout.ayahRangeLabel && (
+              <div className="flex items-center gap-1.5 font-mono text-[11px] bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-lg text-amber-300">
+                <span className="text-gray-400">Verses:</span>
+                <span className="font-bold text-amber-300">{selectedLayout.ayahRangeLabel}</span>
+              </div>
+            )}
+
+            {/* Snap to Verses Button */}
+            <button
+              onClick={() => handleSnapClipToNearestAyahs(selectedClip.id)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 hover:text-amber-200 transition text-[11px] border border-amber-500/30 font-medium"
+              title="Snap this clip's start and end to the nearest verse boundaries"
+            >
+              <Magnet className="w-3.5 h-3.5 text-amber-400" />
+              <span>Snap to Verses</span>
+            </button>
 
             {/* Swap / Replace Media Dropdown Button */}
             <div className="relative">

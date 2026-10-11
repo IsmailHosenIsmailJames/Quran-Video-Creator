@@ -429,43 +429,39 @@ export const useStudioStore = create<StudioState>((set, get) => ({
     try {
       const surahMeta = getSurahByNumber(config.surahNumber);
 
-      // 1. Fetch Words
-      const wordsMap = await api.getAyahRangeWords(
-        config.script,
-        config.surahNumber,
-        config.fromAyah,
-        config.toAyah
-      );
-
-      // 2. Fetch Primary Translations
-      const primaryTransMap = config.showPrimaryTranslation
-        ? await api.getVerseRangeTranslations(
-            config.primaryTranslationLang,
-            config.primaryTranslationFile,
-            config.surahNumber,
-            config.fromAyah,
-            config.toAyah
-          )
-        : {};
-
-      // 3. Fetch Secondary Translations
-      const secondaryTransMap = config.showSecondaryTranslation
-        ? await api.getVerseRangeTranslations(
-            config.secondaryTranslationLang,
-            config.secondaryTranslationFile,
-            config.surahNumber,
-            config.fromAyah,
-            config.toAyah
-          )
-        : {};
-
-      // 4. Fetch Audio & Timing Segments
-      const audioMap = await api.getAyahRangeAudioData(
-        config.reciterIndex,
-        config.surahNumber,
-        config.fromAyah,
-        config.toAyah
-      );
+      // Fetch Words, Translations, and Timing/Audio Data concurrently in parallel
+      const [wordsMap, primaryTransMap, secondaryTransMap, audioMap] = await Promise.all([
+        api.getAyahRangeWords(
+          config.script,
+          config.surahNumber,
+          config.fromAyah,
+          config.toAyah
+        ),
+        config.showPrimaryTranslation
+          ? api.getVerseRangeTranslations(
+              config.primaryTranslationLang,
+              config.primaryTranslationFile,
+              config.surahNumber,
+              config.fromAyah,
+              config.toAyah
+            )
+          : Promise.resolve({} as Record<number, string>),
+        config.showSecondaryTranslation
+          ? api.getVerseRangeTranslations(
+              config.secondaryTranslationLang,
+              config.secondaryTranslationFile,
+              config.surahNumber,
+              config.fromAyah,
+              config.toAyah
+            )
+          : Promise.resolve({} as Record<number, string>),
+        api.getAyahRangeAudioData(
+          config.reciterIndex,
+          config.surahNumber,
+          config.fromAyah,
+          config.toAyah
+        ),
+      ]);
 
       // Build sequence
       const sequence: AyahSequenceData[] = [];
@@ -484,9 +480,32 @@ export const useStudioStore = create<StudioState>((set, get) => ({
 
       if (shouldAddBismillah) {
         try {
-          const bismillahRawWords = await api.getAyahWords(config.script, 1, 1);
-          // Omit the Ayah end-marker (word 5), keep the 4 core sacred words:
-          // بِسْمِ - اللّٰهِ - الرَّحْمٰنِ - الرَّحِيْمِ
+          const [bismillahRawWords, bismillahPrimaryTranslation, bismillahSecondaryTranslation, bismillahAudio] =
+            await Promise.all([
+              api.getAyahWords(config.script, 1, 1),
+              config.showPrimaryTranslation
+                ? api.getVerseTranslation(
+                    config.primaryTranslationLang,
+                    config.primaryTranslationFile,
+                    1,
+                    1
+                  )
+                : Promise.resolve(''),
+              config.showSecondaryTranslation
+                ? api.getVerseTranslation(
+                    config.secondaryTranslationLang,
+                    config.secondaryTranslationFile,
+                    1,
+                    1
+                  )
+                : Promise.resolve(''),
+              api.getAyahAudioData(
+                config.reciterIndex,
+                1,
+                1
+              ),
+            ]);
+
           const bismillahWords: QuranWord[] = (bismillahRawWords || []).slice(0, 4).map((w: QuranWord, idx: number) => ({
             id: -(idx + 1),
             location: `${config.surahNumber}:0:${w.word}`,
@@ -495,32 +514,6 @@ export const useStudioStore = create<StudioState>((set, get) => ({
             word: w.word,
             text: w.text,
           }));
-
-          let bismillahPrimaryTranslation = '';
-          if (config.showPrimaryTranslation) {
-            bismillahPrimaryTranslation = await api.getVerseTranslation(
-              config.primaryTranslationLang,
-              config.primaryTranslationFile,
-              1,
-              1
-            );
-          }
-
-          let bismillahSecondaryTranslation = '';
-          if (config.showSecondaryTranslation) {
-            bismillahSecondaryTranslation = await api.getVerseTranslation(
-              config.secondaryTranslationLang,
-              config.secondaryTranslationFile,
-              1,
-              1
-            );
-          }
-
-          const bismillahAudio = await api.getAyahAudioData(
-            config.reciterIndex,
-            1,
-            1
-          );
 
           const bDurationInSeconds = (bismillahAudio.durationInSeconds || 5) / speed;
           const bDurationInFrames = Math.max(

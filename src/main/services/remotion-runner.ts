@@ -455,21 +455,36 @@ class RemotionRunnerService {
         const ayah = ayahs[i];
         let localAudio = ayah.audioUrl;
 
-        // If audioUrl is remote, download and cache it locally
-        if (localAudio && (localAudio.startsWith('http://') || localAudio.startsWith('https://'))) {
-          mainWindow.webContents.send('render:progress', {
-            jobId,
-            progress: 0.01 + (i / totalAyahs) * 0.04,
-            status: 'rendering',
-            message: `Caching recitation audio for offline render (${i + 1}/${totalAyahs})...`,
-          });
-          const reciters = recitationService.getReciters();
-          const reciter = reciters[config.reciterIndex] || reciters[0];
-          const cacheDir = recitationService.getAudioCacheDir(reciter);
-          const surahPadded = String(ayah.surah).padStart(3, '0');
-          const ayahPadded = String(ayah.ayah).padStart(3, '0');
-          const dest = path.join(cacheDir, `${surahPadded}${ayahPadded}.mp3`);
-          localAudio = await recitationService.ensureAudioCached(localAudio, dest);
+        if (localAudio) {
+          const isRemote = localAudio.startsWith('http://') || localAudio.startsWith('https://');
+          const remoteUrl = isRemote ? localAudio : recitationService.getRemoteUrlForPath(localAudio);
+
+          let destPath = localAudio;
+          if (isRemote) {
+            const reciters = recitationService.getReciters();
+            const reciter = reciters[config.reciterIndex] || reciters[0];
+            const cacheDir = recitationService.getAudioCacheDir(reciter);
+            const surahPadded = String(ayah.surah).padStart(3, '0');
+            const ayahPadded = String(ayah.ayah).padStart(3, '0');
+            destPath = path.join(cacheDir, `${surahPadded}${ayahPadded}.mp3`);
+          }
+
+          let isCached = false;
+          try {
+            isCached = fs.existsSync(destPath) && fs.statSync(destPath).size > 512;
+          } catch {}
+
+          if (!isCached && remoteUrl) {
+            mainWindow.webContents.send('render:progress', {
+              jobId,
+              progress: 0.01 + (i / totalAyahs) * 0.04,
+              status: 'rendering',
+              message: `Caching recitation audio for offline render (${i + 1}/${totalAyahs})...`,
+            });
+            localAudio = await recitationService.ensureAudioCached(remoteUrl, destPath);
+          } else if (isCached) {
+            localAudio = destPath;
+          }
         }
 
         sanitizedAyahs.push({

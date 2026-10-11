@@ -1,3 +1,4 @@
+import dns from 'dns';
 import { app, BrowserWindow, protocol, net, Menu, MenuItemConstructorOptions } from 'electron';
 import path from 'path';
 import fs from 'fs';
@@ -6,6 +7,13 @@ import { registerIpcHandlers } from './ipc-handlers';
 import { quranDbService } from './services/quran-db';
 import { localMediaServer } from './services/local-media-server';
 import { settingsService } from './services/settings-service';
+
+// Prioritize IPv4 DNS lookups to prevent IPv6 ENETUNREACH and ETIMEDOUT connection stalls
+try {
+  dns.setDefaultResultOrder('ipv4first');
+} catch (e) {
+  // Ignore on runtimes where not supported
+}
 
 // On macOS / packaged Electron apps, process.cwd() defaults to '/' when launched from Finder.
 // Any package resolving paths against cwd (such as Remotion's getDownloadsCacheDir)

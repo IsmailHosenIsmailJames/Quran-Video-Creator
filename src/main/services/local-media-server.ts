@@ -1,6 +1,7 @@
 import http from 'http';
 import fs from 'fs';
 import path from 'path';
+import { recitationService } from './recitation-service';
 
 class LocalMediaServer {
   private server: http.Server | null = null;
@@ -12,7 +13,7 @@ class LocalMediaServer {
     }
 
     return new Promise((resolve, reject) => {
-      this.server = http.createServer((req, res) => {
+      this.server = http.createServer(async (req, res) => {
         // Universal CORS headers
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
@@ -39,6 +40,19 @@ class LocalMediaServer {
           }
 
           filePath = decodeURIComponent(filePath);
+
+          // If file does not exist yet or is incomplete, check if it's a known recitation audio path
+          let fileExists = false;
+          try {
+            fileExists = fs.existsSync(filePath) && fs.statSync(filePath).size > 512;
+          } catch {}
+
+          if (!fileExists) {
+            const remoteUrl = recitationService.getRemoteUrlForPath(filePath);
+            if (remoteUrl) {
+              await recitationService.ensureAudioCached(remoteUrl, filePath);
+            }
+          }
 
           if (!fs.existsSync(filePath)) {
             res.writeHead(404, { 'Content-Type': 'text/plain' });
