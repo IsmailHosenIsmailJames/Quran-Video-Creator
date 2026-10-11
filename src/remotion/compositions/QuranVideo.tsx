@@ -1,11 +1,106 @@
 import React, { useEffect, useState } from 'react';
-import { AbsoluteFill, Series, Audio, staticFile, delayRender, continueRender } from 'remotion';
-import { QuranVideoCompositionProps, AyahSequenceData } from '../../shared/types';
+import {
+  AbsoluteFill,
+  Series,
+  Sequence,
+  Audio,
+  OffthreadVideo,
+  interpolate,
+  useCurrentFrame,
+  staticFile,
+  delayRender,
+  continueRender,
+} from 'remotion';
+import { QuranVideoCompositionProps, AyahSequenceData, TransitionType } from '../../shared/types';
 import { BackgroundLayer } from './BackgroundLayer';
 import { WaveformLayer } from './WaveformLayer';
 import { TypographyLayer } from './TypographyLayer';
 import { BrandingLayer } from './BrandingLayer';
 import { getMediaUrl } from '../../shared/media-url';
+
+interface IntroSequenceProps {
+  videoPath: string;
+  durationInFrames: number;
+  muted: boolean;
+  transition: TransitionType;
+}
+
+const IntroSequence: React.FC<IntroSequenceProps> = ({
+  videoPath,
+  durationInFrames,
+  muted,
+  transition = 'dip-black',
+}) => {
+  const frame = useCurrentFrame();
+  const transitionFrames = Math.min(18, Math.max(6, Math.floor(durationInFrames / 3)));
+  const exitStart = durationInFrames - transitionFrames;
+
+  let opacity = 1;
+  let transform = '';
+
+  if (transition === 'dip-black' || transition === 'crossfade' || transition === 'blur-fade') {
+    if (frame >= exitStart) {
+      opacity = interpolate(frame, [exitStart, durationInFrames], [1, 0], {
+        extrapolateLeft: 'clamp',
+        extrapolateRight: 'clamp',
+      });
+    }
+  } else if (transition === 'zoom-fade') {
+    if (frame >= exitStart) {
+      const p = interpolate(frame, [exitStart, durationInFrames], [0, 1], {
+        extrapolateLeft: 'clamp',
+        extrapolateRight: 'clamp',
+      });
+      opacity = 1 - p;
+      transform = `scale(${1 + p * 0.08})`;
+    }
+  }
+
+  return (
+    <AbsoluteFill
+      style={{
+        backgroundColor: '#000000',
+        overflow: 'hidden',
+        opacity,
+        transform,
+      }}
+    >
+      <OffthreadVideo
+        src={getMediaUrl(videoPath)}
+        muted={muted}
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          objectPosition: 'center center',
+        }}
+      />
+    </AbsoluteFill>
+  );
+};
+
+const MainContentFadeWrapper: React.FC<{
+  isIntroActive: boolean;
+  transition: TransitionType;
+  children: React.ReactNode;
+}> = ({ isIntroActive, transition, children }) => {
+  const frame = useCurrentFrame();
+  let opacity = 1;
+
+  if (isIntroActive && (transition === 'dip-black' || transition === 'crossfade')) {
+    const fadeFrames = 12;
+    opacity = interpolate(frame, [0, fadeFrames], [0, 1], {
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+    });
+  }
+
+  return (
+    <AbsoluteFill style={{ opacity }}>
+      {children}
+    </AbsoluteFill>
+  );
+};
 
 export const QuranVideo: React.FC<QuranVideoCompositionProps> = ({
   config,
@@ -28,6 +123,18 @@ export const QuranVideo: React.FC<QuranVideoCompositionProps> = ({
       continueRender(handle);
     }
   }, [handle]);
+
+  const isIntroActive = Boolean(
+    config.enableIntroVideo &&
+    config.introVideoPath &&
+    !(config.skipIntroForShorts !== false && config.aspectRatio === '9:16')
+  );
+
+  const introDurationInFrames = isIntroActive
+    ? Math.max(1, Math.round((config.introVideoDurationSeconds || 4) * config.fps))
+    : 0;
+
+  const scriptureDurationInFrames = Math.max(1, totalDurationInFrames - introDurationInFrames);
 
   return (
     <AbsoluteFill
@@ -126,71 +233,99 @@ export const QuranVideo: React.FC<QuranVideoCompositionProps> = ({
         }
       `}</style>
 
-      {/* Layer 1: Ambient Background (Spans Entire Video) */}
-      <BackgroundLayer
-        type={config.backgroundType}
-        source={config.backgroundPath}
-        clips={config.backgroundClips}
-        overlayOpacity={config.overlayOpacity}
-        vignetteIntensity={config.vignetteIntensity}
-        kenBurnsEffect={config.kenBurnsEffect}
-        totalDurationInFrames={totalDurationInFrames}
-        fps={config.fps}
-      />
-
-      {/* Sequential Ayah Audio & Typography Display */}
-      {ayahs && ayahs.length > 0 ? (
-        <Series>
-          {ayahs.map((ayahData: AyahSequenceData, index: number) => {
-            const audioSrc = getMediaUrl(ayahData.audioUrl);
-
-            return (
-              <Series.Sequence
-                key={`${ayahData.surah}:${ayahData.ayah}_${index}`}
-                durationInFrames={Math.max(1, ayahData.durationInFrames)}
-              >
-                {/* Recitation Audio Track */}
-                {audioSrc && (
-                  <Audio
-                    src={audioSrc}
-                    playbackRate={config.recitationSpeed || 1.0}
-                  />
-                )}
-
-                {/* Layer 2: Audio-Reactive Waveform */}
-                {config.showWaveform && (
-                  <WaveformLayer
-                    audioUrl={audioSrc}
-                    type={config.waveformType}
-                    color={config.waveformColor}
-                    height={config.waveformHeight}
-                    width={config.waveformWidth ?? 92}
-                    amplitude={config.waveformAmplitude ?? 2.2}
-                    positionY={config.waveformPositionY}
-                  />
-                )}
-
-                {/* Layer 3: Typographic Hierarchy & Synchronized Karaoke */}
-                <TypographyLayer
-                  config={config}
-                  ayahData={ayahData}
-                  fps={config.fps}
-                />
-              </Series.Sequence>
-            );
-          })}
-        </Series>
-      ) : null}
-
-      {/* Layer 4: Channel Identity & Watermark (Spans Entire Video) */}
-      {config.showBranding && (
-        <BrandingLayer
-          logoPath={config.logoPath}
-          channelHandle={config.channelHandle}
-          position={config.brandingPosition}
-          scale={config.brandingScale}
-        />
+      {/* Layer 0: Channel Intro Video Bumper (Plays before main recitation) */}
+      {isIntroActive && config.introVideoPath && (
+        <Sequence
+          from={0}
+          durationInFrames={introDurationInFrames}
+          name="Channel Intro Video"
+        >
+          <IntroSequence
+            videoPath={config.introVideoPath}
+            durationInFrames={introDurationInFrames}
+            muted={config.introMuted === true}
+            transition={config.introTransition || 'dip-black'}
+          />
+        </Sequence>
       )}
+
+      {/* Main Scripture Recitation & Visual Content */}
+      <Sequence
+        from={introDurationInFrames}
+        durationInFrames={scriptureDurationInFrames}
+        name="Main Scripture Content"
+      >
+        <MainContentFadeWrapper
+          isIntroActive={isIntroActive}
+          transition={config.introTransition || 'dip-black'}
+        >
+          {/* Layer 1: Ambient Background (Spans Scripture Content) */}
+          <BackgroundLayer
+            type={config.backgroundType}
+            source={config.backgroundPath}
+            clips={config.backgroundClips}
+            overlayOpacity={config.overlayOpacity}
+            vignetteIntensity={config.vignetteIntensity}
+            kenBurnsEffect={config.kenBurnsEffect}
+            totalDurationInFrames={scriptureDurationInFrames}
+            fps={config.fps}
+          />
+
+          {/* Sequential Ayah Audio & Typography Display */}
+          {ayahs && ayahs.length > 0 ? (
+            <Series>
+              {ayahs.map((ayahData: AyahSequenceData, index: number) => {
+                const audioSrc = getMediaUrl(ayahData.audioUrl);
+
+                return (
+                  <Series.Sequence
+                    key={`${ayahData.surah}:${ayahData.ayah}_${index}`}
+                    durationInFrames={Math.max(1, ayahData.durationInFrames)}
+                  >
+                    {/* Recitation Audio Track */}
+                    {audioSrc && (
+                      <Audio
+                        src={audioSrc}
+                        playbackRate={config.recitationSpeed || 1.0}
+                      />
+                    )}
+
+                    {/* Layer 2: Audio-Reactive Waveform */}
+                    {config.showWaveform && (
+                      <WaveformLayer
+                        audioUrl={audioSrc}
+                        type={config.waveformType}
+                        color={config.waveformColor}
+                        height={config.waveformHeight}
+                        width={config.waveformWidth ?? 92}
+                        amplitude={config.waveformAmplitude ?? 2.2}
+                        positionY={config.waveformPositionY}
+                      />
+                    )}
+
+                    {/* Layer 3: Typographic Hierarchy & Synchronized Karaoke */}
+                    <TypographyLayer
+                      config={config}
+                      ayahData={ayahData}
+                      fps={config.fps}
+                    />
+                  </Series.Sequence>
+                );
+              })}
+            </Series>
+          ) : null}
+
+          {/* Layer 4: Channel Identity & Watermark (Spans Main Video) */}
+          {config.showBranding && (
+            <BrandingLayer
+              logoPath={config.logoPath}
+              channelHandle={config.channelHandle}
+              position={config.brandingPosition}
+              scale={config.brandingScale}
+            />
+          )}
+        </MainContentFadeWrapper>
+      </Sequence>
     </AbsoluteFill>
   );
 };

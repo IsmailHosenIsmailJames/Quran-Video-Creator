@@ -146,6 +146,14 @@ export const DEFAULT_TEMPLATE_CONFIG: VideoTemplateConfig = {
   brandingPosition: 'top-right',
   brandingScale: 1.0,
 
+  // Channel Intro Video Bumper
+  enableIntroVideo: false,
+  introVideoPath: undefined,
+  introVideoDurationSeconds: undefined,
+  skipIntroForShorts: true,
+  introMuted: false,
+  introTransition: 'dip-black',
+
   // Video Output
   fps: 30,
   resolution: '1080p',

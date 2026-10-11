@@ -201,6 +201,14 @@ export interface VideoTemplateConfig {
   brandingPosition: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
   brandingScale: number;
 
+  // Channel Intro Video Bumper
+  enableIntroVideo?: boolean;
+  introVideoPath?: string;
+  introVideoDurationSeconds?: number;
+  skipIntroForShorts?: boolean;
+  introMuted?: boolean;
+  introTransition?: TransitionType;
+
   // Video Output
   fps: 30 | 60;
   resolution: '1080p' | '4k' | '720p';

@@ -85,8 +85,17 @@ export const useStudioStore = create<StudioState>((set, get) => ({
 
   updateConfig: (partial) => {
     set((state) => ({ config: { ...state.config, ...partial } }));
-    // If FPS, recitation speed, or includeBismillah changed:
-    if (partial.fps || partial.recitationSpeed !== undefined || partial.includeBismillah !== undefined) {
+    // If FPS, recitation speed, includeBismillah, aspectRatio, or intro settings changed:
+    if (
+      partial.fps ||
+      partial.recitationSpeed !== undefined ||
+      partial.includeBismillah !== undefined ||
+      partial.aspectRatio !== undefined ||
+      partial.enableIntroVideo !== undefined ||
+      partial.introVideoPath !== undefined ||
+      partial.introVideoDurationSeconds !== undefined ||
+      partial.skipIntroForShorts !== undefined
+    ) {
       get().refreshAyahSequence();
     }
   },
@@ -577,9 +586,20 @@ export const useStudioStore = create<StudioState>((set, get) => ({
         });
       }
 
+      const isIntroActive = Boolean(
+        config.enableIntroVideo &&
+        config.introVideoPath &&
+        !(config.skipIntroForShorts !== false && config.aspectRatio === '9:16')
+      );
+      const introFrames = isIntroActive
+        ? Math.max(1, Math.round((config.introVideoDurationSeconds || 4) * config.fps))
+        : 0;
+
+      const grandTotalFrames = Math.max(30, totalFrames + introFrames);
+
       set({
         ayahs: sequence,
-        totalDurationInFrames: Math.max(30, totalFrames),
+        totalDurationInFrames: grandTotalFrames,
         isLoading: false,
         statusMessage: `Loaded ${sequence.length} Ayah(s)`,
       });

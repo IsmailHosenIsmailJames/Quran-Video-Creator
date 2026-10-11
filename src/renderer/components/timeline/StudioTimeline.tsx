@@ -127,6 +127,15 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
         },
       ];
 
+  const isIntroActive = Boolean(
+    config.enableIntroVideo &&
+    config.introVideoPath &&
+    !(config.skipIntroForShorts !== false && config.aspectRatio === '9:16')
+  );
+  const introDurationInFrames = isIntroActive
+    ? Math.max(1, Math.round((config.introVideoDurationSeconds || 4) * fps))
+    : 0;
+
   // Calculate normalized percentages and duration in seconds for each clip
   const clipLayouts = useMemo(() => {
     const totalClips = clips.length;
@@ -135,6 +144,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
       0
     );
     const norm = totalWeight > 0 ? 100 / totalWeight : 1;
+    const recitationFrames = Math.max(1, totalDurationInFrames - introDurationInFrames);
 
     let accumulatedPercent = 0;
     return clips.map((clip, index) => {
@@ -144,7 +154,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
       const startPercent = accumulatedPercent;
       accumulatedPercent += percent;
 
-      const durationSec = Number(((percent / 100) * (totalDurationInFrames / fps)).toFixed(1));
+      const durationSec = Number(((percent / 100) * (recitationFrames / fps)).toFixed(1));
 
       // Calculate effective speed for display
       const isVideo = clip.type === 'video' || /\.(mp4|webm|mov|mkv)(\?.*)?$/i.test(clip.source);
@@ -177,7 +187,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
         isVideo,
       };
     });
-  }, [clips, totalDurationInFrames, fps]);
+  }, [clips, totalDurationInFrames, introDurationInFrames, fps]);
 
   // Selected clip object for inspector
   const selectedClip = clips.find((c) => c.id === selectedClipId) || null;
@@ -255,7 +265,11 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
       if (trackWidth <= 0) return;
 
       const dx = e.clientX - dragStartRef.current.startX;
-      const deltaPct = (dx / trackWidth) * 100;
+      const recitationWidth =
+        isIntroActive && totalDurationInFrames > 0
+          ? trackWidth * ((totalDurationInFrames - introDurationInFrames) / totalDurationInFrames)
+          : trackWidth;
+      const deltaPct = (dx / Math.max(1, recitationWidth)) * 100;
 
       const { leftId, rightId, leftStartPct, rightStartPct } = dragStartRef.current;
       const minPct = 2.0;
@@ -286,7 +300,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [draggingDividerIndex, updateBackgroundClip]);
+  }, [draggingDividerIndex, updateBackgroundClip, isIntroActive, totalDurationInFrames, introDurationInFrames]);
 
   // Format timecode (e.g. 01:23.4)
   const formatTime = (frame: number): string => {
@@ -578,6 +592,28 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
 
           {/* Track A: Ayahs / Scripture Audio Track */}
           <div className="h-6 w-full flex gap-1 relative overflow-hidden">
+            {isIntroActive && (
+              <div
+                style={{ width: `${(introDurationInFrames / Math.max(1, totalDurationInFrames)) * 100}%` }}
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  setCurrentFrame(0);
+                  playerRef.current?.seekTo(0);
+                  setSelectedAyahNumber(null);
+                  setSelectedClipId(null);
+                }}
+                className="h-full rounded-md px-1.5 flex items-center justify-between text-[10px] font-mono truncate cursor-pointer transition select-none bg-purple-500/25 hover:bg-purple-500/35 border border-purple-500/40 text-purple-200"
+                title={`Intro Bumper (${(introDurationInFrames / fps).toFixed(1)}s) - Click to seek to start`}
+              >
+                <span className="truncate font-semibold flex items-center gap-1">
+                  <Film className="w-2.5 h-2.5 text-purple-400" />
+                  <span>Intro</span>
+                </span>
+                <span className="text-[9px] text-purple-300/80 hidden sm:inline">
+                  {(introDurationInFrames / fps).toFixed(1)}s
+                </span>
+              </div>
+            )}
             {ayahs.map((ayah, index) => {
               const ayahPercent = (ayah.durationInFrames / Math.max(1, totalDurationInFrames)) * 100;
               const isAyahSelected = selectedAyahNumber === ayah.ayah;
@@ -590,7 +626,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
                   style={{ width: `${ayahPercent}%` }}
                   onMouseDown={(e) => {
                     e.stopPropagation();
-                    let startFrame = 0;
+                    let startFrame = isIntroActive ? introDurationInFrames : 0;
                     for (let k = 0; k < index; k++) {
                       startFrame += ayahs[k].durationInFrames;
                     }
@@ -628,14 +664,44 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
 
           {/* Track B: Multi-Media Background Sequence Track */}
           <div className="h-12 w-full flex relative">
+            {isIntroActive && (
+              <div
+                style={{ width: `${(introDurationInFrames / Math.max(1, totalDurationInFrames)) * 100}%` }}
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  setCurrentFrame(0);
+                  playerRef.current?.seekTo(0);
+                  setSelectedClipId(null);
+                  setSelectedAyahNumber(null);
+                }}
+                className="h-full relative rounded-lg border border-purple-500/50 bg-purple-950/40 hover:bg-purple-900/50 cursor-pointer transition-all flex items-center justify-between px-2 text-[10px] mr-1 select-none"
+                title={`Channel Intro Video Bumper (${(introDurationInFrames / fps).toFixed(1)}s) - Click to seek to start`}
+              >
+                <div className="flex items-center gap-1.5 truncate">
+                  <Film className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
+                  <span className="truncate font-medium text-purple-200">Intro Video</span>
+                </div>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <span className="font-mono text-purple-300 text-[9px] bg-purple-900/60 px-1 py-0.5 rounded border border-purple-700/60">
+                    {((introDurationInFrames / Math.max(1, totalDurationInFrames)) * 100).toFixed(0)}%
+                  </span>
+                  <span className="font-mono text-purple-400/80 text-[10px]">
+                    {(introDurationInFrames / fps).toFixed(1)}s
+                  </span>
+                </div>
+              </div>
+            )}
             {clipLayouts.map(({ clip, percent, durationSec, displaySpeed, isAutoSlowed, isVideo }, index) => {
               const isSelected = clip.id === selectedClipId;
               const nextLayout = clipLayouts[index + 1];
+              const displayWidthPercent = isIntroActive
+                ? (percent * (totalDurationInFrames - introDurationInFrames)) / Math.max(1, totalDurationInFrames)
+                : percent;
 
               return (
                 <div
                   key={clip.id}
-                  style={{ width: `${percent}%` }}
+                  style={{ width: `${displayWidthPercent}%` }}
                   onMouseDown={(e) => {
                     e.stopPropagation();
                     // Select this clip immediately on mouse down without seeking playhead

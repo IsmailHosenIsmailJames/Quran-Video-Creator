@@ -72,6 +72,14 @@ export const PERSISTABLE_CONFIG_KEYS: Array<keyof VideoTemplateConfig> = [
   'brandingPosition',
   'brandingScale',
 
+  // Channel Intro Video Bumper
+  'enableIntroVideo',
+  'introVideoPath',
+  'introVideoDurationSeconds',
+  'skipIntroForShorts',
+  'introMuted',
+  'introTransition',
+
   // Video Output
   'fps',
   'resolution',

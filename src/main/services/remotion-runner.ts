@@ -192,10 +192,30 @@ class RemotionRunnerService {
         }
       }
 
+      let sanitizedIntroVideoPath: string | undefined = undefined;
+      if (config.introVideoPath) {
+        let cleanIntro = config.introVideoPath;
+        if (cleanIntro.startsWith('app-media://local/')) {
+          cleanIntro = cleanIntro.slice('app-media://local/'.length);
+        } else if (cleanIntro.startsWith('app-media://')) {
+          cleanIntro = cleanIntro.replace(/^app-media:\/\/(\/)?/, '');
+        }
+        cleanIntro = decodeURIComponent(cleanIntro);
+        if (cleanIntro.startsWith('http://') || cleanIntro.startsWith('https://')) {
+          sanitizedIntroVideoPath = cleanIntro;
+        } else if (fs.existsSync(cleanIntro)) {
+          sanitizedIntroVideoPath = localMediaServer.getMediaUrl(cleanIntro);
+        } else {
+          console.warn(`[RemotionRunner] Intro video not found on disk, ignoring: ${cleanIntro}`);
+          sanitizedIntroVideoPath = undefined;
+        }
+      }
+
       // Convert any local filesystem or app-media paths into HTTP streaming URLs for Headless Chrome
       const sanitizedConfig: VideoTemplateConfig = {
         ...config,
         logoPath: sanitizedLogoPath,
+        introVideoPath: sanitizedIntroVideoPath,
         backgroundPath: localMediaServer.getMediaUrl(config.backgroundPath),
         backgroundClips: preparedClips,
         customAudioPath: config.customAudioPath
