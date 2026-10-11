@@ -606,12 +606,16 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
                       ? 'bg-amber-500/25 hover:bg-amber-500/35 border border-amber-500/50 text-amber-300'
                       : 'bg-amber-500/15 hover:bg-amber-500/30 border border-amber-500/30 hover:border-amber-400/60 text-amber-300'
                   }`}
-                  title={`Verse ${ayah.ayah} (${(ayah.durationInFrames / fps).toFixed(1)}s) - Click to inspect typography`}
+                  title={
+                    ayah.ayah === 0
+                      ? `Bismillah (${(ayah.durationInFrames / fps).toFixed(1)}s) - Click to inspect styling`
+                      : `Verse ${ayah.ayah} (${(ayah.durationInFrames / fps).toFixed(1)}s) - Click to inspect styling`
+                  }
                 >
                   <span className="truncate font-semibold flex items-center gap-1">
-                    v.{ayah.ayah}
+                    {ayah.ayah === 0 ? 'Bism.' : `v.${ayah.ayah}`}
                     {hasOverride && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" title="Custom font sizes set" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" title="Custom styling set" />
                     )}
                   </span>
                   <span className="text-[9px] text-amber-400/70 hidden sm:inline">
@@ -1054,7 +1058,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
             {/* Verse Identifier */}
             <div className="flex items-center gap-1.5 font-semibold text-amber-400 bg-amber-500/10 px-2.5 py-1.5 rounded-lg border border-amber-500/20">
               <Type className="w-4 h-4 text-amber-400" />
-              <span>Verse {selectedAyah.ayah} Styling</span>
+              <span>{selectedAyah.ayah === 0 ? 'Bismillah' : `Verse ${selectedAyah.ayah}`} Styling</span>
               {hasAyahOverride && (
                 <span className="text-[10px] bg-amber-500/30 text-amber-300 px-1.5 py-0.5 rounded font-normal">
                   Custom
@@ -1222,7 +1226,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
               <button
                 onClick={() => resetAyahFontOverride(selectedAyah.surah, selectedAyah.ayah)}
                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white transition text-[11px] border border-gray-700"
-                title="Reset this verse to global font size and animation defaults"
+                title={`Reset ${selectedAyah.ayah === 0 ? 'Bismillah' : 'this verse'} to global font size and animation defaults`}
               >
                 <RotateCcw className="w-3.5 h-3.5 text-gray-400" />
                 <span>Reset to Default</span>

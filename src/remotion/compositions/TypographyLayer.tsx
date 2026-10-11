@@ -403,7 +403,9 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
               letterSpacing: '0.04em',
             }}
           >
-            {ayahData.surahNameTransliterated} • Ayah {ayahData.ayah}
+            {ayahData.ayah === 0
+              ? `${ayahData.surahNameTransliterated} • Bismillah`
+              : `${ayahData.surahNameTransliterated} • Ayah ${ayahData.ayah}`}
           </span>
         </div>
       )}

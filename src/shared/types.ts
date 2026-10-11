@@ -131,6 +131,7 @@ export interface VideoTemplateConfig {
   surahNumber: number;
   fromAyah: number;
   toAyah: number;
+  includeBismillah?: boolean;
 
   // Scripture Typography & Styling
   script: ScriptType;

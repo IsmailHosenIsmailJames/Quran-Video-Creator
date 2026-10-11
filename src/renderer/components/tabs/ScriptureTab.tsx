@@ -482,7 +482,9 @@ export const ScriptureTab: React.FC = () => {
                   >
                     <div className="flex items-center justify-between text-xs mb-1.5">
                       <div className="flex items-center gap-1.5 font-medium">
-                        <span className="font-mono text-amber-400 font-bold">Ayah {ayah.ayah}</span>
+                        <span className="font-mono text-amber-400 font-bold">
+                          {ayah.ayah === 0 ? 'Bismillah' : `Ayah ${ayah.ayah}`}
+                        </span>
                         <span className="text-[10px] text-gray-500">
                           ({ayah.words?.length || 0} words • {(ayah.durationInFrames / (config.fps || 30)).toFixed(1)}s)
                         </span>

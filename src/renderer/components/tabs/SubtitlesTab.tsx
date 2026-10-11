@@ -403,7 +403,9 @@ export const SubtitlesTab: React.FC = () => {
                       }`}
                     >
                       <div className="flex items-center justify-between text-xs mb-2">
-                        <span className="font-mono text-amber-400 font-bold">Ayah {ayah.ayah}</span>
+                        <span className="font-mono text-amber-400 font-bold">
+                          {ayah.ayah === 0 ? 'Bismillah' : `Ayah ${ayah.ayah}`}
+                        </span>
                         {hasOverride && (
                           <button
                             onClick={() =>

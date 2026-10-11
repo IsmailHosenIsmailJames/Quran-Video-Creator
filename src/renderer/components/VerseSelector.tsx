@@ -5,7 +5,7 @@ import { ScriptType } from '../../shared/types';
 import { BookOpen, Hash, Layers } from 'lucide-react';
 
 export const VerseSelector: React.FC = () => {
-  const { config, changeSurah, changeAyahRange, changeScript } = useStudioStore();
+  const { config, changeSurah, changeAyahRange, changeScript, updateConfig } = useStudioStore();
   const currentSurah = getSurahByNumber(config.surahNumber);
 
   return (
@@ -104,6 +104,45 @@ export const VerseSelector: React.FC = () => {
             Full Surah
           </button>
         </div>
+      </div>
+
+      {/* Bismillah Opening Preface */}
+      <div className="p-3.5 rounded-xl bg-gray-900/60 border border-gray-800 space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-amber-400 font-semibold text-xs tracking-wide">
+              Bismillah Opening
+            </span>
+          </div>
+
+          {config.surahNumber === 9 ? (
+            <span className="text-[10px] bg-red-500/20 text-red-300 border border-red-500/30 px-2 py-0.5 rounded-full font-medium">
+              Omitted for Surah 9
+            </span>
+          ) : config.surahNumber === 1 && config.fromAyah === 1 ? (
+            <span className="text-[10px] bg-sky-500/20 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-full font-medium">
+              Ayah 1 is Bismillah
+            </span>
+          ) : (
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={config.includeBismillah !== false}
+                onChange={(e) => updateConfig({ includeBismillah: e.target.checked })}
+                className="sr-only peer"
+              />
+              <div className="w-9 h-5 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+            </label>
+          )}
+        </div>
+
+        <p className="text-[11px] text-gray-400 leading-relaxed">
+          {config.surahNumber === 9
+            ? 'Surah At-Tawbah does not begin with Bismillah in the Holy Quran, so Bismillah is strictly omitted.'
+            : config.surahNumber === 1 && config.fromAyah === 1
+            ? 'Surah Al-Fatihah already begins with Bismillah as its first verse.'
+            : 'Prepend the recitation, synchronized karaoke, and typography of Bismillahi-r-Rahmani-r-Raheem at the beginning of the video.'}
+        </p>
       </div>
 
       {/* Scripture Orthography Selection */}

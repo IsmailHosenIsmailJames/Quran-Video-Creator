@@ -5,6 +5,9 @@ import { app } from 'electron';
 import { VideoTemplateConfig } from '../../shared/types';
 
 export const PERSISTABLE_CONFIG_KEYS: Array<keyof VideoTemplateConfig> = [
+  // Scripture Selection & Preferences
+  'includeBismillah',
+
   // Scripture Typography & Styling
   'script',
   'selectedQuranFont',

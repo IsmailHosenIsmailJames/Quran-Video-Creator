@@ -63,6 +63,7 @@ export const DEFAULT_TEMPLATE_CONFIG: VideoTemplateConfig = {
   surahNumber: 1,
   fromAyah: 1,
   toAyah: 7,
+  includeBismillah: true,
 
   // Scripture Typography
   script: 'qpc-nastaleeq',

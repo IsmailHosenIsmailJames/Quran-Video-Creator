@@ -8,6 +8,7 @@ import {
   TransitionType,
   WordSegment,
   AyahFontOverride,
+  QuranWord,
 } from '../../shared/types';
 import {
   DEFAULT_TEMPLATE_CONFIG,
@@ -84,8 +85,8 @@ export const useStudioStore = create<StudioState>((set, get) => ({
 
   updateConfig: (partial) => {
     set((state) => ({ config: { ...state.config, ...partial } }));
-    // If FPS or recitation speed changed:
-    if (partial.fps || partial.recitationSpeed !== undefined) {
+    // If FPS, recitation speed, or includeBismillah changed:
+    if (partial.fps || partial.recitationSpeed !== undefined || partial.includeBismillah !== undefined) {
       get().refreshAyahSequence();
     }
   },
@@ -454,6 +455,90 @@ export const useStudioStore = create<StudioState>((set, get) => ({
       // Build sequence
       const sequence: AyahSequenceData[] = [];
       let totalFrames = 0;
+      const speed = config.recitationSpeed || 1.0;
+
+      // Check if Bismillah preface should precede the sequence
+      // Rules:
+      // 1. Never add Bismillah to Surah 9 (At-Tawbah)
+      // 2. Never duplicate Bismillah if Surah 1 (Al-Fatihah) begins with Ayah 1
+      // 3. User must have enabled it (config.includeBismillah !== false)
+      const shouldAddBismillah =
+        config.includeBismillah !== false &&
+        config.surahNumber !== 9 &&
+        !(config.surahNumber === 1 && config.fromAyah === 1);
+
+      if (shouldAddBismillah) {
+        try {
+          const bismillahRawWords = await api.getAyahWords(config.script, 1, 1);
+          // Omit the Ayah end-marker (word 5), keep the 4 core sacred words:
+          // بِسْمِ - اللّٰهِ - الرَّحْمٰنِ - الرَّحِيْمِ
+          const bismillahWords: QuranWord[] = (bismillahRawWords || []).slice(0, 4).map((w: QuranWord, idx: number) => ({
+            id: -(idx + 1),
+            location: `${config.surahNumber}:0:${w.word}`,
+            surah: config.surahNumber,
+            ayah: 0,
+            word: w.word,
+            text: w.text,
+          }));
+
+          let bismillahPrimaryTranslation = '';
+          if (config.showPrimaryTranslation) {
+            bismillahPrimaryTranslation = await api.getVerseTranslation(
+              config.primaryTranslationLang,
+              config.primaryTranslationFile,
+              1,
+              1
+            );
+          }
+
+          let bismillahSecondaryTranslation = '';
+          if (config.showSecondaryTranslation) {
+            bismillahSecondaryTranslation = await api.getVerseTranslation(
+              config.secondaryTranslationLang,
+              config.secondaryTranslationFile,
+              1,
+              1
+            );
+          }
+
+          const bismillahAudio = await api.getAyahAudioData(
+            config.reciterIndex,
+            1,
+            1
+          );
+
+          const bDurationInSeconds = (bismillahAudio.durationInSeconds || 5) / speed;
+          const bDurationInFrames = Math.max(
+            30,
+            Math.round(bDurationInSeconds * config.fps)
+          );
+
+          totalFrames += bDurationInFrames;
+
+          const scaledBismillahSegments = (bismillahAudio.segments || [])
+            .filter((seg: WordSegment) => seg.wordIndex <= 4)
+            .map((seg: WordSegment) => ({
+              wordIndex: seg.wordIndex,
+              startMs: Math.round(seg.startMs / speed),
+              endMs: Math.round(seg.endMs / speed),
+            }));
+
+          sequence.push({
+            surah: config.surahNumber,
+            ayah: 0,
+            surahNameArabic: surahMeta.nameArabic,
+            surahNameTransliterated: surahMeta.nameTransliterated,
+            words: bismillahWords,
+            primaryTranslation: bismillahPrimaryTranslation,
+            secondaryTranslation: bismillahSecondaryTranslation,
+            audioUrl: config.customAudioPath || bismillahAudio.audioUrl,
+            durationInFrames: bDurationInFrames,
+            segments: scaledBismillahSegments,
+          });
+        } catch (bErr) {
+          console.warn('Failed to prepend Bismillah:', bErr);
+        }
+      }
 
       for (let a = config.fromAyah; a <= config.toAyah; a++) {
         const words = wordsMap[a] || [];
@@ -463,7 +548,6 @@ export const useStudioStore = create<StudioState>((set, get) => ({
           segments: [],
         };
 
-        const speed = config.recitationSpeed || 1.0;
         const durationInSeconds = (audioData.durationInSeconds || 5) / speed;
         const durationInFrames = Math.max(
           30,
