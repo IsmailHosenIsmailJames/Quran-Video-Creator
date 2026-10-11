@@ -126,6 +126,15 @@ export interface AyahFontOverride {
   animationOut?: TextAnimationOut | 'inherit';
 }
 
+export type IntroMode = 'preset' | 'custom-video';
+
+export type IntroPresetId =
+  | 'golden-elegance'
+  | 'modern-minimal'
+  | 'sacred-geometry'
+  | 'cinematic-reveal'
+  | 'islamic-calligraphy';
+
 export interface VideoTemplateConfig {
   // Scripture Selection
   surahNumber: number;
@@ -204,6 +213,12 @@ export interface VideoTemplateConfig {
 
   // Channel Intro Video Bumper
   enableIntroVideo?: boolean;
+  introMode?: IntroMode;
+  introPreset?: IntroPresetId;
+  introTitle?: string;
+  introSubtitle?: string;
+  introCustomLogo?: string;
+  introThemeColor?: string;
   introVideoPath?: string;
   introVideoDurationSeconds?: number;
   skipIntroForShorts?: boolean;

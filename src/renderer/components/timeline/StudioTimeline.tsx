@@ -130,7 +130,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
 
   const isIntroActive = Boolean(
     config.enableIntroVideo &&
-    config.introVideoPath &&
+    (config.introMode === 'custom-video' ? config.introVideoPath : true) &&
     !(config.skipIntroForShorts !== false && config.aspectRatio === '9:16')
   );
   const introDurationInFrames = isIntroActive

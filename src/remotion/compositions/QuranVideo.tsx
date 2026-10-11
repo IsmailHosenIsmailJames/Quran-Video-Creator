@@ -16,6 +16,7 @@ import { BackgroundLayer } from './BackgroundLayer';
 import { WaveformLayer } from './WaveformLayer';
 import { TypographyLayer } from './TypographyLayer';
 import { BrandingLayer } from './BrandingLayer';
+import { ProgrammaticIntro } from './ProgrammaticIntro';
 import { getMediaUrl } from '../../shared/media-url';
 
 interface IntroSequenceProps {
@@ -126,7 +127,7 @@ export const QuranVideo: React.FC<QuranVideoCompositionProps> = ({
 
   const isIntroActive = Boolean(
     config.enableIntroVideo &&
-    config.introVideoPath &&
+    (config.introMode === 'custom-video' ? config.introVideoPath : true) &&
     !(config.skipIntroForShorts !== false && config.aspectRatio === '9:16')
   );
 
@@ -234,18 +235,26 @@ export const QuranVideo: React.FC<QuranVideoCompositionProps> = ({
       `}</style>
 
       {/* Layer 0: Channel Intro Video Bumper (Plays before main recitation) */}
-      {isIntroActive && config.introVideoPath && (
+      {isIntroActive && (
         <Sequence
           from={0}
           durationInFrames={introDurationInFrames}
           name="Channel Intro Video"
         >
-          <IntroSequence
-            videoPath={config.introVideoPath}
-            durationInFrames={introDurationInFrames}
-            muted={config.introMuted === true}
-            transition={config.introTransition || 'dip-black'}
-          />
+          {config.introMode === 'custom-video' && config.introVideoPath ? (
+            <IntroSequence
+              videoPath={config.introVideoPath}
+              durationInFrames={introDurationInFrames}
+              muted={config.introMuted === true}
+              transition={config.introTransition || 'dip-black'}
+            />
+          ) : (
+            <ProgrammaticIntro
+              config={config}
+              durationInFrames={introDurationInFrames}
+              transition={config.introTransition || 'dip-black'}
+            />
+          )}
         </Sequence>
       )}
 

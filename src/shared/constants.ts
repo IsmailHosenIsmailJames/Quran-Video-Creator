@@ -150,8 +150,14 @@ export const DEFAULT_TEMPLATE_CONFIG: VideoTemplateConfig = {
 
   // Channel Intro Video Bumper
   enableIntroVideo: false,
+  introMode: 'preset',
+  introPreset: 'golden-elegance',
+  introTitle: '',
+  introSubtitle: 'Holy Quran Recitation',
+  introCustomLogo: undefined,
+  introThemeColor: '#F59E0B',
   introVideoPath: undefined,
-  introVideoDurationSeconds: undefined,
+  introVideoDurationSeconds: 4.0,
   skipIntroForShorts: true,
   introMuted: false,
   introTransition: 'dip-black',
@@ -160,6 +166,44 @@ export const DEFAULT_TEMPLATE_CONFIG: VideoTemplateConfig = {
   fps: 30,
   resolution: '1080p',
 };
+
+export const INTRO_PRESET_OPTIONS = [
+  {
+    id: 'golden-elegance' as const,
+    name: 'Golden Islamic Elegance',
+    description: 'Radiant metallic gold calligraphy, glowing emblem, and elegant divider with particle dust',
+    accentColor: '#F59E0B',
+    previewGradient: 'from-amber-600/30 to-amber-950/80',
+  },
+  {
+    id: 'sacred-geometry' as const,
+    name: 'Sacred Geometric Aura',
+    description: 'Concentric rotating 8-point Islamic geometric arabesques with serene cosmic halo',
+    accentColor: '#10B981',
+    previewGradient: 'from-emerald-600/30 to-teal-950/80',
+  },
+  {
+    id: 'modern-minimal' as const,
+    name: 'Modern Minimalist Glow',
+    description: 'Ultra-clean dark glassmorphism card, neon accent flare, and high-impact channel typography',
+    accentColor: '#38BDF8',
+    previewGradient: 'from-sky-600/30 to-slate-950/80',
+  },
+  {
+    id: 'cinematic-reveal' as const,
+    name: 'Cinematic Title Reveal',
+    description: 'Wide anamorphic lens flare beam, defocus blur reveal, and smooth cinematic scale-up',
+    accentColor: '#E2E8F0',
+    previewGradient: 'from-slate-600/30 to-zinc-950/80',
+  },
+  {
+    id: 'islamic-calligraphy' as const,
+    name: 'Divine Calligraphy & Crescent',
+    description: 'Regal Islamic crescent emblem, sacred ornamental brackets, and rich emerald ambiance',
+    accentColor: '#F59E0B',
+    previewGradient: 'from-amber-500/30 to-emerald-950/80',
+  },
+];
 
 export const TEXT_ANIMATION_IN_OPTIONS = [
   { id: 'float-up' as const, name: 'Soft Float Up', description: 'Fade in with a gentle upward rise' },

@@ -415,10 +415,29 @@ class RemotionRunnerService {
         }
       }
 
+      let sanitizedIntroCustomLogo: string | undefined = undefined;
+      if (config.introCustomLogo) {
+        let cleanIntroLogo = config.introCustomLogo;
+        if (cleanIntroLogo.startsWith('app-media://local/')) {
+          cleanIntroLogo = cleanIntroLogo.slice('app-media://local/'.length);
+        } else if (cleanIntroLogo.startsWith('app-media://')) {
+          cleanIntroLogo = cleanIntroLogo.replace(/^app-media:\/\/(\/)?/, '');
+        }
+        cleanIntroLogo = decodeURIComponent(cleanIntroLogo);
+        if (cleanIntroLogo.startsWith('http://') || cleanIntroLogo.startsWith('https://') || cleanIntroLogo.startsWith('data:')) {
+          sanitizedIntroCustomLogo = cleanIntroLogo;
+        } else if (fs.existsSync(cleanIntroLogo)) {
+          sanitizedIntroCustomLogo = localMediaServer.getMediaUrl(cleanIntroLogo);
+        } else {
+          sanitizedIntroCustomLogo = undefined;
+        }
+      }
+
       // Convert any local filesystem or app-media paths into HTTP streaming URLs for Headless Chrome
       const sanitizedConfig: VideoTemplateConfig = {
         ...config,
         logoPath: sanitizedLogoPath,
+        introCustomLogo: sanitizedIntroCustomLogo,
         introVideoPath: sanitizedIntroVideoPath,
         backgroundPath: localMediaServer.getMediaUrl(config.backgroundPath),
         backgroundClips: preparedClips,

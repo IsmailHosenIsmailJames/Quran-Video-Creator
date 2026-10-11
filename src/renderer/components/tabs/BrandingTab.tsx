@@ -1,16 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useStudioStore } from '../../store/studio-store';
 import { getMediaUrl } from '../../../shared/media-url';
-import { Shield, Upload, Sparkles, Film } from 'lucide-react';
-import { TransitionType } from '../../../shared/types';
+import { Shield, Upload, Sparkles, Film, Wand2, Palette, Clock, Check, Star, RefreshCw } from 'lucide-react';
+import { TransitionType, IntroPresetId, IntroMode } from '../../../shared/types';
+import { INTRO_PRESET_OPTIONS } from '../../../shared/constants';
 
 export const BrandingTab: React.FC = () => {
   const { config, updateConfig } = useStudioStore();
   const [imageError, setImageError] = useState(false);
+  const [introLogoError, setIntroLogoError] = useState(false);
 
   useEffect(() => {
     setImageError(false);
   }, [config.logoPath]);
+
+  useEffect(() => {
+    setIntroLogoError(false);
+  }, [config.introCustomLogo]);
 
   const handleSelectLogo = async () => {
     const api = window.electronAPI;
@@ -20,6 +26,17 @@ export const BrandingTab: React.FC = () => {
     setImageError(false);
     updateConfig({
       logoPath: filePath,
+    });
+  };
+
+  const handleSelectIntroLogo = async () => {
+    const api = window.electronAPI;
+    if (!api) return;
+    const filePath = await api.selectMediaFile('image');
+    if (!filePath) return;
+    setIntroLogoError(false);
+    updateConfig({
+      introCustomLogo: filePath,
     });
   };
 
@@ -40,13 +57,17 @@ export const BrandingTab: React.FC = () => {
 
     updateConfig({
       enableIntroVideo: true,
+      introMode: 'custom-video',
       introVideoPath: filePath,
       introVideoDurationSeconds: durationSec ? Number(durationSec.toFixed(2)) : 4.0,
     });
   };
 
+  const activeIntroMode = config.introMode || 'preset';
+
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* ─── 1. Channel Attribution & Watermark ─── */}
       <div className="p-4 rounded-2xl bg-gray-900/60 border border-gray-800 space-y-4">
         <div className="flex items-center justify-between pb-1 border-b border-gray-800">
           <div className="flex items-center gap-2 text-xs font-semibold text-amber-300 uppercase tracking-wider">
@@ -186,12 +207,12 @@ export const BrandingTab: React.FC = () => {
         )}
       </div>
 
-      {/* Channel Intro Video & Bumper Card */}
+      {/* ─── 2. Programmatic & Video Intro Bumper ─── */}
       <div className="p-4 rounded-2xl bg-gray-900/60 border border-gray-800 space-y-4">
         <div className="flex items-center justify-between pb-1 border-b border-gray-800">
           <div className="flex items-center gap-2 text-xs font-semibold text-amber-300 uppercase tracking-wider">
             <Film className="w-4 h-4 text-amber-400" />
-            Channel Intro Video & Bumper
+            Channel Intro Video & Title Bumper
           </div>
           <input
             type="checkbox"
@@ -202,102 +223,311 @@ export const BrandingTab: React.FC = () => {
         </div>
 
         <p className="text-[11px] text-gray-400 leading-relaxed">
-          Prepend a short channel intro bumper (e.g. An-Nafee animated logo intro) before the Holy Quran recitation begins.
+          Prepend a cinematic channel opening title or bumper card before the Holy Quran recitation begins.
         </p>
 
         {config.enableIntroVideo && (
           <div className="space-y-4 pt-1">
-            {/* Intro Video File Selection */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs text-gray-400">Intro Video File (MP4 / WebM / MOV)</label>
-                <button
-                  onClick={handleSelectIntroVideo}
-                  className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white transition"
-                >
-                  <Upload className="w-3.5 h-3.5 text-amber-400" />
-                  {config.introVideoPath ? 'Change Video' : 'Choose Video'}
-                </button>
-              </div>
+            {/* Mode Selector Tabs (Preset vs Upload) */}
+            <div className="grid grid-cols-2 p-1 bg-gray-950 border border-gray-800 rounded-xl gap-1">
+              <button
+                type="button"
+                onClick={() => updateConfig({ introMode: 'preset' })}
+                className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-medium transition ${
+                  activeIntroMode === 'preset'
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
+                    : 'text-gray-400 hover:text-gray-200'
+                }`}
+              >
+                <Wand2 className="w-3.5 h-3.5 text-amber-400" />
+                <span>Motion Presets (Built-in)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => updateConfig({ introMode: 'custom-video' })}
+                className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-medium transition ${
+                  activeIntroMode === 'custom-video'
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
+                    : 'text-gray-400 hover:text-gray-200'
+                }`}
+              >
+                <Film className="w-3.5 h-3.5 text-amber-400" />
+                <span>Upload Custom MP4</span>
+              </button>
+            </div>
 
-              {config.introVideoPath ? (
-                <div className="flex items-center justify-between p-3 rounded-xl bg-gray-950/80 border border-gray-800">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400">
-                      <Film className="w-4 h-4" />
-                    </div>
-                    <div className="space-y-0.5">
-                      <p className="text-xs font-medium text-white truncate max-w-[220px]">
-                        {config.introVideoPath.split(/[/\\]/).pop()}
-                      </p>
-                      <p className="text-[10px] text-emerald-400">
-                        Duration: {config.introVideoDurationSeconds || 4.0}s • Ready
-                      </p>
-                    </div>
+            {/* ─── PROGRAMMATIC PRESET MODE ─── */}
+            {activeIntroMode === 'preset' && (
+              <div className="space-y-4">
+                {/* 1. Preset Selection Grid */}
+                <div className="space-y-2">
+                  <label className="text-xs text-gray-300 font-semibold block">
+                    Choose Intro Preset Style
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {INTRO_PRESET_OPTIONS.map((item) => {
+                      const isSelected = (config.introPreset || 'golden-elegance') === item.id;
+                      return (
+                        <div
+                          key={item.id}
+                          onClick={() =>
+                            updateConfig({
+                              introPreset: item.id,
+                              introThemeColor: item.accentColor,
+                            })
+                          }
+                          className={`p-3 rounded-xl border transition cursor-pointer flex flex-col justify-between ${
+                            isSelected
+                              ? 'bg-amber-500/15 border-amber-500/70 ring-1 ring-amber-500/30'
+                              : 'bg-gray-950/70 border-gray-800 hover:border-gray-700 hover:bg-gray-900/60'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2 mb-1.5">
+                            <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                              <Star
+                                className="w-3.5 h-3.5"
+                                style={{ color: item.accentColor }}
+                              />
+                              {item.name}
+                            </span>
+                            {isSelected && (
+                              <span className="p-0.5 rounded-full bg-amber-500/30 text-amber-300">
+                                <Check className="w-3 h-3" />
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-gray-400 leading-relaxed mb-2">
+                            {item.description}
+                          </p>
+                          <div className="flex items-center gap-1.5 pt-1 border-t border-gray-800/60">
+                            <span
+                              className="w-2.5 h-2.5 rounded-full"
+                              style={{ backgroundColor: item.accentColor }}
+                            />
+                            <span className="text-[10px] font-mono text-gray-500 uppercase">
+                              Theme Accent
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                  <button
-                    onClick={() =>
-                      updateConfig({
-                        enableIntroVideo: false,
-                        introVideoPath: undefined,
-                        introVideoDurationSeconds: undefined,
-                      })
-                    }
-                    className="text-xs text-rose-400 hover:text-rose-300 px-2 py-1 rounded hover:bg-rose-500/10 transition"
-                  >
-                    Remove
-                  </button>
                 </div>
-              ) : (
-                <div
-                  onClick={handleSelectIntroVideo}
-                  className="p-5 text-center border border-dashed border-gray-800/80 hover:border-amber-500/50 rounded-xl bg-gray-950/40 text-xs text-gray-400 cursor-pointer transition flex flex-col items-center gap-1.5"
-                >
-                  <Film className="w-5 h-5 text-amber-400/70" />
-                  <span className="font-medium text-gray-300">Click to upload channel intro clip</span>
-                  <span className="text-[10px] text-gray-500">Supports MP4, WebM, MOV clips</span>
-                </div>
-              )}
-            </div>
 
-            {/* Skip for 9:16 Shorts Setting */}
-            <div className="p-3 rounded-xl bg-gray-950/60 border border-gray-800/80 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-300 font-medium">Skip Intro for 9:16 Shorts</span>
-                <input
-                  type="checkbox"
-                  checked={config.skipIntroForShorts !== false}
-                  onChange={(e) => updateConfig({ skipIntroForShorts: e.target.checked })}
-                  className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
-                />
-              </div>
-              <p className="text-[11px] text-gray-400 leading-relaxed">
-                Automatically omits the intro bumper when making vertical 9:16 Shorts, Reels, and TikTok clips.
-              </p>
-              {config.aspectRatio === '9:16' && config.skipIntroForShorts !== false && (
-                <div className="text-[10px] bg-amber-500/10 border border-amber-500/20 text-amber-300 px-2 py-1 rounded-lg">
-                  ⚡ Intro is currently bypassed because active canvas is 9:16 (Shorts)
-                </div>
-              )}
-            </div>
-
-            {/* Intro Audio and Transition Controls */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-xs text-gray-400">Intro Audio</label>
-                <div className="flex items-center justify-between p-2 rounded-xl bg-gray-950 border border-gray-800">
-                  <span className="text-xs text-gray-300">
-                    {config.introMuted ? 'Muted' : 'Sound On'}
-                  </span>
+                {/* 2. Channel Title Input */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs text-gray-300 font-medium">Channel Title / Main Name</label>
+                    <span className="text-[10px] text-gray-500">Centerpiece heading</span>
+                  </div>
                   <input
-                    type="checkbox"
-                    checked={!config.introMuted}
-                    onChange={(e) => updateConfig({ introMuted: !e.target.checked })}
-                    className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+                    type="text"
+                    value={config.introTitle ?? ''}
+                    onChange={(e) => updateConfig({ introTitle: e.target.value })}
+                    placeholder={config.channelHandle ? config.channelHandle.replace(/^@/, '') : 'e.g. An-Nafee Official'}
+                    className="w-full bg-gray-950 border border-gray-800 rounded-xl px-3.5 py-2 text-white text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none"
                   />
                 </div>
-              </div>
 
+                {/* 3. Subtitle / Tagline Input with Quick Presets */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs text-gray-300 font-medium">Subtitle / Tagline</label>
+                    <span className="text-[10px] text-gray-500">Secondary caption</span>
+                  </div>
+                  <input
+                    type="text"
+                    value={config.introSubtitle ?? 'Holy Quran Recitation'}
+                    onChange={(e) => updateConfig({ introSubtitle: e.target.value })}
+                    placeholder="e.g. Holy Quran Recitation"
+                    className="w-full bg-gray-950 border border-gray-800 rounded-xl px-3.5 py-2 text-white text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none"
+                  />
+                  {/* Quick Suggestions */}
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {[
+                      'Holy Quran Recitation',
+                      'Sacred Recitation & Reflections',
+                      'Heart-Soothing Recitation',
+                      'Peace of the Soul',
+                    ].map((text) => (
+                      <button
+                        key={text}
+                        type="button"
+                        onClick={() => updateConfig({ introSubtitle: text })}
+                        className="text-[10px] px-2 py-0.5 rounded-lg bg-gray-950 border border-gray-800 text-gray-400 hover:text-amber-300 hover:border-amber-500/40 transition"
+                      >
+                        {text}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 4. Intro Logo / Icon Selection */}
+                <div className="p-3 rounded-xl bg-gray-950/70 border border-gray-800 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-300 font-medium">Intro Center Logo / Icon</span>
+                    <button
+                      type="button"
+                      onClick={handleSelectIntroLogo}
+                      className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white transition"
+                    >
+                      <Upload className="w-3 h-3 text-amber-400" />
+                      {config.introCustomLogo ? 'Change Intro Logo' : 'Upload Intro Logo'}
+                    </button>
+                  </div>
+
+                  {config.introCustomLogo ? (
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-gray-900 border border-gray-800">
+                      <div className="flex items-center gap-2.5">
+                        <img
+                          src={getMediaUrl(config.introCustomLogo)}
+                          alt="Intro Logo"
+                          className="w-7 h-7 rounded-full object-cover ring-1 ring-white/20"
+                        />
+                        <span className="text-[11px] text-white truncate max-w-[180px]">
+                          {config.introCustomLogo.split(/[/\\]/).pop()}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => updateConfig({ introCustomLogo: undefined })}
+                        className="text-[10px] text-rose-400 hover:underline"
+                      >
+                        Reset to Branding Logo
+                      </button>
+                    </div>
+                  ) : config.logoPath ? (
+                    <p className="text-[11px] text-emerald-400 flex items-center gap-1.5">
+                      <Check className="w-3 h-3" />
+                      Using your uploaded Channel Logo ({config.logoPath.split(/[/\\]/).pop()})
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-amber-400/90 leading-relaxed">
+                      ✨ No logo uploaded. The intro will feature the preset's glowing sacred Islamic emblem (Octagram / Calligraphy).
+                    </p>
+                  )}
+                </div>
+
+                {/* 5. Theme Accent Color */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs text-gray-300 font-medium">Theme Accent Color</label>
+                    <span className="font-mono text-xs text-amber-400">{config.introThemeColor || '#F59E0B'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={config.introThemeColor || '#F59E0B'}
+                      onChange={(e) => updateConfig({ introThemeColor: e.target.value })}
+                      className="w-8 h-8 rounded-lg border border-gray-700 bg-transparent cursor-pointer"
+                    />
+                    <div className="flex items-center gap-1.5">
+                      {[
+                        { color: '#F59E0B', label: 'Gold' },
+                        { color: '#10B981', label: 'Emerald' },
+                        { color: '#38BDF8', label: 'Celestial' },
+                        { color: '#A855F7', label: 'Velvet' },
+                        { color: '#E2E8F0', label: 'Pearl' },
+                      ].map((c) => (
+                        <button
+                          key={c.color}
+                          type="button"
+                          onClick={() => updateConfig({ introThemeColor: c.color })}
+                          style={{ backgroundColor: c.color }}
+                          className={`w-6 h-6 rounded-full border transition transform hover:scale-110 ${
+                            config.introThemeColor === c.color ? 'ring-2 ring-white scale-110' : 'border-gray-800'
+                          }`}
+                          title={c.label}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 6. Duration Slider */}
+                <div className="space-y-1.5 bg-gray-950/60 p-3 rounded-xl border border-gray-800">
+                  <div className="flex justify-between text-xs text-gray-300">
+                    <span className="flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-amber-400" />
+                      Intro Duration
+                    </span>
+                    <span className="text-amber-400 font-mono font-semibold">
+                      {(config.introVideoDurationSeconds || 4.0).toFixed(1)}s
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={2.0}
+                    max={7.0}
+                    step={0.5}
+                    value={config.introVideoDurationSeconds || 4.0}
+                    onChange={(e) => updateConfig({ introVideoDurationSeconds: Number(e.target.value) })}
+                    className="w-full accent-amber-500 cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[10px] text-gray-500 font-mono">
+                    <span>2.0s (Fast)</span>
+                    <span>4.0s (Standard)</span>
+                    <span>7.0s (Majestic)</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ─── CUSTOM VIDEO FILE MODE ─── */}
+            {activeIntroMode === 'custom-video' && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs text-gray-300 font-medium">Intro Video File (MP4 / WebM / MOV)</label>
+                  <button
+                    onClick={handleSelectIntroVideo}
+                    className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white transition"
+                  >
+                    <Upload className="w-3.5 h-3.5 text-amber-400" />
+                    {config.introVideoPath ? 'Change Video' : 'Choose Video'}
+                  </button>
+                </div>
+
+                {config.introVideoPath ? (
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-gray-950/80 border border-gray-800">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400">
+                        <Film className="w-4 h-4" />
+                      </div>
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-medium text-white truncate max-w-[220px]">
+                          {config.introVideoPath.split(/[/\\]/).pop()}
+                        </p>
+                        <p className="text-[10px] text-emerald-400">
+                          Duration: {config.introVideoDurationSeconds || 4.0}s • Ready
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() =>
+                        updateConfig({
+                          introVideoPath: undefined,
+                        })
+                      }
+                      className="text-xs text-rose-400 hover:text-rose-300 px-2 py-1 rounded hover:bg-rose-500/10 transition"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    onClick={handleSelectIntroVideo}
+                    className="p-5 text-center border border-dashed border-gray-800/80 hover:border-amber-500/50 rounded-xl bg-gray-950/40 text-xs text-gray-400 cursor-pointer transition flex flex-col items-center gap-1.5"
+                  >
+                    <Film className="w-5 h-5 text-amber-400/70" />
+                    <span className="font-medium text-gray-300">Click to upload custom intro video</span>
+                    <span className="text-[10px] text-gray-500">Supports MP4, WebM, MOV clips</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Common Transition and Skip Settings */}
+            <div className="grid grid-cols-2 gap-3 pt-1">
               <div className="space-y-1">
                 <label className="text-xs text-gray-400">Transition into Recitation</label>
                 <select
@@ -311,26 +541,26 @@ export const BrandingTab: React.FC = () => {
                   <option value="cut">Hard Cut</option>
                 </select>
               </div>
+
+              <div className="space-y-1">
+                <label className="text-xs text-gray-400">Skip for 9:16 Shorts</label>
+                <div className="flex items-center justify-between p-2 rounded-xl bg-gray-950 border border-gray-800">
+                  <span className="text-[11px] text-gray-300">
+                    {config.skipIntroForShorts !== false ? 'Enabled' : 'Disabled'}
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={config.skipIntroForShorts !== false}
+                    onChange={(e) => updateConfig({ skipIntroForShorts: e.target.checked })}
+                    className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+                  />
+                </div>
+              </div>
             </div>
 
-            {/* Configurable Duration Override */}
-            {config.introVideoPath && (
-              <div className="space-y-1.5 bg-gray-950/60 p-3 rounded-xl border border-gray-800/80">
-                <div className="flex justify-between text-xs text-gray-400">
-                  <span>Intro Duration</span>
-                  <span className="text-amber-400 font-mono font-semibold">
-                    {(config.introVideoDurationSeconds || 4.0).toFixed(1)}s
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min={1.0}
-                  max={20.0}
-                  step={0.5}
-                  value={config.introVideoDurationSeconds || 4.0}
-                  onChange={(e) => updateConfig({ introVideoDurationSeconds: Number(e.target.value) })}
-                  className="w-full accent-amber-500 cursor-pointer"
-                />
+            {config.aspectRatio === '9:16' && config.skipIntroForShorts !== false && (
+              <div className="text-[10px] bg-amber-500/10 border border-amber-500/20 text-amber-300 px-3 py-1.5 rounded-lg">
+                ⚡ Intro is automatically bypassed because active canvas is 9:16 (Shorts / Reels).
               </div>
             )}
           </div>

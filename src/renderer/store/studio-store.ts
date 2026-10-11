@@ -92,6 +92,12 @@ export const useStudioStore = create<StudioState>((set, get) => ({
       partial.includeBismillah !== undefined ||
       partial.aspectRatio !== undefined ||
       partial.enableIntroVideo !== undefined ||
+      partial.introMode !== undefined ||
+      partial.introPreset !== undefined ||
+      partial.introTitle !== undefined ||
+      partial.introSubtitle !== undefined ||
+      partial.introCustomLogo !== undefined ||
+      partial.introThemeColor !== undefined ||
       partial.introVideoPath !== undefined ||
       partial.introVideoDurationSeconds !== undefined ||
       partial.skipIntroForShorts !== undefined
@@ -588,7 +594,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
 
       const isIntroActive = Boolean(
         config.enableIntroVideo &&
-        config.introVideoPath &&
+        (config.introMode === 'custom-video' ? config.introVideoPath : true) &&
         !(config.skipIntroForShorts !== false && config.aspectRatio === '9:16')
       );
       const introFrames = isIntroActive

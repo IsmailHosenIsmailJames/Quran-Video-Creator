@@ -75,6 +75,12 @@ export const PERSISTABLE_CONFIG_KEYS: Array<keyof VideoTemplateConfig> = [
 
   // Channel Intro Video Bumper
   'enableIntroVideo',
+  'introMode',
+  'introPreset',
+  'introTitle',
+  'introSubtitle',
+  'introCustomLogo',
+  'introThemeColor',
   'introVideoPath',
   'introVideoDurationSeconds',
   'skipIntroForShorts',
