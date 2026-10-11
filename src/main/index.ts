@@ -1,5 +1,5 @@
 import dns from 'dns';
-import { app, BrowserWindow, protocol, net, Menu, MenuItemConstructorOptions } from 'electron';
+import { app, BrowserWindow, protocol, net, Menu, MenuItem, MenuItemConstructorOptions } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { pathToFileURL } from 'url';
@@ -284,6 +284,33 @@ function createWindow(mediaServerPort: number): void {
 
   registerIpcHandlers(mainWindow);
   createApplicationMenu(mainWindow);
+
+  // Native context menu for text fields (Cut, Copy, Paste, Undo, Redo, Select All)
+  mainWindow.webContents.on('context-menu', (_event, params) => {
+    const { isEditable, selectionText, editFlags } = params;
+    const contextMenu = new Menu();
+
+    if (isEditable) {
+      contextMenu.append(new MenuItem({ label: 'Undo', role: 'undo', enabled: editFlags.canUndo }));
+      contextMenu.append(new MenuItem({ label: 'Redo', role: 'redo', enabled: editFlags.canRedo }));
+      contextMenu.append(new MenuItem({ type: 'separator' }));
+      contextMenu.append(new MenuItem({ label: 'Cut', role: 'cut', enabled: editFlags.canCut }));
+      contextMenu.append(new MenuItem({ label: 'Copy', role: 'copy', enabled: editFlags.canCopy }));
+      contextMenu.append(new MenuItem({ label: 'Paste', role: 'paste', enabled: editFlags.canPaste }));
+      contextMenu.append(new MenuItem({ label: 'Paste and Match Style', role: 'pasteAndMatchStyle', enabled: editFlags.canPaste }));
+      contextMenu.append(new MenuItem({ label: 'Delete', role: 'delete', enabled: editFlags.canDelete }));
+      contextMenu.append(new MenuItem({ type: 'separator' }));
+      contextMenu.append(new MenuItem({ label: 'Select All', role: 'selectAll', enabled: editFlags.canSelectAll }));
+    } else if (selectionText && selectionText.trim().length > 0) {
+      contextMenu.append(new MenuItem({ label: 'Copy', role: 'copy', enabled: editFlags.canCopy }));
+      contextMenu.append(new MenuItem({ type: 'separator' }));
+      contextMenu.append(new MenuItem({ label: 'Select All', role: 'selectAll', enabled: editFlags.canSelectAll }));
+    } else {
+      return;
+    }
+
+    contextMenu.popup({ window: mainWindow || undefined });
+  });
 
   // Load dev server or production build
   if (process.env.VITE_DEV_SERVER_URL) {
