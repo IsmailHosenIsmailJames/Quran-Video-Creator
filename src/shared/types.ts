@@ -144,6 +144,7 @@ export interface VideoTemplateConfig {
 
   // Per-Ayah Custom Font Size Overrides (Key: `${surah}:${ayah}`)
   ayahFontOverrides?: Record<string, AyahFontOverride>;
+  autoAdjustFontSizeByLength?: boolean;
 
   // Subtitles
   showPrimaryTranslation: boolean;

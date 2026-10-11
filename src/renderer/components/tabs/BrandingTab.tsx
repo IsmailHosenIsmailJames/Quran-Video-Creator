@@ -61,16 +61,35 @@ export const BrandingTab: React.FC = () => {
           />
         </div>
 
+        {!config.showBranding && (
+          <p className="text-[11px] text-gray-400 leading-relaxed">
+            Branding watermark is currently turned off. Turn it on above to upload your channel logo and set your YouTube handle.
+          </p>
+        )}
+
         {config.showBranding && (
           <div className="space-y-4">
+            {/* Setup Guidance Banner */}
+            {(!config.logoPath || !config.channelHandle?.trim()) && (
+              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-3">
+                <Sparkles className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <div className="space-y-0.5 text-xs">
+                  <p className="font-semibold text-amber-300">Set Up Your Channel Branding</p>
+                  <p className="text-gray-300 text-[11px] leading-relaxed">
+                    Please upload your channel logo and enter your YouTube handle below so your watermark badge appears on the video.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Channel Handle */}
             <div className="space-y-1.5">
-              <label className="text-xs text-gray-400">Channel Handle / Attribution Text</label>
+              <label className="text-xs text-gray-400">Channel Handle / YouTube Creator Name</label>
               <input
                 type="text"
                 value={config.channelHandle}
                 onChange={(e) => updateConfig({ channelHandle: e.target.value })}
-                placeholder="@AnNafee_Official"
+                placeholder="@YourChannelHandle (e.g. @QuranRecitations)"
                 className="w-full bg-gray-950 border border-gray-800 rounded-xl px-3.5 py-2.5 text-white text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none"
               />
             </div>
@@ -86,7 +105,7 @@ export const BrandingTab: React.FC = () => {
                   className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white transition"
                 >
                   <Upload className="w-3.5 h-3.5 text-amber-400" />
-                  Upload PNG/SVG
+                  {config.logoPath ? 'Change Logo' : 'Upload Logo'}
                 </button>
               </div>
 
@@ -120,9 +139,13 @@ export const BrandingTab: React.FC = () => {
                   </button>
                 </div>
               ) : (
-                <div className="p-4 text-center border border-dashed border-gray-800/80 rounded-xl bg-gray-950/40 text-xs text-gray-500">
-                  <Sparkles className="w-4 h-4 text-amber-400/60 mx-auto mb-1" />
-                  <span>No custom logo selected. Default channel pill badge will be used.</span>
+                <div
+                  onClick={handleSelectLogo}
+                  className="p-5 text-center border border-dashed border-gray-800/80 hover:border-amber-500/50 rounded-xl bg-gray-950/40 text-xs text-gray-400 cursor-pointer transition flex flex-col items-center gap-1.5"
+                >
+                  <Upload className="w-5 h-5 text-amber-400/80 mx-auto" />
+                  <span className="font-medium text-gray-300">Click to upload channel logo (PNG / SVG)</span>
+                  <span className="text-[10px] text-gray-500">Transparent square or circular images look best</span>
                 </div>
               )}
             </div>

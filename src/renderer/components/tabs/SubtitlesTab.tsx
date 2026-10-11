@@ -14,7 +14,9 @@ import {
   ChevronDown,
   ChevronUp,
   Type,
+  Sparkles,
 } from 'lucide-react';
+import { computeAdaptiveFontSizes } from '../../../shared/typography-utils';
 
 export const SubtitlesTab: React.FC = () => {
   const {
@@ -388,10 +390,12 @@ export const SubtitlesTab: React.FC = () => {
                 {ayahs.map((ayah) => {
                   const key = `${ayah.surah}:${ayah.ayah}`;
                   const override = config.ayahFontOverrides?.[key];
-                  const activePri = override?.primaryFontSize ?? config.primaryFontSize;
-                  const activeSec = override?.secondaryFontSize ?? config.secondaryFontSize;
-                  const hasOverride =
-                    override?.primaryFontSize !== undefined || override?.secondaryFontSize !== undefined;
+                  const computedSizes = computeAdaptiveFontSizes(config, ayah, override);
+                  const activePri = computedSizes.primaryFontSize;
+                  const activeSec = computedSizes.secondaryFontSize;
+                  const isSecCustom = override?.secondaryFontSize !== undefined;
+                  const isPriCustom = override?.primaryFontSize !== undefined;
+                  const hasOverride = isPriCustom || isSecCustom;
 
                   return (
                     <div
@@ -425,7 +429,14 @@ export const SubtitlesTab: React.FC = () => {
                         <div className="space-y-1 mb-2">
                           <div className="flex justify-between text-[11px]">
                             <span className="text-gray-400">English Font Size:</span>
-                            <span className="text-amber-300 font-mono font-medium">{activeSec}px</span>
+                            <span className={`font-mono font-medium ${isSecCustom ? 'text-amber-300' : config.autoAdjustFontSizeByLength !== false ? 'text-sky-300' : 'text-gray-300'}`}>
+                              {activeSec}px{' '}
+                              {isSecCustom ? (
+                                <span className="text-[10px] text-amber-400 font-normal">(custom)</span>
+                              ) : config.autoAdjustFontSizeByLength !== false ? (
+                                <span className="text-[10px] text-sky-400 font-normal">(auto)</span>
+                              ) : null}
+                            </span>
                           </div>
                           <input
                             type="range"
@@ -449,7 +460,14 @@ export const SubtitlesTab: React.FC = () => {
                             <span className="text-gray-400">
                               {config.primaryTranslationLang || 'Primary'} Subtitle Font Size:
                             </span>
-                            <span className="text-amber-300 font-mono font-medium">{activePri}px</span>
+                            <span className={`font-mono font-medium ${isPriCustom ? 'text-amber-300' : config.autoAdjustFontSizeByLength !== false ? 'text-sky-300' : 'text-gray-300'}`}>
+                              {activePri}px{' '}
+                              {isPriCustom ? (
+                                <span className="text-[10px] text-amber-400 font-normal">(custom)</span>
+                              ) : config.autoAdjustFontSizeByLength !== false ? (
+                                <span className="text-[10px] text-sky-400 font-normal">(auto)</span>
+                              ) : null}
+                            </span>
                           </div>
                           <input
                             type="range"

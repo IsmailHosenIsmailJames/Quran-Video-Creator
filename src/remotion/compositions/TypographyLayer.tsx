@@ -1,6 +1,7 @@
 import React from 'react';
 import { AbsoluteFill, useCurrentFrame, interpolate, Easing } from 'remotion';
 import { VideoTemplateConfig, AyahSequenceData, QuranWord, ScriptBlockType, TextAnimationIn, TextAnimationOut } from '../../shared/types';
+import { computeAdaptiveFontSizes } from '../../shared/typography-utils';
 
 interface TypographyLayerProps {
   config: VideoTemplateConfig;
@@ -134,10 +135,11 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
   // Format Surah title string for surah-name-v1 font ligature
   const surahLigatureCode = `surah${String(ayahData.surah).padStart(3, '0')}`;
 
-  // Per-Ayah Custom Font Size Overrides (with fallback to global config)
-  const arabicFontSize = override?.arabicFontSize ?? config.arabicFontSize;
-  const primaryFontSize = override?.primaryFontSize ?? config.primaryFontSize;
-  const secondaryFontSize = override?.secondaryFontSize ?? config.secondaryFontSize;
+  // Adaptive Font Sizing based on Ayah length (respects per-ayah manual overrides if specified)
+  const computedSizes = computeAdaptiveFontSizes(config, ayahData, override);
+  const arabicFontSize = computedSizes.arabicFontSize;
+  const primaryFontSize = computedSizes.primaryFontSize;
+  const secondaryFontSize = computedSizes.secondaryFontSize;
 
   // Alignment & Layout Positioning
   const textAlignment = config.textAlignment || 'center';

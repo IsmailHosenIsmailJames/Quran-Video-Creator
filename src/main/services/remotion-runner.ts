@@ -5,6 +5,7 @@ import { renderMedia, selectComposition, ensureBrowser } from '@remotion/rendere
 import { BrowserWindow, app } from 'electron';
 import { VideoTemplateConfig, AyahSequenceData, QuranVideoCompositionProps } from '../../shared/types';
 import { localMediaServer } from './local-media-server';
+import { recitationService } from './recitation-service';
 
 class RemotionRunnerService {
   private activeJobs = new Map<string, { cancel: () => void }>();
@@ -426,10 +427,37 @@ class RemotionRunnerService {
           : undefined,
       };
 
-      const sanitizedAyahs: AyahSequenceData[] = (ayahs || []).map((ayah) => ({
-        ...ayah,
-        audioUrl: localMediaServer.getMediaUrl(ayah.audioUrl),
-      }));
+      // Ensure all recitation audio tracks are cached locally on disk before rendering begins
+      // This guarantees offline export and avoids repeated server requests during render
+      const sanitizedAyahs: AyahSequenceData[] = [];
+      const totalAyahs = (ayahs || []).length;
+      for (let i = 0; i < totalAyahs; i++) {
+        if (isCancelled) break;
+        const ayah = ayahs[i];
+        let localAudio = ayah.audioUrl;
+
+        // If audioUrl is remote, download and cache it locally
+        if (localAudio && (localAudio.startsWith('http://') || localAudio.startsWith('https://'))) {
+          mainWindow.webContents.send('render:progress', {
+            jobId,
+            progress: 0.01 + (i / totalAyahs) * 0.04,
+            status: 'rendering',
+            message: `Caching recitation audio for offline render (${i + 1}/${totalAyahs})...`,
+          });
+          const reciters = recitationService.getReciters();
+          const reciter = reciters[config.reciterIndex] || reciters[0];
+          const cacheDir = recitationService.getAudioCacheDir(reciter);
+          const surahPadded = String(ayah.surah).padStart(3, '0');
+          const ayahPadded = String(ayah.ayah).padStart(3, '0');
+          const dest = path.join(cacheDir, `${surahPadded}${ayahPadded}.mp3`);
+          localAudio = await recitationService.ensureAudioCached(localAudio, dest);
+        }
+
+        sanitizedAyahs.push({
+          ...ayah,
+          audioUrl: localMediaServer.getMediaUrl(localAudio),
+        });
+      }
 
       const inputProps: QuranVideoCompositionProps = {
         config: sanitizedConfig,

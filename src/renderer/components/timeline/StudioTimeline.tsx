@@ -4,6 +4,7 @@ import { useStudioStore } from '../../store/studio-store';
 import { BackgroundClip, TransitionType, TextAnimationIn, TextAnimationOut } from '../../../shared/types';
 import { TEXT_ANIMATION_IN_OPTIONS, TEXT_ANIMATION_OUT_OPTIONS } from '../../../shared/constants';
 import { getMediaUrl } from '../../../shared/media-url';
+import { computeAdaptiveFontSizes } from '../../../shared/typography-utils';
 import {
   Play,
   Pause,
@@ -203,9 +204,13 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
     return config.ayahFontOverrides?.[`${selectedAyah.surah}:${selectedAyah.ayah}`];
   }, [selectedAyah, config.ayahFontOverrides]);
 
-  const currentArabicSize = ayahOverride?.arabicFontSize ?? config.arabicFontSize;
-  const currentEnglishSize = ayahOverride?.secondaryFontSize ?? config.secondaryFontSize;
-  const currentSubtitleSize = ayahOverride?.primaryFontSize ?? config.primaryFontSize;
+  const computedSizes = useMemo(() => {
+    return computeAdaptiveFontSizes(config, selectedAyah, ayahOverride);
+  }, [config, selectedAyah, ayahOverride]);
+
+  const currentArabicSize = computedSizes.arabicFontSize;
+  const currentEnglishSize = computedSizes.secondaryFontSize;
+  const currentSubtitleSize = computedSizes.primaryFontSize;
   const currentVerticalOffset = ayahOverride?.verticalOffset ?? config.verticalCustomOffset ?? 0;
   const currentAnimationIn = ayahOverride?.animationIn ?? 'inherit';
   const currentAnimationOut = ayahOverride?.animationOut ?? 'inherit';

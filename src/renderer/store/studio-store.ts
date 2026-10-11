@@ -625,6 +625,13 @@ export const useStudioStore = create<StudioState>((set, get) => ({
         }
       }
 
+      if (savedSettings.channelHandle === '@AnNafee_Official') {
+        savedSettings.channelHandle = '';
+      }
+      if (!savedSettings.logoPath && (!savedSettings.channelHandle || savedSettings.channelHandle === '')) {
+        savedSettings.showBranding = false;
+      }
+
       const initialConfig: VideoTemplateConfig = {
         ...DEFAULT_TEMPLATE_CONFIG,
         ...savedSettings,

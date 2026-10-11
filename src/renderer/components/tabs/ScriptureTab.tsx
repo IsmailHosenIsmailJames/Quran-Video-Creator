@@ -3,6 +3,7 @@ import { useStudioStore } from '../../store/studio-store';
 import { VerseSelector } from '../VerseSelector';
 import { FONT_OPTIONS, TEXT_ANIMATION_IN_OPTIONS, TEXT_ANIMATION_OUT_OPTIONS } from '../../../shared/constants';
 import { ScriptBlockType } from '../../../shared/types';
+import { computeAdaptiveFontSizes } from '../../../shared/typography-utils';
 import {
   Type,
   Sparkles,
@@ -72,6 +73,25 @@ export const ScriptureTab: React.FC = () => {
               </option>
             ))}
           </select>
+        </div>
+
+        {/* Auto-Fit Font Size by Ayah Length Toggle */}
+        <div className="flex items-center justify-between p-3 rounded-xl bg-gray-950/80 border border-gray-800">
+          <div className="space-y-0.5">
+            <span className="text-xs text-gray-200 font-semibold flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              Auto-Fit Font Size by Ayah Length
+            </span>
+            <p className="text-[11px] text-gray-400 leading-relaxed">
+              Dynamically sizes Quranic script and subtitles based on length so text fits the screen automatically
+            </p>
+          </div>
+          <input
+            type="checkbox"
+            checked={config.autoAdjustFontSizeByLength !== false}
+            onChange={(e) => updateConfig({ autoAdjustFontSizeByLength: e.target.checked })}
+            className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+          />
         </div>
 
         {/* Font Size (Wider Range 10 to 100) & Line Height */}
@@ -464,9 +484,11 @@ export const ScriptureTab: React.FC = () => {
               {ayahs.map((ayah) => {
                 const key = `${ayah.surah}:${ayah.ayah}`;
                 const override = config.ayahFontOverrides?.[key];
-                const activeSize = override?.arabicFontSize ?? config.arabicFontSize;
+                const computedSizes = computeAdaptiveFontSizes(config, ayah, override);
+                const activeSize = computedSizes.arabicFontSize;
+                const isCustomFont = override?.arabicFontSize !== undefined;
                 const isOverridden = Boolean(
-                  override?.arabicFontSize !== undefined ||
+                  isCustomFont ||
                   (override?.animationIn && override.animationIn !== 'inherit') ||
                   (override?.animationOut && override.animationOut !== 'inherit')
                 );
@@ -492,10 +514,15 @@ export const ScriptureTab: React.FC = () => {
                       <div className="flex items-center gap-2">
                         <span
                           className={`font-mono text-xs font-semibold ${
-                            isOverridden ? 'text-amber-300' : 'text-gray-400'
+                            isCustomFont ? 'text-amber-300' : config.autoAdjustFontSizeByLength !== false ? 'text-sky-300' : 'text-gray-400'
                           }`}
                         >
-                          {activeSize}px {isOverridden && <span className="text-[10px] text-amber-400">(custom)</span>}
+                          {activeSize}px{' '}
+                          {isCustomFont ? (
+                            <span className="text-[10px] text-amber-400">(custom)</span>
+                          ) : config.autoAdjustFontSizeByLength !== false ? (
+                            <span className="text-[10px] text-sky-400">(auto)</span>
+                          ) : null}
                         </span>
                         {isOverridden && (
                           <button

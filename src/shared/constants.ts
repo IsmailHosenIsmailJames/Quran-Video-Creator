@@ -76,6 +76,7 @@ export const DEFAULT_TEMPLATE_CONFIG: VideoTemplateConfig = {
 
   // Per-Ayah Custom Font Size Overrides
   ayahFontOverrides: {},
+  autoAdjustFontSizeByLength: true,
 
   // Subtitles
   showPrimaryTranslation: true,
@@ -141,8 +142,9 @@ export const DEFAULT_TEMPLATE_CONFIG: VideoTemplateConfig = {
   waveformPositionY: 74, // Lower-third
 
   // Branding
-  showBranding: true,
-  channelHandle: '@AnNafee_Official',
+  showBranding: false,
+  logoPath: undefined,
+  channelHandle: '',
   brandingPosition: 'top-right',
   brandingScale: 1.0,
 

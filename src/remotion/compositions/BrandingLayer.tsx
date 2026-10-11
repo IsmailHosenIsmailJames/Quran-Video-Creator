@@ -41,6 +41,10 @@ export const BrandingLayer: React.FC<BrandingLayerProps> = ({
     resolvedLogoSrc && (!isPuppeteer || !resolvedLogoSrc.startsWith('app-media://'))
   );
 
+  if (!isLoadable && (!channelHandle || !channelHandle.trim())) {
+    return null;
+  }
+
   return (
     <AbsoluteFill style={{ pointerEvents: 'none', userSelect: 'none' }}>
       <div
