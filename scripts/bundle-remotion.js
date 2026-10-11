@@ -17,6 +17,19 @@ async function buildRemotionBundle() {
     publicDir,
   });
   console.log('✅ Remotion composition pre-bundled to:', location);
+
+  console.log('🌐 Ensuring Remotion headless browser is available for packaging...');
+  const remotionDir = path.resolve(__dirname, '../node_modules/.remotion');
+  if (!fs.existsSync(remotionDir)) {
+    fs.mkdirSync(remotionDir, { recursive: true });
+  }
+  try {
+    const { ensureBrowser } = require('@remotion/renderer');
+    const browserInfo = await ensureBrowser();
+    console.log('✅ Remotion headless browser ready at:', browserInfo?.path);
+  } catch (browserErr) {
+    console.warn('⚠️ Notice: Could not pre-download browser during bundling:', browserErr.message);
+  }
 }
 
 buildRemotionBundle().catch((err) => {

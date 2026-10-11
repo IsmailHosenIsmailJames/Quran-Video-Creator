@@ -1,13 +1,216 @@
 import path from 'path';
 import fs from 'fs';
 import { bundle } from '@remotion/bundler';
-import { renderMedia, selectComposition } from '@remotion/renderer';
+import { renderMedia, selectComposition, ensureBrowser } from '@remotion/renderer';
 import { BrowserWindow, app } from 'electron';
 import { VideoTemplateConfig, AyahSequenceData, QuranVideoCompositionProps } from '../../shared/types';
 import { localMediaServer } from './local-media-server';
 
 class RemotionRunnerService {
   private activeJobs = new Map<string, { cancel: () => void }>();
+
+  private ensureSafeWorkingDirectory(): void {
+    try {
+      if (process.cwd() === '/' || (app && app.isPackaged)) {
+        const targetDir = app
+          ? app.getPath('userData')
+          : path.join(process.env.HOME || '', '.quran-video-creator');
+        if (!fs.existsSync(targetDir)) {
+          fs.mkdirSync(targetDir, { recursive: true });
+        }
+        process.chdir(targetDir);
+      }
+    } catch (err) {
+      console.warn('[RemotionRunner] Could not chdir:', err);
+    }
+  }
+
+  private findHeadlessShellInDir(baseDir: string): string | null {
+    if (!fs.existsSync(baseDir)) return null;
+
+    const platform = process.platform === 'darwin'
+      ? (process.arch === 'arm64' ? 'mac-arm64' : 'mac-x64')
+      : process.platform === 'win32'
+      ? 'win64'
+      : (process.arch === 'arm64' ? 'linux-arm64' : 'linux64');
+
+    const exeName = process.platform === 'win32' ? 'chrome-headless-shell.exe' : 'chrome-headless-shell';
+
+    const candidates = [
+      path.join(baseDir, 'chrome-headless-shell', platform, `chrome-headless-shell-${platform}`, exeName),
+      path.join(baseDir, 'chrome-headless-shell', platform, `chrome-headless-shell-${platform}`, 'headless_shell'),
+      path.join(baseDir, platform, `chrome-headless-shell-${platform}`, exeName),
+      path.join(baseDir, `chrome-headless-shell-${platform}`, exeName),
+      path.join(baseDir, exeName),
+    ];
+
+    for (const cand of candidates) {
+      if (fs.existsSync(cand)) {
+        if (process.platform !== 'win32') {
+          try {
+            fs.chmodSync(cand, 0o755);
+          } catch {}
+        }
+        return cand;
+      }
+    }
+
+    return null;
+  }
+
+  private findSystemBrowser(): string | null {
+    const candidates: string[] = [];
+
+    if (process.platform === 'darwin') {
+      candidates.push(
+        '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+        path.join(process.env.HOME || '', 'Applications/Google Chrome.app/Contents/MacOS/Google Chrome'),
+        '/Applications/Chromium.app/Contents/MacOS/Chromium',
+        '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser',
+        '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge'
+      );
+    } else if (process.platform === 'win32') {
+      const localApp = process.env.LOCALAPPDATA || '';
+      const progFiles = process.env.PROGRAMFILES || 'C:\\Program Files';
+      const progFilesX86 = process.env['PROGRAMFILES(X86)'] || 'C:\\Program Files (x86)';
+
+      candidates.push(
+        path.join(progFiles, 'Google\\Chrome\\Application\\chrome.exe'),
+        path.join(progFilesX86, 'Google\\Chrome\\Application\\chrome.exe'),
+        path.join(localApp, 'Google\\Chrome\\Application\\chrome.exe'),
+        path.join(progFiles, 'Microsoft\\Edge\\Application\\msedge.exe'),
+        path.join(progFilesX86, 'Microsoft\\Edge\\Application\\msedge.exe')
+      );
+    } else if (process.platform === 'linux') {
+      candidates.push(
+        '/usr/bin/google-chrome',
+        '/usr/bin/chromium',
+        '/usr/bin/chromium-browser',
+        '/snap/bin/chromium'
+      );
+    }
+
+    for (const cand of candidates) {
+      if (fs.existsSync(cand)) {
+        return cand;
+      }
+    }
+
+    return null;
+  }
+
+  private getBinariesDirectory(): string | undefined {
+    if (!app?.isPackaged) return undefined;
+
+    const platformArch = process.platform === 'darwin'
+      ? (process.arch === 'arm64' ? 'compositor-darwin-arm64' : 'compositor-darwin-x64')
+      : process.platform === 'win32'
+      ? 'compositor-win32-x64-msvc'
+      : (process.arch === 'arm64' ? 'compositor-linux-arm64-gnu' : 'compositor-linux-x64-gnu');
+
+    const candidates = [
+      path.join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', '@remotion', platformArch),
+      path.join(app.getAppPath(), '..', 'app.asar.unpacked', 'node_modules', '@remotion', platformArch),
+      path.join(process.resourcesPath, 'node_modules', '@remotion', platformArch),
+    ];
+
+    for (const cand of candidates) {
+      if (fs.existsSync(cand)) {
+        if (process.platform !== 'win32') {
+          for (const bin of ['ffmpeg', 'ffprobe', 'remotion']) {
+            const p = path.join(cand, bin);
+            if (fs.existsSync(p)) {
+              try { fs.chmodSync(p, 0o755); } catch {}
+            }
+          }
+        }
+        return cand;
+      }
+    }
+
+    return undefined;
+  }
+
+  private async resolveBrowserExecutable(
+    jobId: string,
+    mainWindow: BrowserWindow
+  ): Promise<string> {
+    this.ensureSafeWorkingDirectory();
+
+    // 1. Check packaged extraResources or asar.unpacked
+    if (app?.isPackaged) {
+      const packagedSearchDirs = [
+        path.join(process.resourcesPath, '.remotion'),
+        path.join(process.resourcesPath, 'chrome-headless-shell'),
+        path.join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', '.remotion'),
+      ];
+      for (const dir of packagedSearchDirs) {
+        const found = this.findHeadlessShellInDir(dir);
+        if (found) {
+          console.log(`[RemotionRunner] Using packaged headless browser: ${found}`);
+          return found;
+        }
+      }
+    }
+
+    // 2. Previously downloaded headless shell in userData/.remotion
+    if (app) {
+      const userDataDir = path.join(app.getPath('userData'), '.remotion');
+      const foundInUserData = this.findHeadlessShellInDir(userDataDir);
+      if (foundInUserData) {
+        console.log(`[RemotionRunner] Using cached headless browser in userData: ${foundInUserData}`);
+        return foundInUserData;
+      }
+    }
+
+    // 3. Dev node_modules/.remotion
+    const devRemotion = path.join(process.cwd(), 'node_modules/.remotion');
+    const foundInDev = this.findHeadlessShellInDir(devRemotion);
+    if (foundInDev) {
+      console.log(`[RemotionRunner] Using development headless browser: ${foundInDev}`);
+      return foundInDev;
+    }
+
+    // 4. System browser (Google Chrome / Chromium)
+    const systemBrowser = this.findSystemBrowser();
+    if (systemBrowser) {
+      console.log(`[RemotionRunner] Using detected system browser: ${systemBrowser}`);
+      return systemBrowser;
+    }
+
+    // 5. Download headless shell to userData/.remotion safely
+    console.log('[RemotionRunner] No local browser found. Downloading Chrome Headless Shell...');
+    mainWindow.webContents.send('render:progress', {
+      jobId,
+      progress: 0.03,
+      status: 'rendering',
+      message: 'Downloading Chrome render engine...',
+    });
+
+    const result = await ensureBrowser({
+      chromeMode: 'headless-shell',
+      onBrowserDownload: () => ({
+        version: null,
+        onProgress: ({ percent }) => {
+          mainWindow.webContents.send('render:progress', {
+            jobId,
+            progress: 0.03 + (percent * 0.07),
+            status: 'rendering',
+            message: `Downloading Chrome render engine (${Math.round(percent * 100)}%)...`,
+          });
+        },
+      }),
+    });
+
+    if (result && 'path' in result && result.path && fs.existsSync(result.path)) {
+      if (process.platform !== 'win32') {
+        try { fs.chmodSync(result.path, 0o755); } catch {}
+      }
+      return result.path;
+    }
+
+    throw new Error('Unable to find or download Chromium headless browser for video export.');
+  }
 
   private getPrebundledPath(): string | null {
     const candidates = [
@@ -234,11 +437,34 @@ class RemotionRunnerService {
         totalDurationInFrames,
       };
 
+      // 1. Resolve browser and compositor binaries
+      const browserExecutable = await this.resolveBrowserExecutable(jobId, mainWindow);
+      const binariesDirectory = this.getBinariesDirectory();
+
+      if (isCancelled) {
+        this.activeJobs.delete(jobId);
+        mainWindow.webContents.send('render:progress', {
+          jobId,
+          progress: 0,
+          status: 'cancelled',
+        });
+        return;
+      }
+
+      mainWindow.webContents.send('render:progress', {
+        jobId,
+        progress: 0.1,
+        status: 'rendering',
+        message: 'Preparing video composition...',
+      });
+
       // 2. Select Composition
       const composition = await selectComposition({
         serveUrl: bundleLocation,
         id: 'QuranVideo',
         inputProps: inputProps as unknown as Record<string, unknown>,
+        browserExecutable,
+        binariesDirectory,
       });
 
       const cpuCount = require('os').cpus().length || 4;
@@ -257,6 +483,8 @@ class RemotionRunnerService {
         crf: config.resolution === '4k' ? 18 : 22,
         concurrency,
         cancelSignal,
+        browserExecutable,
+        binariesDirectory,
         chromiumOptions: {
           enableMultiProcessOnLinux: true,
           disableWebSecurity: true,
@@ -271,6 +499,7 @@ class RemotionRunnerService {
             totalFrames: totalDurationInFrames,
             renderEstimatedTime,
             status: 'rendering',
+            message: `Rendering frame ${renderedFrames} of ${totalDurationInFrames}`,
           });
         },
       });

@@ -36,6 +36,10 @@
     {
       "from": "dist/remotion-bundle",
       "to": "remotion-bundle"
+    },
+    {
+      "from": "node_modules/.remotion",
+      "to": ".remotion"
     }
   ],
   "linux": {

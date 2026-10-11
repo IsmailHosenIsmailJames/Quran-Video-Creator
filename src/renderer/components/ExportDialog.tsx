@@ -247,7 +247,7 @@ export const ExportDialog: React.FC = () => {
                     <AlertCircle className="w-3.5 h-3.5 text-rose-400" />
                   )}
                   {renderProgress.status === 'rendering'
-                    ? 'Rendering & Encoding H.264...'
+                    ? renderProgress.message || 'Rendering & Encoding H.264...'
                     : renderProgress.status === 'completed'
                     ? 'Rendering Completed Successfully!'
                     : renderProgress.status === 'cancelled'
@@ -286,7 +286,7 @@ export const ExportDialog: React.FC = () => {
                   </div>
                 ) : (
                   <div className="flex justify-between items-center text-[11px] text-gray-400 font-mono">
-                    <span>Preparing composition & bundler...</span>
+                    <span>{renderProgress.message || 'Preparing composition & bundler...'}</span>
                     <span className="text-gray-500">Starting render</span>
                   </div>
                 )

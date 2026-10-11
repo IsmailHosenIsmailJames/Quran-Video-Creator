@@ -7,6 +7,22 @@ import { quranDbService } from './services/quran-db';
 import { localMediaServer } from './services/local-media-server';
 import { settingsService } from './services/settings-service';
 
+// On macOS / packaged Electron apps, process.cwd() defaults to '/' when launched from Finder.
+// Any package resolving paths against cwd (such as Remotion's getDownloadsCacheDir)
+// will attempt to write to '/.remotion', causing ENOENT crashes on read-only root volumes.
+// Ensure the working directory is set to a safe, writable user data directory.
+try {
+  if (process.cwd() === '/' || app.isPackaged) {
+    const safeUserData = app.getPath('userData');
+    if (!fs.existsSync(safeUserData)) {
+      fs.mkdirSync(safeUserData, { recursive: true });
+    }
+    process.chdir(safeUserData);
+  }
+} catch (err) {
+  console.warn('[Main] Failed to set safe working directory:', err);
+}
+
 // Register custom protocol for local media streaming
 protocol.registerSchemesAsPrivileged([
   {

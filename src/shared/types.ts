@@ -229,4 +229,5 @@ export interface RenderProgressPayload {
   renderEstimatedTime?: number; // Estimated remaining time in ms
   status: 'rendering' | 'encoding' | 'completed' | 'failed' | 'cancelled';
   error?: string;
+  message?: string;
 }
