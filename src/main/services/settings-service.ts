@@ -62,10 +62,18 @@ export const PERSISTABLE_CONFIG_KEYS: Array<keyof VideoTemplateConfig> = [
   'showWaveform',
   'waveformType',
   'waveformColor',
+  'waveformColorSecondary',
   'waveformHeight',
   'waveformWidth',
   'waveformAmplitude',
   'waveformPositionY',
+  'waveformGlow',
+  'waveformGlowIntensity',
+  'waveformFillArea',
+  'waveformBarWidth',
+  'waveformSampleCount',
+  'waveformCircularRadius',
+  'waveformOpacity',
 
   // Branding
   'showBranding',

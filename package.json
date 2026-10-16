@@ -12,6 +12,7 @@
     "lint": "tsc --noEmit",
     "test:thumbnail": "electron scripts/verify-thumbnail.cjs",
     "test:seo": "node scripts/test-youtube-seo.cjs",
+    "test:waveform": "node scripts/test-waveform-engine.cjs",
     "loc": "node scripts/count-loc.js",
     "pack": "npm run build:vite && npm run bundle:remotion && electron-builder --dir",
     "dist": "npm run build:vite && npm run bundle:remotion && electron-builder",

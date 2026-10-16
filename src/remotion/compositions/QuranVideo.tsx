@@ -350,10 +350,18 @@ export const QuranVideo: React.FC<QuranVideoCompositionProps> = ({
                         audioUrl={audioSrc}
                         type={config.waveformType}
                         color={config.waveformColor}
+                        colorSecondary={config.waveformColorSecondary}
                         height={config.waveformHeight}
                         width={config.waveformWidth ?? 92}
                         amplitude={config.waveformAmplitude ?? 2.2}
                         positionY={config.waveformPositionY}
+                        glow={config.waveformGlow ?? true}
+                        glowIntensity={config.waveformGlowIntensity ?? 1.5}
+                        fillArea={config.waveformFillArea ?? false}
+                        barWidth={config.waveformBarWidth ?? 6}
+                        sampleCount={config.waveformSampleCount ?? 64}
+                        circularRadius={config.waveformCircularRadius ?? 130}
+                        opacity={config.waveformOpacity ?? 0.9}
                       />
                     )}
 

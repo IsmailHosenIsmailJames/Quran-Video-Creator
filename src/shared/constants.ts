@@ -155,10 +155,18 @@ export const DEFAULT_TEMPLATE_CONFIG: VideoTemplateConfig = {
   showWaveform: true,
   waveformType: 'smooth-wave',
   waveformColor: '#F59E0B',
+  waveformColorSecondary: '#FBBF24',
   waveformHeight: 120,
   waveformWidth: 92,
   waveformAmplitude: 2.2,
   waveformPositionY: 74, // Lower-third
+  waveformGlow: true,
+  waveformGlowIntensity: 1.5,
+  waveformFillArea: false,
+  waveformBarWidth: 6,
+  waveformSampleCount: 64,
+  waveformCircularRadius: 130,
+  waveformOpacity: 0.9,
 
   // Branding
   showBranding: false,

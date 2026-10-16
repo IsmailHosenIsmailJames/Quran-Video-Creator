@@ -153,6 +153,15 @@ export type TitleCardPresetId =
   | 'minimal-noir'
   | 'sacred-medina';
 
+export type WaveformType =
+  | 'smooth-wave'
+  | 'mirrored-bars'
+  | 'gradient-bars'
+  | 'circular-halo'
+  | 'dual-symmetrical-wave'
+  | 'dotted-matrix'
+  | 'minimal-line-pulse';
+
 export interface VideoTemplateConfig {
   // Scripture Selection
   surahNumber: number;
@@ -216,12 +225,20 @@ export interface VideoTemplateConfig {
   recitationSpeed: number;      // 0.75x to 1.25x (default 1.0)
   customAudioPath?: string;
   showWaveform: boolean;
-  waveformType: 'smooth-wave' | 'mirrored-bars';
+  waveformType: WaveformType;
   waveformColor: string;
+  waveformColorSecondary?: string;
   waveformHeight: number;
   waveformWidth?: number;       // Percentage of canvas width (e.g. 50% to 100%, default 92%)
   waveformAmplitude?: number;   // Dynamic gain multiplier (e.g. 1.0 to 3.5, default 2.2)
   waveformPositionY: number;   // Percentage from top (e.g. 78%)
+  waveformGlow?: boolean;       // Enable neon drop-shadow glow (default: true)
+  waveformGlowIntensity?: number; // 0 to 3 (default: 1.5)
+  waveformFillArea?: boolean;   // Translucent gradient fill under wave (default: false)
+  waveformBarWidth?: number;    // Width of bars in px (2 to 14, default: 6)
+  waveformSampleCount?: number; // Number of sample points (32, 48, 64, 96, 128, default: 64)
+  waveformCircularRadius?: number; // Radius for circular-halo mode in px (default: 130)
+  waveformOpacity?: number;     // Waveform layer opacity (0.2 to 1.0, default: 0.9)
 
   // Branding
   showBranding: boolean;
