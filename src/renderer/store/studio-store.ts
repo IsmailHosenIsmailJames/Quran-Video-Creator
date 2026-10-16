@@ -107,6 +107,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
       thumbnailConfig: {
         ...state.thumbnailConfig,
         preset: preset.id,
+        layoutMode: preset.layoutMode,
         accentThemeColor: preset.accentColor,
         surahCalligraphyColor: preset.accentColor,
         hookTitleText: preset.hookTitle,
@@ -120,6 +121,8 @@ export const useStudioStore = create<StudioState>((set, get) => ({
         showSunRays: preset.showSunRays,
         showGoldenSparks: preset.showGoldenSparks,
         badgeCustomText: preset.badgeText,
+        goldGradientText: preset.goldGradientText,
+        calligraphyMedallion: true,
       },
     }));
   },

@@ -4,8 +4,7 @@ import {
   THUMBNAIL_PRESET_OPTIONS,
   THUMBNAIL_HOOK_SUGGESTIONS,
   THUMBNAIL_BADGE_PRESETS,
-  ThumbnailPresetId,
-  ThumbnailBadgeId,
+  ThumbnailLayoutMode,
 } from '../../../shared/thumbnail-types';
 import { BACKGROUND_PRESETS } from '../../../shared/constants';
 import {
@@ -20,8 +19,10 @@ import {
   Sliders,
   Check,
   Star,
-  Shield,
-  HelpCircle,
+  Columns,
+  Maximize,
+  Compass,
+  Zap,
 } from 'lucide-react';
 
 export const ThumbnailTab: React.FC = () => {
@@ -34,7 +35,7 @@ export const ThumbnailTab: React.FC = () => {
   } = useStudioStore();
 
   const [activeSection, setActiveSection] = useState<
-    'presets' | 'background' | 'scripture' | 'hook' | 'badges' | 'guides'
+    'presets' | 'layout' | 'background' | 'scripture' | 'hook' | 'badges' | 'guides'
   >('presets');
 
   // File picker for custom background image
@@ -71,7 +72,6 @@ export const ThumbnailTab: React.FC = () => {
         console.error('Failed to capture frame from video element:', err);
       }
     } else {
-      // Fallback: If background clips exist, use active background image/video source
       const currentBg = config.backgroundClips[0]?.source || config.backgroundPath;
       if (currentBg) {
         updateThumbnailConfig({
@@ -82,8 +82,10 @@ export const ThumbnailTab: React.FC = () => {
     }
   };
 
+  const currentLayout = thumbnailConfig.layoutMode || 'split-screen';
+
   return (
-    <div className="space-y-5 pb-8 select-none">
+    <div className="space-y-4 pb-8 select-none">
       {/* Header Banner */}
       <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent border border-amber-500/30">
         <div className="flex items-center justify-between mb-1.5">
@@ -96,7 +98,7 @@ export const ThumbnailTab: React.FC = () => {
                 YouTube Thumbnail Studio
               </h3>
               <p className="text-[10px] text-gray-400">
-                High-converting Islamic thumbnail generator
+                2026 High-Converting Islamic Design Engine
               </p>
             </div>
           </div>
@@ -113,7 +115,7 @@ export const ThumbnailTab: React.FC = () => {
           title="Grab the current visual frame from the video player as your thumbnail background"
         >
           <Camera className="w-3.5 h-3.5" />
-          <span>Capture Current Video Frame as Background</span>
+          <span>Capture Video Frame as Background</span>
         </button>
       </div>
 
@@ -121,11 +123,11 @@ export const ThumbnailTab: React.FC = () => {
       <div className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-gray-950 border border-gray-800 text-[11px] font-medium">
         {[
           { id: 'presets', label: 'Presets', icon: Star },
-          { id: 'background', label: 'Background', icon: ImageIcon },
+          { id: 'layout', label: 'Layouts', icon: Columns },
+          { id: 'background', label: 'Backdrop', icon: ImageIcon },
           { id: 'scripture', label: 'Scripture', icon: Type },
           { id: 'hook', label: 'Hook Title', icon: Sliders },
-          { id: 'badges', label: 'Badges & Art', icon: Layers },
-          { id: 'guides', label: 'Safe Zones', icon: Eye },
+          { id: 'badges', label: 'Ornaments', icon: Layers },
         ].map((item) => {
           const Icon = item.icon;
           const isActive = activeSection === item.id;
@@ -154,13 +156,13 @@ export const ThumbnailTab: React.FC = () => {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <label className="text-xs font-semibold text-gray-200">
-              Curated Islamic Thumbnail Presets
+              Modern 2026 Thumbnail Presets
             </label>
-            <span className="text-[10px] text-gray-400">1-Click Pro Design</span>
+            <span className="text-[10px] text-amber-400 font-medium">1-Click Pro Design</span>
           </div>
 
           <div className="grid grid-cols-1 gap-2.5">
-            {THUMBNAIL_PRESET_OPTIONS.map((preset) => {
+            {THUMBNAIL_PRESET_OPTIONS.slice(0, 8).map((preset) => {
               const isSelected = thumbnailConfig.preset === preset.id;
               return (
                 <div
@@ -168,32 +170,48 @@ export const ThumbnailTab: React.FC = () => {
                   onClick={() => applyThumbnailPreset(preset.id)}
                   className={`p-3 rounded-xl border transition cursor-pointer flex flex-col justify-between ${
                     isSelected
-                      ? 'bg-amber-500/15 border-amber-500/70 ring-1 ring-amber-500/30'
+                      ? 'bg-amber-500/15 border-amber-500/70 ring-1 ring-amber-500/40 shadow-lg'
                       : 'bg-gray-950/70 border-gray-800 hover:border-gray-700 hover:bg-gray-900/60'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2 mb-1">
-                    <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                      <span
-                        className="w-2.5 h-2.5 rounded-full"
-                        style={{ backgroundColor: preset.accentColor }}
-                      />
-                      {preset.name}
-                    </span>
-                    {isSelected && (
-                      <span className="p-0.5 rounded-full bg-amber-500/30 text-amber-300">
-                        <Check className="w-3 h-3" />
+                    <div>
+                      <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                        <span
+                          className="w-2.5 h-2.5 rounded-full shadow-sm"
+                          style={{ backgroundColor: preset.accentColor }}
+                        />
+                        {preset.name}
+                      </div>
+                      <div className="text-[10px] text-amber-400/90 font-medium">
+                        {preset.subtitle}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[9px] uppercase font-mono px-1.5 py-0.5 rounded bg-gray-900 border border-gray-750 text-gray-300">
+                        {preset.layoutMode === 'split-screen'
+                          ? 'SPLIT #1 CTR'
+                          : preset.layoutMode === 'centerpiece'
+                          ? 'ROYAL'
+                          : preset.layoutMode === 'cinematic-hero'
+                          ? 'CINEMATIC'
+                          : 'VIRAL'}
                       </span>
-                    )}
+                      {isSelected && (
+                        <span className="p-0.5 rounded-full bg-amber-500/30 text-amber-300">
+                          <Check className="w-3 h-3" />
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <p className="text-[10px] text-gray-400 leading-relaxed mb-2">
                     {preset.description}
                   </p>
                   <div className="flex items-center justify-between text-[10px] pt-1.5 border-t border-gray-800/60">
-                    <span className="text-amber-400/90 font-semibold font-mono">
+                    <span className="text-gray-300 font-semibold font-mono">
                       {preset.badgeText}
                     </span>
-                    <span className="text-gray-400 font-mono truncate max-w-[180px]">
+                    <span className="text-amber-400/90 font-mono truncate max-w-[180px]">
                       {preset.hookTitle}
                     </span>
                   </div>
@@ -209,9 +227,9 @@ export const ThumbnailTab: React.FC = () => {
             </label>
             <div className="grid grid-cols-3 gap-2">
               {[
-                { id: '16:9', label: '16:9 Landscape', desc: 'YouTube (1280x720)' },
-                { id: '9:16', label: '9:16 Vertical', desc: 'Shorts (1080x1920)' },
-                { id: '1:1', label: '1:1 Square', desc: 'Instagram (1080x1080)' },
+                { id: '16:9', label: '16:9 Landscape', desc: 'YouTube (1280×720)' },
+                { id: '9:16', label: '9:16 Vertical', desc: 'Shorts (1080×1920)' },
+                { id: '1:1', label: '1:1 Square', desc: 'Community (1080×1080)' },
               ].map((ratio) => {
                 const isSelected = thumbnailConfig.aspectRatio === ratio.id;
                 return (
@@ -240,7 +258,83 @@ export const ThumbnailTab: React.FC = () => {
       )}
 
       {/* ========================================================= */}
-      {/* 2. BACKGROUND & ATMOSPHERE                                */}
+      {/* 2. LAYOUT ARCHETYPES                                      */}
+      {/* ========================================================= */}
+      {activeSection === 'layout' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-gray-200">
+              Modern Thumbnail Layout Archetype
+            </label>
+            <span className="text-[10px] text-gray-400">Structure</span>
+          </div>
+
+          <div className="grid grid-cols-1 gap-2.5">
+            {[
+              {
+                id: 'split-screen' as ThumbnailLayoutMode,
+                name: 'Split-Screen Masterclass',
+                badge: '#1 TOP CTR ON YOUTUBE',
+                desc: 'Left side features a grand glowing calligraphy medallion; right side features stacked high-impact typography with frosted glass badges.',
+                icon: Columns,
+              },
+              {
+                id: 'centerpiece' as ThumbnailLayoutMode,
+                name: 'Centerpiece Majesty',
+                badge: 'ROYAL SACRED',
+                desc: 'Symmetrical, iconic centered layout with radiant sunbeams, monumental Surah lettering, and sleek glassmorphic intention banner.',
+                icon: Maximize,
+              },
+              {
+                id: 'cinematic-hero' as ThumbnailLayoutMode,
+                name: 'Cinematic Widescreen',
+                badge: 'EDITORIAL & LUXURY',
+                desc: 'Deep atmospheric vignette with wide letter-spacing, delicate 1px gold hairline divider, and modern minimalist typography.',
+                icon: Compass,
+              },
+              {
+                id: 'high-impact-focus' as ThumbnailLayoutMode,
+                name: 'Mobile Viral Contrast',
+                badge: 'SMALL SCREEN FOCUS',
+                desc: 'Extra-large title fonts and high-contrast punchy hook banners specifically tuned to grab attention on 5-inch smartphone screens.',
+                icon: Zap,
+              },
+            ].map((layout) => {
+              const isSelected = currentLayout === layout.id;
+              const Icon = layout.icon;
+              return (
+                <div
+                  key={layout.id}
+                  onClick={() => updateThumbnailConfig({ layoutMode: layout.id })}
+                  className={`p-3 rounded-xl border transition cursor-pointer flex flex-col justify-between ${
+                    isSelected
+                      ? 'bg-amber-500/15 border-amber-500/70 ring-1 ring-amber-500/40 shadow-sm'
+                      : 'bg-gray-950/70 border-gray-800 hover:border-gray-700 hover:bg-gray-900/60'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <div className={`p-1.5 rounded-lg ${isSelected ? 'bg-amber-500 text-black' : 'bg-gray-900 text-amber-400'}`}>
+                        <Icon className="w-4 h-4" />
+                      </div>
+                      <span className="text-xs font-bold text-white">{layout.name}</span>
+                    </div>
+                    <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-gray-900 border border-gray-750 text-amber-300">
+                      {layout.badge}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-gray-400 leading-relaxed">
+                    {layout.desc}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* 3. BACKGROUND & ATMOSPHERE                                */}
       {/* ========================================================= */}
       {activeSection === 'background' && (
         <div className="space-y-4">
@@ -253,7 +347,7 @@ export const ThumbnailTab: React.FC = () => {
               <button
                 type="button"
                 onClick={handleCaptureVideoFrame}
-                className="flex items-center gap-1.5 p-2 rounded-lg bg-gray-900 border border-gray-800 hover:border-gray-700 text-xs text-white transition"
+                className="flex items-center justify-center gap-1.5 p-2 rounded-lg bg-gray-900 border border-gray-800 hover:border-gray-700 text-xs text-white transition active:scale-98"
               >
                 <Camera className="w-3.5 h-3.5 text-amber-400" />
                 <span>Video Frame</span>
@@ -261,7 +355,7 @@ export const ThumbnailTab: React.FC = () => {
               <button
                 type="button"
                 onClick={handleSelectCustomImage}
-                className="flex items-center gap-1.5 p-2 rounded-lg bg-gray-900 border border-gray-800 hover:border-gray-700 text-xs text-white transition"
+                className="flex items-center justify-center gap-1.5 p-2 rounded-lg bg-gray-900 border border-gray-800 hover:border-gray-700 text-xs text-white transition active:scale-98"
               >
                 <Upload className="w-3.5 h-3.5 text-amber-400" />
                 <span>Upload Custom</span>
@@ -272,7 +366,7 @@ export const ThumbnailTab: React.FC = () => {
           {/* Built-in Presets Carousel */}
           <div className="space-y-2">
             <label className="text-xs font-semibold text-gray-300 block">
-              Or Choose Built-in Backdrop
+              Curated High-Res Islamic Backdrops
             </label>
             <div className="grid grid-cols-2 gap-2">
               {BACKGROUND_PRESETS.map((bg) => {
@@ -317,7 +411,7 @@ export const ThumbnailTab: React.FC = () => {
               <div className="flex justify-between text-xs text-gray-300">
                 <span>Dimming / Darkness Overlay</span>
                 <span className="font-mono text-amber-400 font-semibold">
-                  {Math.round((thumbnailConfig.bgOverlayOpacity || 0.45) * 100)}%
+                  {Math.round((thumbnailConfig.bgOverlayOpacity || 0.5) * 100)}%
                 </span>
               </div>
               <input
@@ -325,7 +419,7 @@ export const ThumbnailTab: React.FC = () => {
                 min={0}
                 max={0.9}
                 step={0.05}
-                value={thumbnailConfig.bgOverlayOpacity ?? 0.45}
+                value={thumbnailConfig.bgOverlayOpacity ?? 0.5}
                 onChange={(e) => updateThumbnailConfig({ bgOverlayOpacity: parseFloat(e.target.value) })}
                 className="w-full accent-amber-500 cursor-pointer"
               />
@@ -363,7 +457,7 @@ export const ThumbnailTab: React.FC = () => {
       )}
 
       {/* ========================================================= */}
-      {/* 3. SCRIPTURE & CALLIGRAPHY                                */}
+      {/* 4. SCRIPTURE & CALLIGRAPHY                                */}
       {/* ========================================================= */}
       {activeSection === 'scripture' && (
         <div className="space-y-4">
@@ -374,7 +468,10 @@ export const ThumbnailTab: React.FC = () => {
                 <span className="surah-calligraphy-title text-2xl text-amber-400">
                   {`surah${String(config.surahNumber).padStart(3, '0')}`}
                 </span>
-                <span className="text-xs font-semibold text-white">Calligraphy Emblem</span>
+                <div>
+                  <span className="text-xs font-semibold text-white block">Calligraphy Emblem</span>
+                  <span className="text-[10px] text-gray-400">Sacred vector calligraphy glyph</span>
+                </div>
               </div>
               <input
                 type="checkbox"
@@ -385,7 +482,7 @@ export const ThumbnailTab: React.FC = () => {
             </div>
 
             {thumbnailConfig.showSurahCalligraphy !== false && (
-              <div className="space-y-2 pt-2 border-t border-gray-850">
+              <div className="space-y-2.5 pt-2 border-t border-gray-850">
                 <div className="flex justify-between text-xs text-gray-300">
                   <span>Calligraphy Size Scale</span>
                   <span className="font-mono text-amber-400 font-semibold">
@@ -403,19 +500,65 @@ export const ThumbnailTab: React.FC = () => {
                 />
 
                 <div className="flex items-center justify-between pt-1">
-                  <span className="text-xs text-gray-300">Emblem Color</span>
+                  <span className="text-xs text-gray-300">Glowing Frosted Medallion Frame</span>
                   <input
-                    type="color"
-                    value={thumbnailConfig.surahCalligraphyColor || '#F59E0B'}
-                    onChange={(e) => updateThumbnailConfig({ surahCalligraphyColor: e.target.value })}
-                    className="w-8 h-8 rounded-lg border border-gray-700 bg-transparent cursor-pointer"
+                    type="checkbox"
+                    checked={thumbnailConfig.calligraphyMedallion !== false}
+                    onChange={(e) => updateThumbnailConfig({ calligraphyMedallion: e.target.checked })}
+                    className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-xs text-gray-300">24K Liquid Gold Metallic Gradient</span>
+                  <input
+                    type="checkbox"
+                    checked={thumbnailConfig.goldGradientText !== false}
+                    onChange={(e) => updateThumbnailConfig({ goldGradientText: e.target.checked })}
+                    className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
                   />
                 </div>
               </div>
             )}
           </div>
 
-          {/* English Surah Name */}
+          {/* Vocalized Arabic Surah Title */}
+          <div className="p-3.5 rounded-xl bg-gray-950/80 border border-gray-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-xs font-semibold text-white block">Vocalized Arabic Name</span>
+                <span className="text-[10px] text-gray-400 font-amiri">سُورَةُ ...</span>
+              </div>
+              <input
+                type="checkbox"
+                checked={thumbnailConfig.showArabicSurahName !== false}
+                onChange={(e) => updateThumbnailConfig({ showArabicSurahName: e.target.checked })}
+                className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+              />
+            </div>
+
+            {thumbnailConfig.showArabicSurahName !== false && (
+              <div className="space-y-2 pt-1 border-t border-gray-850">
+                <div className="flex justify-between text-xs text-gray-300">
+                  <span>Arabic Font Size</span>
+                  <span className="font-mono text-amber-400 font-semibold">
+                    {thumbnailConfig.arabicSurahNameSize || 34}px
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={24}
+                  max={52}
+                  step={2}
+                  value={thumbnailConfig.arabicSurahNameSize ?? 34}
+                  onChange={(e) => updateThumbnailConfig({ arabicSurahNameSize: parseInt(e.target.value, 10) })}
+                  className="w-full accent-amber-500 cursor-pointer"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* English Surah Title */}
           <div className="p-3.5 rounded-xl bg-gray-950/80 border border-gray-800 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-white">English Surah Title</span>
@@ -475,7 +618,7 @@ export const ThumbnailTab: React.FC = () => {
       )}
 
       {/* ========================================================= */}
-      {/* 4. HIGH-IMPACT HOOK TITLE                                */}
+      {/* 5. HIGH-IMPACT HOOK TITLE                                */}
       {/* ========================================================= */}
       {activeSection === 'hook' && (
         <div className="space-y-4">
@@ -536,40 +679,26 @@ export const ThumbnailTab: React.FC = () => {
 
               {/* Banner Style & Colors */}
               <div className="p-3.5 rounded-xl bg-gray-950/80 border border-gray-800 space-y-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs text-gray-300 font-medium">Banner Background Container</label>
-                  <select
-                    value={thumbnailConfig.hookTitleBgStyle || 'gradient-pill'}
-                    onChange={(e) => updateThumbnailConfig({ hookTitleBgStyle: e.target.value as any })}
-                    className="w-full bg-gray-900 border border-gray-800 rounded-lg px-2.5 py-1.5 text-xs text-white"
-                  >
-                    <option value="gradient-pill">Gradient Pill Container (Recommended)</option>
-                    <option value="glass-card">Modern Glassmorphic Card</option>
-                    <option value="solid-banner">Full-Width Solid Dark Ribbon</option>
-                    <option value="none">Pure Floating Text (No Container)</option>
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 pt-1 border-t border-gray-850">
+                <div className="grid grid-cols-2 gap-2 pt-1">
                   <div className="space-y-1">
-                    <span className="text-[11px] text-gray-400">Text Color</span>
+                    <span className="text-[11px] text-gray-400">Accent Text Color</span>
                     <input
                       type="color"
-                      value={thumbnailConfig.hookTitleColor || '#FBBF24'}
+                      value={thumbnailConfig.hookTitleColor || '#FDE68A'}
                       onChange={(e) => updateThumbnailConfig({ hookTitleColor: e.target.value })}
-                      className="w-full h-7 rounded border border-gray-700 bg-transparent cursor-pointer"
+                      className="w-full h-8 rounded border border-gray-700 bg-transparent cursor-pointer"
                     />
                   </div>
                   <div className="space-y-1">
-                    <span className="text-[11px] text-gray-400">Outline Stroke</span>
-                    <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] text-gray-400">Glow Aura</span>
+                    <div className="flex items-center gap-1.5 pt-1.5">
                       <input
                         type="checkbox"
-                        checked={thumbnailConfig.hookTitleStroke !== false}
-                        onChange={(e) => updateThumbnailConfig({ hookTitleStroke: e.target.checked })}
+                        checked={thumbnailConfig.hookTitleGlow !== false}
+                        onChange={(e) => updateThumbnailConfig({ hookTitleGlow: e.target.checked })}
                         className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
                       />
-                      <span className="text-[11px] text-gray-300">Enable Outline</span>
+                      <span className="text-[11px] text-gray-300">Enable Glow</span>
                     </div>
                   </div>
                 </div>
@@ -580,14 +709,14 @@ export const ThumbnailTab: React.FC = () => {
       )}
 
       {/* ========================================================= */}
-      {/* 5. BADGES & ISLAMIC ART OVERLAYS                          */}
+      {/* 6. BADGES & ISLAMIC ART OVERLAYS                          */}
       {/* ========================================================= */}
       {activeSection === 'badges' && (
         <div className="space-y-4">
-          {/* Eye-Catching Viral Sticker */}
+          {/* Eye-Catching Status Badge */}
           <div className="p-3.5 rounded-xl bg-gray-950/80 border border-gray-800 space-y-2.5">
             <label className="text-xs font-semibold text-white block">
-              Viral Top Sticker / Badge
+              Frosted Glass Status Chip
             </label>
             <div className="grid grid-cols-2 gap-1.5">
               {THUMBNAIL_BADGE_PRESETS.map((badge) => {
@@ -602,13 +731,17 @@ export const ThumbnailTab: React.FC = () => {
                         badgeCustomText: badge.id === 'none' ? '' : badge.label,
                       })
                     }
-                    className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold text-left border transition truncate ${
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold text-left border transition truncate flex items-center gap-1.5 ${
                       isSelected
                         ? 'bg-amber-500/20 border-amber-500 text-amber-300'
                         : 'bg-gray-900 border-gray-800 text-gray-400 hover:text-white'
                     }`}
                   >
-                    {badge.label}
+                    <span
+                      className="w-2 h-2 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: badge.dot }}
+                    />
+                    <span className="truncate">{badge.label}</span>
                   </button>
                 );
               })}
@@ -624,21 +757,21 @@ export const ThumbnailTab: React.FC = () => {
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={thumbnailConfig.showIslamicArchFrame !== false}
-                  onChange={(e) => updateThumbnailConfig({ showIslamicArchFrame: e.target.checked })}
-                  className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
-                />
-                <span>Medina Arch Frame</span>
-              </label>
-
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
                   checked={thumbnailConfig.showArabesqueCorners !== false}
                   onChange={(e) => updateThumbnailConfig({ showArabesqueCorners: e.target.checked })}
                   className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
                 />
                 <span>Arabesque Corners</span>
+              </label>
+
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={thumbnailConfig.showIslamicArchFrame || false}
+                  onChange={(e) => updateThumbnailConfig({ showIslamicArchFrame: e.target.checked })}
+                  className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+                />
+                <span>Moorish Arch Frame</span>
               </label>
 
               <label className="flex items-center gap-2 cursor-pointer">
@@ -658,7 +791,7 @@ export const ThumbnailTab: React.FC = () => {
                   onChange={(e) => updateThumbnailConfig({ showGoldenSparks: e.target.checked })}
                   className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
                 />
-                <span>Golden Sparkles</span>
+                <span>Golden Sparks</span>
               </label>
             </div>
           </div>
@@ -680,7 +813,7 @@ export const ThumbnailTab: React.FC = () => {
               </label>
 
               <label className="flex items-center justify-between cursor-pointer">
-                <span>Display Translation Book Badge</span>
+                <span>Display Translation Badge</span>
                 <input
                   type="checkbox"
                   checked={thumbnailConfig.showTranslationBadge !== false}
@@ -688,49 +821,6 @@ export const ThumbnailTab: React.FC = () => {
                   className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
                 />
               </label>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================= */}
-      {/* 6. GUIDES & SAFE ZONES                                    */}
-      {/* ========================================================= */}
-      {activeSection === 'guides' && (
-        <div className="space-y-4">
-          <div className="p-3.5 rounded-xl bg-gray-950/80 border border-gray-800 space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-xs font-semibold text-white block">
-                  YouTube Timestamp Safe Zone
-                </span>
-                <p className="text-[10px] text-gray-400">
-                  Shows where YouTube renders the video length badge in the bottom-right corner so your text is never obscured.
-                </p>
-              </div>
-              <input
-                type="checkbox"
-                checked={thumbnailConfig.showYouTubeSafeZone || false}
-                onChange={(e) => updateThumbnailConfig({ showYouTubeSafeZone: e.target.checked })}
-                className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
-              />
-            </div>
-
-            <div className="pt-2 border-t border-gray-850 flex items-center justify-between">
-              <div>
-                <span className="text-xs font-semibold text-white block">
-                  Rule of Thirds Grid
-                </span>
-                <p className="text-[10px] text-gray-400">
-                  Overlays a 3x3 compositional grid to align focal elements with cinematic precision.
-                </p>
-              </div>
-              <input
-                type="checkbox"
-                checked={thumbnailConfig.showRuleOfThirds || false}
-                onChange={(e) => updateThumbnailConfig({ showRuleOfThirds: e.target.checked })}
-                className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
-              />
             </div>
           </div>
         </div>

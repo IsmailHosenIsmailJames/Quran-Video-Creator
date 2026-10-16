@@ -57,6 +57,24 @@ export const BACKGROUND_PRESETS = [
     type: 'preset' as const,
     url: 'https://images.unsplash.com/photo-1448375240586-882707db888b?q=80&w=1920&auto=format&fit=crop',
   },
+  {
+    id: 'twilight-mosque',
+    name: 'Twilight Mosque & Minaret',
+    type: 'preset' as const,
+    url: 'https://images.unsplash.com/photo-1542816417-0983c9c9ad53?q=80&w=1920&auto=format&fit=crop',
+  },
+  {
+    id: 'cosmic-nebula',
+    name: 'Celestial Cosmos & Nebula',
+    type: 'preset' as const,
+    url: 'https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?q=80&w=1920&auto=format&fit=crop',
+  },
+  {
+    id: 'marble-courtyard',
+    name: 'Sacred Marble Courtyard',
+    type: 'preset' as const,
+    url: 'https://images.unsplash.com/photo-1564769625905-50e93615e769?q=80&w=1920&auto=format&fit=crop',
+  },
 ];
 
 export const DEFAULT_TEMPLATE_CONFIG: VideoTemplateConfig = {

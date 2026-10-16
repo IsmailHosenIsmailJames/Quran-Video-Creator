@@ -20,3 +20,6 @@ yarn-error.log*
 # Environment
 .env
 .env.local
+
+# Test outputs
+test-output/
