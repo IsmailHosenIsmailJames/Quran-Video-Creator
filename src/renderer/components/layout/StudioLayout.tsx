@@ -6,10 +6,11 @@ import { VisualsTab } from '../tabs/VisualsTab';
 import { AudioTab } from '../tabs/AudioTab';
 import { BrandingTab } from '../tabs/BrandingTab';
 import { ThumbnailTab } from '../thumbnail/ThumbnailTab';
+import { YouTubeSeoTab } from '../tabs/YouTubeSeoTab';
 import { ThumbnailPreviewView } from '../thumbnail/ThumbnailPreviewView';
 import { LivePreview } from '../LivePreview';
 import { ExportDialog } from '../modals/ExportDialog';
-import { BookOpen, Layers, Image, Music, Shield, Sparkles } from 'lucide-react';
+import { BookOpen, Layers, Image, Music, Shield, Sparkles, Youtube } from 'lucide-react';
 
 export const StudioLayout: React.FC = () => {
   const { activeTab, setActiveTab } = useStudioStore();
@@ -21,6 +22,7 @@ export const StudioLayout: React.FC = () => {
     { id: 'audio' as const, label: 'Audio & Wave', icon: Music },
     { id: 'branding' as const, label: 'Branding', icon: Shield },
     { id: 'thumbnail' as const, label: 'Thumbnail', icon: Sparkles },
+    { id: 'youtube' as const, label: 'YouTube SEO', icon: Youtube },
   ];
 
   return (
@@ -36,7 +38,7 @@ export const StudioLayout: React.FC = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-3.5 py-2.5 rounded-t-xl text-xs font-semibold transition-all border-b-2 ${
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-t-xl text-xs font-semibold transition-all border-b-2 flex-shrink-0 ${
                   isActive
                     ? 'border-amber-400 bg-gray-900 text-amber-300 shadow-sm'
                     : 'border-transparent text-gray-400 hover:text-gray-200 hover:bg-gray-900/50'
@@ -57,6 +59,7 @@ export const StudioLayout: React.FC = () => {
           {activeTab === 'audio' && <AudioTab />}
           {activeTab === 'branding' && <BrandingTab />}
           {activeTab === 'thumbnail' && <ThumbnailTab />}
+          {activeTab === 'youtube' && <YouTubeSeoTab />}
         </div>
       </div>
 

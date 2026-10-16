@@ -40,13 +40,13 @@ interface StudioState {
   translatorsSecondary: string[];
   reciters: ReciterInfo[];
 
-  activeTab: 'scripture' | 'subtitles' | 'visuals' | 'audio' | 'branding' | 'thumbnail';
+  activeTab: 'scripture' | 'subtitles' | 'visuals' | 'audio' | 'branding' | 'thumbnail' | 'youtube';
   isExportModalOpen: boolean;
   isThumbnailModalOpen: boolean;
   thumbnailConfig: ThumbnailConfig;
 
   // Actions
-  setActiveTab: (tab: 'scripture' | 'subtitles' | 'visuals' | 'audio' | 'branding' | 'thumbnail') => void;
+  setActiveTab: (tab: 'scripture' | 'subtitles' | 'visuals' | 'audio' | 'branding' | 'thumbnail' | 'youtube') => void;
   setExportModalOpen: (open: boolean) => void;
   setThumbnailModalOpen: (open: boolean) => void;
   updateThumbnailConfig: (partial: Partial<ThumbnailConfig>) => void;

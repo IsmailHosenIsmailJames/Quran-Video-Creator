@@ -3,6 +3,7 @@ import { useStudioStore } from '../store/studio-store';
 import { RenderProgressPayload } from '../../shared/types';
 import { getSurahByNumber } from '../../shared/surahs';
 import { getTranslationBookName } from '../../shared/surah-localization';
+import { generateYouTubeDescription } from '../../shared/youtube-seo-generator';
 import {
   X,
   Film,
@@ -12,6 +13,9 @@ import {
   FolderOpen,
   RotateCcw,
   Sparkles,
+  Copy,
+  Check,
+  Youtube,
 } from 'lucide-react';
 
 const formatDuration = (ms: number): string => {
@@ -46,7 +50,19 @@ export const ExportDialog: React.FC = () => {
   const [renderProgress, setRenderProgress] = useState<RenderProgressPayload | null>(null);
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [elapsedRenderTime, setElapsedRenderTime] = useState<number | null>(null);
+  const [hasCopiedDesc, setHasCopiedDesc] = useState<boolean>(false);
   const renderStartTimeRef = useRef<number | null>(null);
+
+  const handleCopyDescription = async () => {
+    try {
+      const desc = generateYouTubeDescription(config, ayahs, reciter);
+      await navigator.clipboard.writeText(desc);
+      setHasCopiedDesc(true);
+      setTimeout(() => setHasCopiedDesc(false), 3000);
+    } catch (e) {
+      console.error('Failed to copy description:', e);
+    }
+  };
 
   // Requirement: Export file name includes reciter name, style of recitation (optional), surah name, starting ayah, ending ayah number, and translation book name
   const reciter = reciters[config.reciterIndex];
@@ -410,20 +426,53 @@ export const ExportDialog: React.FC = () => {
               >
                 Close
               </button>
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2">
                 <button
                   onClick={handleLocateFile}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white text-xs font-semibold transition shadow-md active:scale-[0.98]"
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gray-800 hover:bg-gray-750 border border-gray-700 text-white text-xs font-semibold transition active:scale-98"
+                  title="Show exported MP4 file in folder"
                 >
-                  <FolderOpen className="w-4 h-4 text-amber-400" />
-                  Locate File
+                  <FolderOpen className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Locate File</span>
+                </button>
+                <button
+                  onClick={handleCopyDescription}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-semibold transition active:scale-98 ${
+                    hasCopiedDesc
+                      ? 'bg-emerald-500/20 border-emerald-500/60 text-emerald-300'
+                      : 'bg-gray-800 hover:bg-gray-750 border-gray-700 text-white'
+                  }`}
+                  title="Copy full YouTube description with chapter timestamps to clipboard"
+                >
+                  {hasCopiedDesc ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3]" />
+                      <span>Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Copy Description</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    setExportModalOpen(false);
+                    setActiveTab('youtube');
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition shadow-md shadow-red-600/30 active:scale-98"
+                  title="Open YouTube SEO Kit for Titles, Chapters, and Tags"
+                >
+                  <Youtube className="w-3.5 h-3.5 fill-white stroke-none" />
+                  <span>YouTube Kit</span>
                 </button>
                 <button
                   onClick={handleStartExport}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold transition shadow-lg shadow-amber-500/20 active:scale-[0.98]"
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold transition shadow-lg shadow-amber-500/20 active:scale-98"
                 >
-                  <RotateCcw className="w-4 h-4 stroke-[2.5]" />
-                  Re-render Again
+                  <RotateCcw className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <span>Re-render</span>
                 </button>
               </div>
             </>
