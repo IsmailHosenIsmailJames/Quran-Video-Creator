@@ -156,9 +156,31 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
     ? Math.max(1, Math.round((config.introVideoDurationSeconds || 4) * fps))
     : 0;
 
+  const isTitleCardActive = Boolean(
+    config.enableSurahTitleCard &&
+    !(config.skipTitleCardForShorts !== false && config.aspectRatio === '9:16')
+  );
+  const titleCardDurationInFrames = isTitleCardActive
+    ? Math.max(1, Math.round((config.titleCardDurationSeconds || 3.5) * fps))
+    : 0;
+
+  const isOutroActive = Boolean(
+    config.enableOutroVideo &&
+    (config.outroMode === 'custom-video' ? config.outroVideoPath : true) &&
+    !(config.skipOutroForShorts !== false && config.aspectRatio === '9:16')
+  );
+  const outroDurationInFrames = isOutroActive
+    ? Math.max(1, Math.round((config.outroVideoDurationSeconds || 4.5) * fps))
+    : 0;
+
+  const preScriptureFrames = introDurationInFrames + titleCardDurationInFrames;
+  const nonScriptureFrames = introDurationInFrames + titleCardDurationInFrames + outroDurationInFrames;
+  const recitationFrames = Math.max(1, totalDurationInFrames - nonScriptureFrames);
+  const outroStartFrame = preScriptureFrames + recitationFrames;
+
   // Precalculate start frame and duration for each ayah in sequence
   const ayahTimeMap = useMemo(() => {
-    let currentStart = isIntroActive ? introDurationInFrames : 0;
+    let currentStart = preScriptureFrames;
     return ayahs.map((ayah) => {
       const startFrame = currentStart;
       const endFrame = startFrame + ayah.durationInFrames;
@@ -169,7 +191,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
         endFrame,
       };
     });
-  }, [ayahs, isIntroActive, introDurationInFrames]);
+  }, [ayahs, preScriptureFrames]);
 
   // Calculate normalized percentages, duration, and Ayah verse coverage for each clip
   const clipLayouts = useMemo(() => {
@@ -179,7 +201,6 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
       0
     );
     const norm = totalWeight > 0 ? 100 / totalWeight : 1;
-    const recitationFrames = Math.max(1, totalDurationInFrames - introDurationInFrames);
 
     let accumulatedPercent = 0;
     return clips.map((clip, index) => {
@@ -215,8 +236,8 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
       // Calculate which ayahs this clip spans in the audio timeline
       const clipStartRecitation = (startPercent / 100) * recitationFrames;
       const clipEndRecitation = ((startPercent + percent) / 100) * recitationFrames;
-      const clipStartTotal = (isIntroActive ? introDurationInFrames : 0) + clipStartRecitation;
-      const clipEndTotal = (isIntroActive ? introDurationInFrames : 0) + clipEndRecitation;
+      const clipStartTotal = preScriptureFrames + clipStartRecitation;
+      const clipEndTotal = preScriptureFrames + clipEndRecitation;
 
       const overlapping = ayahTimeMap.filter((item) => {
         return item.endFrame > clipStartTotal && item.startFrame < clipEndTotal;
@@ -244,7 +265,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
         clipEndTotal,
       };
     });
-  }, [clips, totalDurationInFrames, introDurationInFrames, fps, ayahTimeMap]);
+  }, [clips, recitationFrames, preScriptureFrames, fps, ayahTimeMap]);
 
   // Selected clip object for inspector
   const selectedClip = clips.find((c) => c.id === selectedClipId) || null;
@@ -327,8 +348,8 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
 
       const dx = e.clientX - dragStartRef.current.startX;
       const recitationWidth =
-        isIntroActive && totalDurationInFrames > 0
-          ? trackWidth * ((totalDurationInFrames - introDurationInFrames) / totalDurationInFrames)
+        totalDurationInFrames > 0
+          ? trackWidth * (recitationFrames / totalDurationInFrames)
           : trackWidth;
       const deltaPct = (dx / Math.max(1, recitationWidth)) * 100;
 
@@ -345,11 +366,10 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
         for (let i = 0; i < leftIndex; i++) {
           leftClipStartPct += clipLayouts[i]?.percent || 0;
         }
-        const recitationFrames = Math.max(1, totalDurationInFrames - introDurationInFrames);
         const dividerRecitationFrame = ((leftClipStartPct + newLeft) / 100) * recitationFrames;
 
         for (const item of ayahTimeMap) {
-          const ayahEndRecitationFrame = item.endFrame - (isIntroActive ? introDurationInFrames : 0);
+          const ayahEndRecitationFrame = item.endFrame - preScriptureFrames;
           const diffFrames = Math.abs(dividerRecitationFrame - ayahEndRecitationFrame);
           // Snap threshold: ~20 frames (~0.7s)
           if (diffFrames < 20) {
@@ -386,7 +406,17 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [draggingDividerIndex, updateBackgroundClip, isIntroActive, totalDurationInFrames, introDurationInFrames]);
+  }, [
+    draggingDividerIndex,
+    updateBackgroundClip,
+    totalDurationInFrames,
+    recitationFrames,
+    preScriptureFrames,
+    ayahs,
+    clips,
+    clipLayouts,
+    ayahTimeMap,
+  ]);
 
   // Format timecode (e.g. 01:23.4)
   const formatTime = (frame: number): string => {
@@ -542,7 +572,6 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
     if (!clips || clips.length === 0 || !ayahs || ayahs.length === 0) return;
     const totalClips = clips.length;
     const totalAyahs = ayahs.length;
-    const recitationFrames = Math.max(1, totalDurationInFrames - introDurationInFrames);
 
     const ayahsPerClip = totalAyahs / totalClips;
     const updatedClips = clips.map((clip, idx) => {
@@ -569,14 +598,13 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
     }
 
     updateConfig({ backgroundClips: updatedClips });
-  }, [clips, ayahs, totalDurationInFrames, introDurationInFrames, updateConfig]);
+  }, [clips, ayahs, recitationFrames, updateConfig]);
 
   // Snap a single selected clip to nearest Ayah verse boundaries
   const handleSnapClipToNearestAyahs = useCallback(
     (clipId: string) => {
       const layout = clipLayouts.find((l) => l.clip.id === clipId);
       if (!layout || !ayahTimeMap.length) return;
-      const recitationFrames = Math.max(1, totalDurationInFrames - introDurationInFrames);
 
       let bestStartFrame = ayahTimeMap[0].startFrame;
       let minStartDiff = Math.abs(layout.clipStartTotal - bestStartFrame);
@@ -606,7 +634,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
       const newPct = Math.max(2, Number(((snappedDuration / recitationFrames) * 100).toFixed(2)));
       updateClipPercentage(clipId, newPct);
     },
-    [clipLayouts, ayahTimeMap, totalDurationInFrames, introDurationInFrames, updateClipPercentage]
+    [clipLayouts, ayahTimeMap, recitationFrames, updateClipPercentage]
   );
 
   // Time ruler tick intervals scaled dynamically by zoom level
@@ -858,6 +886,28 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
                   </span>
                 </div>
               )}
+              {isTitleCardActive && (
+                <div
+                  style={{ width: `${(titleCardDurationInFrames / Math.max(1, totalDurationInFrames)) * 100}%` }}
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                    setCurrentFrame(introDurationInFrames);
+                    playerRef.current?.seekTo(introDurationInFrames);
+                    setSelectedAyahNumber(null);
+                    setSelectedClipId(null);
+                  }}
+                  className="h-full border-r border-black/50 px-1.5 flex items-center justify-between text-[10px] font-mono truncate cursor-pointer transition select-none bg-amber-500/25 hover:bg-amber-500/35 border-amber-500/40 text-amber-200 flex-shrink-0"
+                  title={`Surah Title Screen (${(titleCardDurationInFrames / fps).toFixed(1)}s) - Click to seek`}
+                >
+                  <span className="truncate font-semibold flex items-center gap-1">
+                    <Sparkles className="w-2.5 h-2.5 text-amber-400" />
+                    <span>Title Screen</span>
+                  </span>
+                  <span className="text-[9px] text-amber-300/80 hidden sm:inline">
+                    {(titleCardDurationInFrames / fps).toFixed(1)}s
+                  </span>
+                </div>
+              )}
               {ayahs.map((ayah, index) => {
                 const ayahPercent = (ayah.durationInFrames / Math.max(1, totalDurationInFrames)) * 100;
                 const isAyahSelected = selectedAyahNumber === ayah.ayah;
@@ -870,7 +920,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
                     style={{ width: `${ayahPercent}%` }}
                     onMouseDown={(e) => {
                       e.stopPropagation();
-                      let startFrame = isIntroActive ? introDurationInFrames : 0;
+                      let startFrame = preScriptureFrames;
                       for (let k = 0; k < index; k++) {
                         startFrame += ayahs[k].durationInFrames;
                       }
@@ -904,6 +954,28 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
                   </div>
                 );
               })}
+              {isOutroActive && (
+                <div
+                  style={{ width: `${(outroDurationInFrames / Math.max(1, totalDurationInFrames)) * 100}%` }}
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                    setCurrentFrame(outroStartFrame);
+                    playerRef.current?.seekTo(outroStartFrame);
+                    setSelectedAyahNumber(null);
+                    setSelectedClipId(null);
+                  }}
+                  className="h-full border-l border-black/50 px-1.5 flex items-center justify-between text-[10px] font-mono truncate cursor-pointer transition select-none bg-emerald-500/25 hover:bg-emerald-500/35 border-emerald-500/40 text-emerald-200 flex-shrink-0"
+                  title={`Outro Video Bumper (${(outroDurationInFrames / fps).toFixed(1)}s) - Click to seek to outro`}
+                >
+                  <span className="truncate font-semibold flex items-center gap-1">
+                    <Film className="w-2.5 h-2.5 text-emerald-400" />
+                    <span>Outro</span>
+                  </span>
+                  <span className="text-[9px] text-emerald-300/80 hidden sm:inline">
+                    {(outroDurationInFrames / fps).toFixed(1)}s
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Track B: Multi-Media Background Sequence Track */}
@@ -932,13 +1004,36 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
                   </div>
                 </div>
               )}
+              {isTitleCardActive && (
+                <div
+                  style={{ width: `${(titleCardDurationInFrames / Math.max(1, totalDurationInFrames)) * 100}%` }}
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                    setCurrentFrame(introDurationInFrames);
+                    playerRef.current?.seekTo(introDurationInFrames);
+                    setSelectedClipId(null);
+                    setSelectedAyahNumber(null);
+                  }}
+                  className="h-full relative border-r border-amber-500/40 bg-amber-950/50 hover:bg-amber-900/60 cursor-pointer transition-all flex items-center justify-between px-2 text-[10px] select-none flex-shrink-0"
+                  title={`Surah Title Screen (${(titleCardDurationInFrames / fps).toFixed(1)}s) - Click to seek`}
+                >
+                  <div className="flex items-center gap-1.5 truncate">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                    <span className="truncate font-medium text-amber-200">Title Screen</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <span className="font-mono text-amber-400/80 text-[10px]">
+                      {(titleCardDurationInFrames / fps).toFixed(1)}s
+                    </span>
+                  </div>
+                </div>
+              )}
               {clipLayouts.map(
                 ({ clip, percent, durationSec, displaySpeed, isAutoSlowed, isVideo, ayahRangeLabel }, index) => {
                   const isSelected = clip.id === selectedClipId;
                   const nextLayout = clipLayouts[index + 1];
-                  const displayWidthPercent = isIntroActive
-                    ? (percent * (totalDurationInFrames - introDurationInFrames)) / Math.max(1, totalDurationInFrames)
-                    : percent;
+                  const displayWidthPercent =
+                    (percent * recitationFrames) / Math.max(1, totalDurationInFrames);
 
                   return (
                     <div
@@ -1100,6 +1195,30 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
                     </div>
                   );
                 }
+              )}
+              {isOutroActive && (
+                <div
+                  style={{ width: `${(outroDurationInFrames / Math.max(1, totalDurationInFrames)) * 100}%` }}
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                    setCurrentFrame(outroStartFrame);
+                    playerRef.current?.seekTo(outroStartFrame);
+                    setSelectedClipId(null);
+                    setSelectedAyahNumber(null);
+                  }}
+                  className="h-full relative border-l border-emerald-500/40 bg-emerald-950/50 hover:bg-emerald-900/60 cursor-pointer transition-all flex items-center justify-between px-2 text-[10px] select-none flex-shrink-0"
+                  title={`Channel Outro Video Bumper (${(outroDurationInFrames / fps).toFixed(1)}s) - Click to seek to outro`}
+                >
+                  <div className="flex items-center gap-1.5 truncate">
+                    <Film className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                    <span className="truncate font-medium text-emerald-200">Outro Video</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <span className="font-mono text-emerald-400/80 text-[10px]">
+                      {(outroDurationInFrames / fps).toFixed(1)}s
+                    </span>
+                  </div>
+                </div>
               )}
             </div>
           </div>

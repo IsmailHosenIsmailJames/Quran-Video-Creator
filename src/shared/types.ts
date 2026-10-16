@@ -76,6 +76,8 @@ export interface AyahSequenceData {
   ayah: number;
   surahNameArabic: string;
   surahNameTransliterated: string;
+  surahNameLocalized?: string;
+  ayahLabelLocalized?: string;
   words: QuranWord[];
   primaryTranslation?: string;
   secondaryTranslation?: string;
@@ -135,6 +137,22 @@ export type IntroPresetId =
   | 'cinematic-reveal'
   | 'islamic-calligraphy';
 
+export type OutroMode = 'preset' | 'custom-video';
+
+export type OutroPresetId =
+  | 'golden-sadaqallah'
+  | 'peaceful-closure'
+  | 'sacred-geometry'
+  | 'modern-subscribe'
+  | 'cinematic-fade';
+
+export type TitleCardPresetId =
+  | 'royal-gold'
+  | 'celestial-emerald'
+  | 'cinematic-glass'
+  | 'minimal-noir'
+  | 'sacred-medina';
+
 export interface VideoTemplateConfig {
   // Scripture Selection
   surahNumber: number;
@@ -175,6 +193,7 @@ export interface VideoTemplateConfig {
   verticalAlignment?: VerticalAlignmentType;
   verticalCustomOffset?: number; // In pixels (-150 to +150, default 0)
   showSurahHeader?: boolean;
+  headerLanguage?: string;
 
   // Scripture & Subtitle In/Out Motion Animations
   animationIn: TextAnimationIn;
@@ -225,6 +244,32 @@ export interface VideoTemplateConfig {
   introMuted?: boolean;
   introTransition?: TransitionType;
 
+  // Surah Title & Reciter Info Transition Screen (Plays immediately after Intro Video)
+  enableSurahTitleCard?: boolean;
+  titleCardDurationSeconds?: number;
+  titleCardPreset?: TitleCardPresetId;
+  titleCardThemeColor?: string;
+  showReciterInTitleCard?: boolean;
+  showStyleInTitleCard?: boolean;
+  showVerseRangeInTitleCard?: boolean;
+  showTranslationInTitleCard?: boolean;
+  titleCardTransition?: TransitionType;
+  skipTitleCardForShorts?: boolean;
+
+  // Channel Ending / Outro Video Bumper
+  enableOutroVideo?: boolean;
+  outroMode?: OutroMode;
+  outroPreset?: OutroPresetId;
+  outroTitle?: string;
+  outroSubtitle?: string;
+  outroCustomLogo?: string;
+  outroThemeColor?: string;
+  outroVideoPath?: string;
+  outroVideoDurationSeconds?: number;
+  skipOutroForShorts?: boolean;
+  outroMuted?: boolean;
+  outroTransition?: TransitionType;
+
   // Video Output
   fps: 30 | 60;
   resolution: '1080p' | '4k' | '720p';
@@ -234,6 +279,7 @@ export type QuranVideoCompositionProps = {
   config: VideoTemplateConfig;
   ayahs: AyahSequenceData[];
   totalDurationInFrames: number;
+  reciterInfo?: ReciterInfo;
   [key: string]: unknown;
 };
 

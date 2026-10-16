@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useStudioStore } from '../store/studio-store';
 import { RenderProgressPayload } from '../../shared/types';
+import { getSurahByNumber } from '../../shared/surahs';
+import { getTranslationBookName } from '../../shared/surah-localization';
 import {
   X,
   Film,
@@ -9,6 +11,7 @@ import {
   AlertCircle,
   FolderOpen,
   RotateCcw,
+  Sparkles,
 } from 'lucide-react';
 
 const formatDuration = (ms: number): string => {
@@ -33,6 +36,8 @@ export const ExportDialog: React.FC = () => {
     totalDurationInFrames,
     isExportModalOpen,
     setExportModalOpen,
+    reciters,
+    setActiveTab,
   } = useStudioStore();
 
   const [outputPath, setOutputPath] = useState<string>('');
@@ -42,6 +47,39 @@ export const ExportDialog: React.FC = () => {
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [elapsedRenderTime, setElapsedRenderTime] = useState<number | null>(null);
   const renderStartTimeRef = useRef<number | null>(null);
+
+  // Requirement: Export file name includes reciter name, style of recitation (optional), surah name, starting ayah, ending ayah number, and translation book name
+  const reciter = reciters[config.reciterIndex];
+  const surahMeta = getSurahByNumber(config.surahNumber);
+  const surahName = surahMeta ? surahMeta.nameTransliterated : `Surah_${config.surahNumber}`;
+  const translationBookName = useMemo(() => getTranslationBookName(config), [
+    config.primaryTranslationFile,
+    config.secondaryTranslationFile,
+    config.showPrimaryTranslation,
+    config.showSecondaryTranslation,
+  ]);
+
+  const defaultFileName = useMemo(() => {
+    const safeReciter = (reciter?.name || 'Reciter').replace(/[\\/:*?"<>|]/g, '').trim();
+    const safeStyle = reciter?.style ? reciter.style.replace(/[\\/:*?"<>|]/g, '').trim() : '';
+    const safeSurah = (surahName || 'Surah').replace(/[\\/:*?"<>|]/g, '').trim();
+    const ayahPart =
+      config.fromAyah === config.toAyah
+        ? `Ayah ${config.fromAyah}`
+        : `Ayah ${config.fromAyah}-${config.toAyah}`;
+    const safeTranslation = translationBookName
+      ? translationBookName.replace(/[\\/:*?"<>|]/g, '').trim()
+      : '';
+
+    const parts = [
+      safeReciter,
+      safeStyle || null,
+      safeSurah,
+      ayahPart,
+      safeTranslation || null,
+    ].filter(Boolean);
+    return `${parts.join(' - ')}.mp4`;
+  }, [reciter, surahName, config.fromAyah, config.toAyah, translationBookName]);
 
   useEffect(() => {
     const api = window.electronAPI;
@@ -65,8 +103,7 @@ export const ExportDialog: React.FC = () => {
   const handleSelectSaveLocation = async () => {
     const api = window.electronAPI;
     if (!api) return;
-    const defaultName = `Surah_${config.surahNumber}_Ayah_${config.fromAyah}-${config.toAyah}_${config.resolution}.mp4`;
-    const selected = await api.selectSavePath(defaultName);
+    const selected = await api.selectSavePath(defaultFileName);
     if (selected) {
       setOutputPath(selected);
       setExportedFilePath(selected);
@@ -79,8 +116,7 @@ export const ExportDialog: React.FC = () => {
 
     let targetPath = outputPath;
     if (!targetPath) {
-      const defaultName = `Surah_${config.surahNumber}_Ayah_${config.fromAyah}-${config.toAyah}_${config.resolution}.mp4`;
-      const selected = await api.selectSavePath(defaultName);
+      const selected = await api.selectSavePath(defaultFileName);
       if (!selected) return;
       targetPath = selected;
       setOutputPath(selected);
@@ -212,6 +248,30 @@ export const ExportDialog: React.FC = () => {
             </div>
           </div>
 
+          {/* Export File Name Preview */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-medium text-gray-400">Export File Name</label>
+              <span className="text-[10px] text-amber-400/90 font-mono">
+                {translationBookName
+                  ? reciter?.style
+                    ? 'Reciter • Style • Surah • Ayahs • Translation'
+                    : 'Reciter • Surah • Ayahs • Translation'
+                  : reciter?.style
+                  ? 'Reciter • Style • Surah • Ayahs'
+                  : 'Reciter • Surah • Ayahs'}
+              </span>
+            </div>
+            <div className="p-3 rounded-xl bg-gray-950 border border-gray-800 flex items-center justify-between gap-2 shadow-inner">
+              <span className="text-xs font-mono font-medium text-amber-300 truncate" title={defaultFileName}>
+                {defaultFileName}
+              </span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase flex-shrink-0 font-semibold">
+                MP4
+              </span>
+            </div>
+          </div>
+
           {/* Export Destination */}
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-gray-400">Save Destination</label>
@@ -233,6 +293,31 @@ export const ExportDialog: React.FC = () => {
                 Browse
               </button>
             </div>
+          </div>
+
+          {/* Quick YouTube Thumbnail Creator Shortcut */}
+          <div className="p-3.5 rounded-xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/25 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-xs font-semibold text-white">YouTube Thumbnail</h4>
+                <p className="text-[11px] text-gray-400">
+                  Generate matching 1280x720 thumbnail with calligraphy, ayah & reciter info
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setExportModalOpen(false);
+                setActiveTab('thumbnail');
+              }}
+              className="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-semibold transition shrink-0"
+            >
+              Open Thumbnail Studio
+            </button>
           </div>
 
           {/* Render Progress Bar Area */}

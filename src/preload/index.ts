@@ -70,6 +70,10 @@ const api = {
     ipcRenderer.invoke('file:show-in-folder', filePath),
   probeMediaDuration: (filePath: string): Promise<number> =>
     ipcRenderer.invoke('media:probe-duration', filePath),
+  saveThumbnailImage: (dataUrl: string, defaultFileName: string): Promise<string | null> =>
+    ipcRenderer.invoke('thumbnail:save-image', dataUrl, defaultFileName),
+  copyImageToClipboard: (dataUrl: string): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke('clipboard:write-image', dataUrl),
 
   // Video Rendering
   startRender: (

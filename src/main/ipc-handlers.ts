@@ -1,4 +1,4 @@
-import { ipcMain, dialog, BrowserWindow, shell } from 'electron';
+import { ipcMain, dialog, BrowserWindow, shell, clipboard, nativeImage } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { quranDbService } from './services/quran-db';
@@ -167,6 +167,56 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
       settingsService.setLastDirectory('export', chosenDir);
     }
     return result.filePath;
+  });
+
+  ipcMain.handle('thumbnail:save-image', async (_, dataUrl: string, defaultFileName: string) => {
+    try {
+      const lastExportDir = settingsService.getLastDirectory('export');
+      let defaultPath = defaultFileName || 'Quran_Thumbnail.png';
+      if (lastExportDir && fs.existsSync(lastExportDir)) {
+        defaultPath = path.join(lastExportDir, path.basename(defaultPath));
+      }
+
+      const isJpg = defaultFileName.toLowerCase().endsWith('.jpg') || defaultFileName.toLowerCase().endsWith('.jpeg');
+      const filters = isJpg
+        ? [{ name: 'JPEG Image', extensions: ['jpg', 'jpeg'] }]
+        : [{ name: 'PNG Image', extensions: ['png'] }];
+
+      const result = await dialog.showSaveDialog(mainWindow, {
+        title: 'Save YouTube Thumbnail',
+        defaultPath,
+        filters,
+      });
+
+      if (result.canceled || !result.filePath) {
+        return null;
+      }
+
+      const base64Data = dataUrl.replace(/^data:image\/\w+;base64,/, '');
+      const buffer = Buffer.from(base64Data, 'base64');
+      await fs.promises.writeFile(result.filePath, buffer);
+
+      const chosenDir = path.dirname(result.filePath);
+      if (chosenDir && fs.existsSync(chosenDir)) {
+        settingsService.setLastDirectory('export', chosenDir);
+      }
+
+      return result.filePath;
+    } catch (err: any) {
+      console.error('Failed to save thumbnail image:', err);
+      return null;
+    }
+  });
+
+  ipcMain.handle('clipboard:write-image', async (_, dataUrl: string) => {
+    try {
+      const img = nativeImage.createFromDataURL(dataUrl);
+      clipboard.writeImage(img);
+      return { success: true };
+    } catch (err: any) {
+      console.error('Failed to copy thumbnail image to clipboard:', err);
+      return { success: false, error: err.message };
+    }
   });
 
   ipcMain.handle('file:show-in-folder', async (_, filePath: string) => {

@@ -2,6 +2,7 @@ import React from 'react';
 import { AbsoluteFill, useCurrentFrame, interpolate, Easing } from 'remotion';
 import { VideoTemplateConfig, AyahSequenceData, QuranWord, ScriptBlockType, TextAnimationIn, TextAnimationOut } from '../../shared/types';
 import { computeAdaptiveFontSizes } from '../../shared/typography-utils';
+import { getLocalizedHeader, getLanguageFontFamily } from '../../shared/surah-localization';
 
 interface TypographyLayerProps {
   config: VideoTemplateConfig;
@@ -135,6 +136,9 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
   // Format Surah title string for surah-name-v1 font ligature
   const surahLigatureCode = `surah${String(ayahData.surah).padStart(3, '0')}`;
 
+  // Localized Surah & Ayah badge info (e.g., "আল-ফাতিহা • আয়াত ১" when Bangla is active)
+  const localizedHeader = getLocalizedHeader(config, ayahData.surah, ayahData.ayah);
+
   // Adaptive Font Sizing based on Ayah length (respects per-ayah manual overrides if specified)
   const computedSizes = computeAdaptiveFontSizes(config, ayahData, override);
   const arabicFontSize = computedSizes.arabicFontSize;
@@ -226,7 +230,7 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
       <p
         key="primary"
         style={{
-          fontFamily: "'Hind Siliguri', 'Kalpurush', 'Noto Sans Bengali', sans-serif",
+          fontFamily: getLanguageFontFamily(config.primaryTranslationLang),
           fontSize: `${primaryFontSize}px`,
           color: config.primaryTextColor,
           fontWeight: 500,
@@ -398,16 +402,15 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
           />
           <span
             style={{
-              fontFamily: "'Inter', sans-serif",
+              fontFamily: localizedHeader.fontFamily,
               color: 'rgba(255, 255, 255, 0.95)',
               fontSize: '16px',
               fontWeight: 500,
-              letterSpacing: '0.04em',
+              letterSpacing: '0.02em',
+              lineHeight: 1.2,
             }}
           >
-            {ayahData.ayah === 0
-              ? `${ayahData.surahNameTransliterated} • Bismillah`
-              : `${ayahData.surahNameTransliterated} • Ayah ${ayahData.ayah}`}
+            {localizedHeader.fullTitle}
           </span>
         </div>
       )}

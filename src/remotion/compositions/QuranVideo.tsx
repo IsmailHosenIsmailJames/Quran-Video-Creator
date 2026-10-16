@@ -17,6 +17,8 @@ import { WaveformLayer } from './WaveformLayer';
 import { TypographyLayer } from './TypographyLayer';
 import { BrandingLayer } from './BrandingLayer';
 import { ProgrammaticIntro } from './ProgrammaticIntro';
+import { ProgrammaticOutro } from './ProgrammaticOutro';
+import { SurahTitleCard } from './SurahTitleCard';
 import { getMediaUrl } from '../../shared/media-url';
 
 interface IntroSequenceProps {
@@ -81,14 +83,14 @@ const IntroSequence: React.FC<IntroSequenceProps> = ({
 };
 
 const MainContentFadeWrapper: React.FC<{
-  isIntroActive: boolean;
+  hasPrecedingSection: boolean;
   transition: TransitionType;
   children: React.ReactNode;
-}> = ({ isIntroActive, transition, children }) => {
+}> = ({ hasPrecedingSection, transition, children }) => {
   const frame = useCurrentFrame();
   let opacity = 1;
 
-  if (isIntroActive && (transition === 'dip-black' || transition === 'crossfade')) {
+  if (hasPrecedingSection && (transition === 'dip-black' || transition === 'crossfade')) {
     const fadeFrames = 12;
     opacity = interpolate(frame, [0, fadeFrames], [0, 1], {
       extrapolateLeft: 'clamp',
@@ -107,6 +109,7 @@ export const QuranVideo: React.FC<QuranVideoCompositionProps> = ({
   config,
   ayahs,
   totalDurationInFrames,
+  reciterInfo,
 }) => {
   // Guarantee fonts are fully loaded before capturing frames
   const [handle] = useState(() => delayRender('fonts-loader'));
@@ -125,17 +128,39 @@ export const QuranVideo: React.FC<QuranVideoCompositionProps> = ({
     }
   }, [handle]);
 
+  // 1. Intro Video Bumper (Plays before anything else)
   const isIntroActive = Boolean(
     config.enableIntroVideo &&
     (config.introMode === 'custom-video' ? config.introVideoPath : true) &&
     !(config.skipIntroForShorts !== false && config.aspectRatio === '9:16')
   );
-
   const introDurationInFrames = isIntroActive
     ? Math.max(1, Math.round((config.introVideoDurationSeconds || 4) * config.fps))
     : 0;
 
-  const scriptureDurationInFrames = Math.max(1, totalDurationInFrames - introDurationInFrames);
+  // 2. Surah Title & Reciter Info Transition Screen (Plays right after Intro)
+  const isTitleCardActive = Boolean(
+    config.enableSurahTitleCard &&
+    !(config.skipTitleCardForShorts !== false && config.aspectRatio === '9:16')
+  );
+  const titleCardDurationInFrames = isTitleCardActive
+    ? Math.max(1, Math.round((config.titleCardDurationSeconds || 3.5) * config.fps))
+    : 0;
+
+  // 3. Outro Video Bumper (Plays at the very end of video)
+  const isOutroActive = Boolean(
+    config.enableOutroVideo &&
+    (config.outroMode === 'custom-video' ? config.outroVideoPath : true) &&
+    !(config.skipOutroForShorts !== false && config.aspectRatio === '9:16')
+  );
+  const outroDurationInFrames = isOutroActive
+    ? Math.max(1, Math.round((config.outroVideoDurationSeconds || 4.5) * config.fps))
+    : 0;
+
+  const nonScriptureFrames = introDurationInFrames + titleCardDurationInFrames + outroDurationInFrames;
+  const scriptureDurationInFrames = Math.max(1, totalDurationInFrames - nonScriptureFrames);
+  const scriptureStartFrame = introDurationInFrames + titleCardDurationInFrames;
+  const outroStartFrame = scriptureStartFrame + scriptureDurationInFrames;
 
   return (
     <AbsoluteFill
@@ -149,7 +174,7 @@ export const QuranVideo: React.FC<QuranVideoCompositionProps> = ({
     >
       {/* Self-contained Font Registration and OpenType Typography Rules */}
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Noto+Nastaliq+Urdu:wght@400;700&family=Noto+Sans+Bengali:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;600;700&family=Noto+Sans+Gurmukhi:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;700&family=Noto+Sans+KR:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Sans+Tamil:wght@400;600;700&display=swap');
 
         @font-face {
           font-family: 'surah-name-v1';
@@ -234,7 +259,7 @@ export const QuranVideo: React.FC<QuranVideoCompositionProps> = ({
         }
       `}</style>
 
-      {/* Layer 0: Channel Intro Video Bumper (Plays before main recitation) */}
+      {/* Section 0: Channel Intro Video Bumper (Plays before main recitation) */}
       {isIntroActive && (
         <Sequence
           from={0}
@@ -258,15 +283,35 @@ export const QuranVideo: React.FC<QuranVideoCompositionProps> = ({
         </Sequence>
       )}
 
-      {/* Main Scripture Recitation & Visual Content */}
+      {/* Section 1: Surah Title & Reciter Info Transition Screen (Plays right after Intro) */}
+      {isTitleCardActive && (
+        <Sequence
+          from={introDurationInFrames}
+          durationInFrames={titleCardDurationInFrames}
+          name="Surah Title Card"
+        >
+          <SurahTitleCard
+            config={config}
+            reciterInfo={reciterInfo}
+            durationInFrames={titleCardDurationInFrames}
+            transition={config.titleCardTransition || 'dip-black'}
+          />
+        </Sequence>
+      )}
+
+      {/* Section 2: Main Scripture Recitation & Visual Content */}
       <Sequence
-        from={introDurationInFrames}
+        from={scriptureStartFrame}
         durationInFrames={scriptureDurationInFrames}
         name="Main Scripture Content"
       >
         <MainContentFadeWrapper
-          isIntroActive={isIntroActive}
-          transition={config.introTransition || 'dip-black'}
+          hasPrecedingSection={isIntroActive || isTitleCardActive}
+          transition={
+            isTitleCardActive
+              ? (config.titleCardTransition || 'dip-black')
+              : (config.introTransition || 'dip-black')
+          }
         >
           {/* Layer 1: Ambient Background (Spans Scripture Content) */}
           <BackgroundLayer
@@ -335,6 +380,30 @@ export const QuranVideo: React.FC<QuranVideoCompositionProps> = ({
           )}
         </MainContentFadeWrapper>
       </Sequence>
+
+      {/* Section 3: Channel Outro / Ending Video Clip */}
+      {isOutroActive && (
+        <Sequence
+          from={outroStartFrame}
+          durationInFrames={outroDurationInFrames}
+          name="Channel Outro Video"
+        >
+          {config.outroMode === 'custom-video' && config.outroVideoPath ? (
+            <IntroSequence
+              videoPath={config.outroVideoPath}
+              durationInFrames={outroDurationInFrames}
+              muted={config.outroMuted === true}
+              transition={config.outroTransition || 'dip-black'}
+            />
+          ) : (
+            <ProgrammaticOutro
+              config={config}
+              durationInFrames={outroDurationInFrames}
+              transition={config.outroTransition || 'dip-black'}
+            />
+          )}
+        </Sequence>
+      )}
     </AbsoluteFill>
   );
 };

@@ -433,12 +433,51 @@ class RemotionRunnerService {
         }
       }
 
+      let sanitizedOutroVideoPath: string | undefined = undefined;
+      if (config.outroVideoPath) {
+        let cleanOutro = config.outroVideoPath;
+        if (cleanOutro.startsWith('app-media://local/')) {
+          cleanOutro = cleanOutro.slice('app-media://local/'.length);
+        } else if (cleanOutro.startsWith('app-media://')) {
+          cleanOutro = cleanOutro.replace(/^app-media:\/\/(\/)?/, '');
+        }
+        cleanOutro = decodeURIComponent(cleanOutro);
+        if (cleanOutro.startsWith('http://') || cleanOutro.startsWith('https://')) {
+          sanitizedOutroVideoPath = cleanOutro;
+        } else if (fs.existsSync(cleanOutro)) {
+          sanitizedOutroVideoPath = localMediaServer.getMediaUrl(cleanOutro);
+        } else {
+          console.warn(`[RemotionRunner] Outro video not found on disk, ignoring: ${cleanOutro}`);
+          sanitizedOutroVideoPath = undefined;
+        }
+      }
+
+      let sanitizedOutroCustomLogo: string | undefined = undefined;
+      if (config.outroCustomLogo) {
+        let cleanOutroLogo = config.outroCustomLogo;
+        if (cleanOutroLogo.startsWith('app-media://local/')) {
+          cleanOutroLogo = cleanOutroLogo.slice('app-media://local/'.length);
+        } else if (cleanOutroLogo.startsWith('app-media://')) {
+          cleanOutroLogo = cleanOutroLogo.replace(/^app-media:\/\/(\/)?/, '');
+        }
+        cleanOutroLogo = decodeURIComponent(cleanOutroLogo);
+        if (cleanOutroLogo.startsWith('http://') || cleanOutroLogo.startsWith('https://') || cleanOutroLogo.startsWith('data:')) {
+          sanitizedOutroCustomLogo = cleanOutroLogo;
+        } else if (fs.existsSync(cleanOutroLogo)) {
+          sanitizedOutroCustomLogo = localMediaServer.getMediaUrl(cleanOutroLogo);
+        } else {
+          sanitizedOutroCustomLogo = undefined;
+        }
+      }
+
       // Convert any local filesystem or app-media paths into HTTP streaming URLs for Headless Chrome
       const sanitizedConfig: VideoTemplateConfig = {
         ...config,
         logoPath: sanitizedLogoPath,
         introCustomLogo: sanitizedIntroCustomLogo,
         introVideoPath: sanitizedIntroVideoPath,
+        outroCustomLogo: sanitizedOutroCustomLogo,
+        outroVideoPath: sanitizedOutroVideoPath,
         backgroundPath: localMediaServer.getMediaUrl(config.backgroundPath),
         backgroundClips: preparedClips,
         customAudioPath: config.customAudioPath
@@ -493,10 +532,14 @@ class RemotionRunnerService {
         });
       }
 
+      const reciters = recitationService.getReciters();
+      const reciter = reciters[config.reciterIndex];
+
       const inputProps: QuranVideoCompositionProps = {
         config: sanitizedConfig,
         ayahs: sanitizedAyahs,
         totalDurationInFrames,
+        reciterInfo: reciter,
       };
 
       // 1. Resolve browser and compositor binaries

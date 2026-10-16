@@ -1,12 +1,17 @@
 import React, { useMemo } from 'react';
 import { useStudioStore } from '../../store/studio-store';
 import { getSurahByNumber } from '../../../shared/surahs';
-import { Film } from 'lucide-react';
+import { getSurahNameLocalized } from '../../../shared/surah-localization';
+import { Film, Sparkles } from 'lucide-react';
 
 export const Header: React.FC = () => {
-  const { config, totalDurationInFrames, setExportModalOpen } = useStudioStore();
+  const { config, totalDurationInFrames, setExportModalOpen, activeTab, setActiveTab } = useStudioStore();
   const currentSurah = getSurahByNumber(config.surahNumber);
   const surahCode = `surah${String(config.surahNumber).padStart(3, '0')}`;
+  const localizedSurahName = getSurahNameLocalized(
+    config.surahNumber,
+    config.headerLanguage && config.headerLanguage !== 'auto' ? config.headerLanguage : config.primaryTranslationLang
+  );
 
   const { compWidth, compHeight } = useMemo(() => {
     if (config.aspectRatio === '9:16') return { compWidth: 1080, compHeight: 1920 };
@@ -53,12 +58,25 @@ export const Header: React.FC = () => {
         </span>
         <div className="h-3.5 w-[1px] bg-gray-700" />
         <span className="text-xs text-gray-200 font-medium">
-          Surah {currentSurah.nameTransliterated} • Verses {config.fromAyah}–{config.toAyah}
+          Surah {localizedSurahName !== currentSurah.nameTransliterated ? `${localizedSurahName} (${currentSurah.nameTransliterated})` : currentSurah.nameTransliterated} • Verses {config.fromAyah}–{config.toAyah}
         </span>
       </div>
 
       {/* Action Controls */}
       <div className="flex items-center gap-2.5">
+        <button
+          onClick={() => setActiveTab(activeTab === 'thumbnail' ? 'scripture' : 'thumbnail')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold shadow-sm transition-all transform active:scale-95 ${
+            activeTab === 'thumbnail'
+              ? 'bg-amber-500 text-black font-bold border-amber-400 shadow-amber-500/20'
+              : 'bg-gray-900 hover:bg-gray-800 text-amber-300 border-gray-750 hover:border-amber-500/50'
+          }`}
+          title="Create & Customize High-Converting YouTube Thumbnail"
+        >
+          <Sparkles className={`w-3.5 h-3.5 ${activeTab === 'thumbnail' ? 'fill-black stroke-none' : 'text-amber-400'}`} />
+          <span>{activeTab === 'thumbnail' ? 'Video Studio' : 'Thumbnail Studio'}</span>
+        </button>
+
         <button
           onClick={() => setExportModalOpen(true)}
           className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-black font-bold text-xs shadow-md shadow-amber-500/20 hover:shadow-amber-500/30 transition-all transform active:scale-95"

@@ -17,6 +17,11 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { computeAdaptiveFontSizes } from '../../../shared/typography-utils';
+import {
+  isLocalizationSupported,
+  resolveLocalizationCode,
+  LOCALIZATION_META_MAP,
+} from '../../../shared/surah-localization';
 
 export const SubtitlesTab: React.FC = () => {
   const {
@@ -328,6 +333,34 @@ export const SubtitlesTab: React.FC = () => {
                   ))}
                 </select>
               </div>
+
+              {/* Localization Status Indicator */}
+              {(() => {
+                const isLocalized = isLocalizationSupported(config.primaryTranslationLang);
+                const code = resolveLocalizationCode(config.primaryTranslationLang);
+                const meta = code ? LOCALIZATION_META_MAP[code] : null;
+
+                return (
+                  <div className="flex items-center gap-2 p-2 rounded-lg bg-gray-900/60 border border-gray-800 text-[11px]">
+                    {isLocalized && meta ? (
+                      <>
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                        <span className="text-gray-300">
+                          Video top badge localized to{' '}
+                          <span className="text-amber-300 font-semibold">{meta.nativeName} ({meta.name})</span>
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="w-2 h-2 rounded-full bg-gray-500 shrink-0" />
+                        <span className="text-gray-400">
+                          Top badge uses English default (localization not available for this language)
+                        </span>
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Wider range 10 to 100 */}
               <div className="space-y-1">

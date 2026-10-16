@@ -5,6 +5,10 @@ import { FONT_OPTIONS, TEXT_ANIMATION_IN_OPTIONS, TEXT_ANIMATION_OUT_OPTIONS } f
 import { ScriptBlockType } from '../../../shared/types';
 import { computeAdaptiveFontSizes } from '../../../shared/typography-utils';
 import {
+  SUPPORTED_LOCALIZATION_LANGUAGES,
+  LOCALIZATION_META_MAP,
+} from '../../../shared/surah-localization';
+import {
   Type,
   Sparkles,
   AlignCenter,
@@ -23,6 +27,7 @@ export const ScriptureTab: React.FC = () => {
     config,
     updateConfig,
     ayahs,
+    refreshAyahSequence,
     updateAyahFontOverride,
     resetAyahFontOverride,
   } = useStudioStore();
@@ -258,15 +263,47 @@ export const ScriptureTab: React.FC = () => {
             </div>
           </div>
 
-          {/* Top Surah Header Badge Toggle */}
-          <div className="flex items-center justify-between pt-1">
-            <span className="text-xs text-gray-400">Show Surah Title Badge at Top</span>
-            <input
-              type="checkbox"
-              checked={config.showSurahHeader !== false}
-              onChange={(e) => updateConfig({ showSurahHeader: e.target.checked })}
-              className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
-            />
+          {/* Top Surah Header Badge Toggle & Localization */}
+          <div className="space-y-2 pt-1">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-400">Show Surah Title Badge at Top</span>
+              <input
+                type="checkbox"
+                checked={config.showSurahHeader !== false}
+                onChange={(e) => updateConfig({ showSurahHeader: e.target.checked })}
+                className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+              />
+            </div>
+
+            {config.showSurahHeader !== false && (
+              <div className="flex items-center justify-between pt-2 border-t border-gray-800/60">
+                <div className="space-y-0.5">
+                  <span className="text-xs text-gray-400 block">Surah & Ayah Badge Language</span>
+                  <span className="text-[10px] text-gray-500 font-mono">
+                    {config.headerLanguage && config.headerLanguage !== 'auto'
+                      ? `Pinned: ${LOCALIZATION_META_MAP[config.headerLanguage]?.name || config.headerLanguage}`
+                      : `Auto: Follows Subtitle (${config.primaryTranslationLang || 'Bengali'})`}
+                  </span>
+                </div>
+                <select
+                  value={config.headerLanguage || 'auto'}
+                  onChange={(e) => {
+                    updateConfig({ headerLanguage: e.target.value });
+                    refreshAyahSequence();
+                  }}
+                  className="bg-gray-900 border border-gray-800 rounded-lg px-2.5 py-1 text-xs text-white cursor-pointer max-w-[200px]"
+                >
+                  <option value="auto">
+                    Auto (Follows Subtitle — {config.primaryTranslationLang || 'Bengali'})
+                  </option>
+                  {SUPPORTED_LOCALIZATION_LANGUAGES.map((lang) => (
+                    <option key={lang.code} value={lang.code}>
+                      {lang.nativeName} ({lang.name})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         </div>
 

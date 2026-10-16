@@ -5,9 +5,11 @@ import { SubtitlesTab } from '../tabs/SubtitlesTab';
 import { VisualsTab } from '../tabs/VisualsTab';
 import { AudioTab } from '../tabs/AudioTab';
 import { BrandingTab } from '../tabs/BrandingTab';
+import { ThumbnailTab } from '../thumbnail/ThumbnailTab';
+import { ThumbnailPreviewView } from '../thumbnail/ThumbnailPreviewView';
 import { LivePreview } from '../LivePreview';
 import { ExportDialog } from '../modals/ExportDialog';
-import { BookOpen, Layers, Image, Music, Shield } from 'lucide-react';
+import { BookOpen, Layers, Image, Music, Shield, Sparkles } from 'lucide-react';
 
 export const StudioLayout: React.FC = () => {
   const { activeTab, setActiveTab } = useStudioStore();
@@ -18,6 +20,7 @@ export const StudioLayout: React.FC = () => {
     { id: 'visuals' as const, label: 'Visuals', icon: Image },
     { id: 'audio' as const, label: 'Audio & Wave', icon: Music },
     { id: 'branding' as const, label: 'Branding', icon: Shield },
+    { id: 'thumbnail' as const, label: 'Thumbnail', icon: Sparkles },
   ];
 
   return (
@@ -53,12 +56,13 @@ export const StudioLayout: React.FC = () => {
           {activeTab === 'visuals' && <VisualsTab />}
           {activeTab === 'audio' && <AudioTab />}
           {activeTab === 'branding' && <BrandingTab />}
+          {activeTab === 'thumbnail' && <ThumbnailTab />}
         </div>
       </div>
 
-      {/* Right Canvas: Live Interactive Remotion Preview */}
+      {/* Right Canvas: Live Remotion Preview OR Thumbnail Studio Preview */}
       <div className="flex-1 flex flex-col min-w-0 bg-[#070a12]">
-        <LivePreview />
+        {activeTab === 'thumbnail' ? <ThumbnailPreviewView /> : <LivePreview />}
       </div>
 
       {/* Export Progress Modal */}

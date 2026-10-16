@@ -24,7 +24,7 @@ const TRANSITION_CYCLE: TransitionType[] = [
 ];
 
 export const VisualsTab: React.FC = () => {
-  const { config, updateConfig, addBackgroundClip, addBackgroundClips } = useStudioStore();
+  const { config, updateConfig, addBackgroundClip, addBackgroundClips, setActiveTab } = useStudioStore();
 
   const handleSelectMedia = async (type: 'video' | 'image') => {
     const api = window.electronAPI;
@@ -120,6 +120,26 @@ export const VisualsTab: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* YouTube Thumbnail Studio Shortcut Banner */}
+      <div className="p-3 rounded-xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/25 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+            <Sparkles className="w-3.5 h-3.5" />
+          </div>
+          <div>
+            <span className="text-xs font-bold text-white block">YouTube Thumbnail Studio</span>
+            <span className="text-[10px] text-gray-400">Design matching 1280x720 click-worthy cover</span>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setActiveTab('thumbnail')}
+          className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-semibold border border-amber-500/40 transition shrink-0"
+        >
+          Open Studio
+        </button>
+      </div>
+
       {/* 1. Video Aspect Ratio */}
       <div className="space-y-2">
         <label className="text-xs font-semibold text-gray-300 uppercase tracking-wider block">

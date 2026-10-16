@@ -15,7 +15,14 @@ import {
   SCRIPT_FONT_MAP,
   SCRIPT_LINE_HEIGHT_MAP,
 } from '../../shared/constants';
+import {
+  ThumbnailConfig,
+  ThumbnailPresetId,
+  DEFAULT_THUMBNAIL_CONFIG,
+  THUMBNAIL_PRESET_OPTIONS,
+} from '../../shared/thumbnail-types';
 import { SURAHS_LIST, getSurahByNumber } from '../../shared/surahs';
+import { getLocalizedHeader } from '../../shared/surah-localization';
 
 interface StudioState {
   config: VideoTemplateConfig;
@@ -33,12 +40,17 @@ interface StudioState {
   translatorsSecondary: string[];
   reciters: ReciterInfo[];
 
-  activeTab: 'scripture' | 'subtitles' | 'visuals' | 'audio' | 'branding';
+  activeTab: 'scripture' | 'subtitles' | 'visuals' | 'audio' | 'branding' | 'thumbnail';
   isExportModalOpen: boolean;
+  isThumbnailModalOpen: boolean;
+  thumbnailConfig: ThumbnailConfig;
 
   // Actions
-  setActiveTab: (tab: 'scripture' | 'subtitles' | 'visuals' | 'audio' | 'branding') => void;
+  setActiveTab: (tab: 'scripture' | 'subtitles' | 'visuals' | 'audio' | 'branding' | 'thumbnail') => void;
   setExportModalOpen: (open: boolean) => void;
+  setThumbnailModalOpen: (open: boolean) => void;
+  updateThumbnailConfig: (partial: Partial<ThumbnailConfig>) => void;
+  applyThumbnailPreset: (presetId: ThumbnailPresetId) => void;
   setCurrentFrame: (currentFrame: number) => void;
   setIsPlaying: (isPlaying: boolean) => void;
   updateConfig: (partial: Partial<VideoTemplateConfig>) => void;
@@ -77,9 +89,40 @@ export const useStudioStore = create<StudioState>((set, get) => ({
 
   activeTab: 'scripture',
   isExportModalOpen: false,
+  isThumbnailModalOpen: false,
+  thumbnailConfig: DEFAULT_THUMBNAIL_CONFIG,
 
   setActiveTab: (activeTab) => set({ activeTab }),
   setExportModalOpen: (isExportModalOpen) => set({ isExportModalOpen }),
+  setThumbnailModalOpen: (isThumbnailModalOpen) => set({ isThumbnailModalOpen }),
+  updateThumbnailConfig: (partial) => {
+    set((state) => ({
+      thumbnailConfig: { ...state.thumbnailConfig, ...partial },
+    }));
+  },
+  applyThumbnailPreset: (presetId) => {
+    const preset = THUMBNAIL_PRESET_OPTIONS.find((p) => p.id === presetId);
+    if (!preset) return;
+    set((state) => ({
+      thumbnailConfig: {
+        ...state.thumbnailConfig,
+        preset: preset.id,
+        accentThemeColor: preset.accentColor,
+        surahCalligraphyColor: preset.accentColor,
+        hookTitleText: preset.hookTitle,
+        hookTitleSubtitle: preset.hookSubtitle,
+        hookTitleColor: preset.secondaryColor,
+        bgPresetUrl: preset.bgPresetUrl,
+        bgOverlayOpacity: preset.bgOverlayOpacity,
+        bgOverlayColor: preset.bgOverlayColor,
+        showIslamicArchFrame: preset.showArchFrame,
+        showArabesqueCorners: preset.showArabesqueCorners,
+        showSunRays: preset.showSunRays,
+        showGoldenSparks: preset.showGoldenSparks,
+        badgeCustomText: preset.badgeText,
+      },
+    }));
+  },
   setCurrentFrame: (currentFrame) => set({ currentFrame }),
   setIsPlaying: (isPlaying) => set({ isPlaying }),
 
@@ -100,7 +143,29 @@ export const useStudioStore = create<StudioState>((set, get) => ({
       partial.introThemeColor !== undefined ||
       partial.introVideoPath !== undefined ||
       partial.introVideoDurationSeconds !== undefined ||
-      partial.skipIntroForShorts !== undefined
+      partial.skipIntroForShorts !== undefined ||
+      partial.enableSurahTitleCard !== undefined ||
+      partial.titleCardDurationSeconds !== undefined ||
+      partial.titleCardPreset !== undefined ||
+      partial.titleCardThemeColor !== undefined ||
+      partial.showReciterInTitleCard !== undefined ||
+      partial.showStyleInTitleCard !== undefined ||
+      partial.showVerseRangeInTitleCard !== undefined ||
+      partial.showTranslationInTitleCard !== undefined ||
+      partial.titleCardTransition !== undefined ||
+      partial.skipTitleCardForShorts !== undefined ||
+      partial.enableOutroVideo !== undefined ||
+      partial.outroMode !== undefined ||
+      partial.outroPreset !== undefined ||
+      partial.outroTitle !== undefined ||
+      partial.outroSubtitle !== undefined ||
+      partial.outroCustomLogo !== undefined ||
+      partial.outroThemeColor !== undefined ||
+      partial.outroVideoPath !== undefined ||
+      partial.outroVideoDurationSeconds !== undefined ||
+      partial.skipOutroForShorts !== undefined ||
+      partial.outroMuted !== undefined ||
+      partial.outroTransition !== undefined
     ) {
       get().refreshAyahSequence();
     }
@@ -531,11 +596,14 @@ export const useStudioStore = create<StudioState>((set, get) => ({
               endMs: Math.round(seg.endMs / speed),
             }));
 
+          const localizedBismillah = getLocalizedHeader(config, config.surahNumber, 0);
           sequence.push({
             surah: config.surahNumber,
             ayah: 0,
             surahNameArabic: surahMeta.nameArabic,
             surahNameTransliterated: surahMeta.nameTransliterated,
+            surahNameLocalized: localizedBismillah.surahName,
+            ayahLabelLocalized: localizedBismillah.ayahLabel,
             words: bismillahWords,
             primaryTranslation: bismillahPrimaryTranslation,
             secondaryTranslation: bismillahSecondaryTranslation,
@@ -571,11 +639,14 @@ export const useStudioStore = create<StudioState>((set, get) => ({
           endMs: Math.round(seg.endMs / speed),
         }));
 
+        const localizedAyah = getLocalizedHeader(config, config.surahNumber, a);
         sequence.push({
           surah: config.surahNumber,
           ayah: a,
           surahNameArabic: surahMeta.nameArabic,
           surahNameTransliterated: surahMeta.nameTransliterated,
+          surahNameLocalized: localizedAyah.surahName,
+          ayahLabelLocalized: localizedAyah.ayahLabel,
           words,
           primaryTranslation: primaryTransMap[a] || '',
           secondaryTranslation: secondaryTransMap[a] || '',
@@ -594,7 +665,24 @@ export const useStudioStore = create<StudioState>((set, get) => ({
         ? Math.max(1, Math.round((config.introVideoDurationSeconds || 4) * config.fps))
         : 0;
 
-      const grandTotalFrames = Math.max(30, totalFrames + introFrames);
+      const isTitleCardActive = Boolean(
+        config.enableSurahTitleCard &&
+        !(config.skipTitleCardForShorts !== false && config.aspectRatio === '9:16')
+      );
+      const titleCardFrames = isTitleCardActive
+        ? Math.max(1, Math.round((config.titleCardDurationSeconds || 3.5) * config.fps))
+        : 0;
+
+      const isOutroActive = Boolean(
+        config.enableOutroVideo &&
+        (config.outroMode === 'custom-video' ? config.outroVideoPath : true) &&
+        !(config.skipOutroForShorts !== false && config.aspectRatio === '9:16')
+      );
+      const outroFrames = isOutroActive
+        ? Math.max(1, Math.round((config.outroVideoDurationSeconds || 4.5) * config.fps))
+        : 0;
+
+      const grandTotalFrames = Math.max(30, totalFrames + introFrames + titleCardFrames + outroFrames);
 
       set({
         ayahs: sequence,

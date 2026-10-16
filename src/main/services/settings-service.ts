@@ -38,6 +38,7 @@ export const PERSISTABLE_CONFIG_KEYS: Array<keyof VideoTemplateConfig> = [
   'verticalAlignment',
   'verticalCustomOffset',
   'showSurahHeader',
+  'headerLanguage',
 
   // Scripture & Subtitle In/Out Motion Animations
   'animationIn',

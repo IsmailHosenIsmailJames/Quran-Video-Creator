@@ -1,12 +1,17 @@
 import React from 'react';
 import { useStudioStore } from '../store/studio-store';
 import { SURAHS_LIST, getSurahByNumber } from '../../shared/surahs';
+import { getSurahNameLocalized } from '../../shared/surah-localization';
 import { ScriptType } from '../../shared/types';
 import { BookOpen, Hash, Layers } from 'lucide-react';
 
 export const VerseSelector: React.FC = () => {
   const { config, changeSurah, changeAyahRange, changeScript, updateConfig } = useStudioStore();
   const currentSurah = getSurahByNumber(config.surahNumber);
+  const localizedSurahName = getSurahNameLocalized(
+    config.surahNumber,
+    config.headerLanguage && config.headerLanguage !== 'auto' ? config.headerLanguage : config.primaryTranslationLang
+  );
 
   return (
     <div className="space-y-6">
@@ -42,8 +47,10 @@ export const VerseSelector: React.FC = () => {
               {`surah${String(config.surahNumber).padStart(3, '0')}`}
             </span>
             <div className="text-xs">
-              <span className="font-semibold text-white">{currentSurah.nameEnglish}</span>
-              <span className="text-gray-400 ml-2">({currentSurah.revelationType})</span>
+              <span className="font-semibold text-white">
+                {localizedSurahName !== currentSurah.nameTransliterated ? `${localizedSurahName} (${currentSurah.nameTransliterated})` : currentSurah.nameEnglish}
+              </span>
+              <span className="text-gray-400 ml-2">({currentSurah.nameEnglish} • {currentSurah.revelationType})</span>
             </div>
           </div>
           <span className="text-xs text-amber-400/90 font-mono bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">

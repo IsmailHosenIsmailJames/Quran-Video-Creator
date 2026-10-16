@@ -17,6 +17,7 @@ export const LivePreview: React.FC = () => {
     setCurrentFrame,
     isPlaying,
     setIsPlaying,
+    reciters,
   } = useStudioStore();
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -97,8 +98,9 @@ export const LivePreview: React.FC = () => {
       config,
       ayahs,
       totalDurationInFrames,
+      reciterInfo: reciters[config.reciterIndex],
     };
-  }, [config, ayahs, totalDurationInFrames]);
+  }, [config, ayahs, totalDurationInFrames, reciters]);
 
   const { compWidth, compHeight } = useMemo(() => {
     if (config.aspectRatio === '9:16') {
