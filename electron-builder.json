@@ -2,7 +2,8 @@
   "appId": "com.quranvideo.studio",
   "productName": "Quran Video Studio",
   "directories": {
-    "output": "release"
+    "output": "release",
+    "buildResources": "build"
   },
   "files": [
     "dist/**",
@@ -15,6 +16,10 @@
     "**/node_modules/better-sqlite3/**"
   ],
   "extraResources": [
+    {
+      "from": "build/icon.png",
+      "to": "icon.png"
+    },
     {
       "from": "Quran Scripts",
       "to": "Quran Scripts",
@@ -44,13 +49,16 @@
   ],
   "linux": {
     "target": ["tar.gz"],
-    "category": "Video"
+    "category": "Video",
+    "icon": "build/icons"
   },
   "mac": {
     "category": "public.app-category.video",
-    "target": ["dmg", "zip"]
+    "target": ["dmg", "zip"],
+    "icon": "build/icon.icns"
   },
   "win": {
-    "target": ["nsis", "portable"]
+    "target": ["nsis", "portable"],
+    "icon": "build/icon.ico"
   }
 }

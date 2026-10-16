@@ -264,7 +264,26 @@ function createApplicationMenu(window: BrowserWindow): void {
   Menu.setApplicationMenu(menu);
 }
 
+function getAppIconPath(): string | undefined {
+  const candidates = [
+    path.join(__dirname, '../../public/icon.png'),
+    path.join(app.getAppPath(), 'public/icon.png'),
+    path.join(app.getAppPath(), 'dist/icon.png'),
+    path.join(__dirname, '../../dist/icon.png'),
+    path.join(process.resourcesPath, 'icon.png'),
+    path.join(app.getAppPath(), 'build/icon.png'),
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return undefined;
+}
+
 function createWindow(mediaServerPort: number): void {
+  const iconPath = getAppIconPath();
+
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -272,6 +291,7 @@ function createWindow(mediaServerPort: number): void {
     minHeight: 700,
     title: 'Quran Video Studio',
     backgroundColor: '#090d16',
+    ...(iconPath ? { icon: iconPath } : {}),
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       sandbox: false,
@@ -281,6 +301,14 @@ function createWindow(mediaServerPort: number): void {
       additionalArguments: [`--media-server-port=${mediaServerPort}`],
     },
   });
+
+  if (process.platform === 'darwin' && app.dock && iconPath) {
+    try {
+      app.dock.setIcon(iconPath);
+    } catch (err) {
+      console.warn('[Main] Failed to set dock icon:', err);
+    }
+  }
 
   registerIpcHandlers(mainWindow);
   createApplicationMenu(mainWindow);
@@ -334,6 +362,15 @@ function createWindow(mediaServerPort: number): void {
 }
 
 app.whenReady().then(async () => {
+  const iconPath = getAppIconPath();
+  if (process.platform === 'darwin' && app.dock && iconPath) {
+    try {
+      app.dock.setIcon(iconPath);
+    } catch (err) {
+      // Dock may initialize with window
+    }
+  }
+
   // Start local streaming server for media with Range 206 support
   const port = await localMediaServer.start();
 

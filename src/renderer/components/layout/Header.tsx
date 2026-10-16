@@ -20,10 +20,12 @@ export const Header: React.FC = () => {
     <header className="h-11 border-b border-gray-800/80 bg-gray-950/90 backdrop-blur-md px-4 flex items-center justify-between z-30 select-none flex-shrink-0">
       {/* Brand & Video Specs (Merged Toolbar) */}
       <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-md bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center shadow-md shadow-amber-500/20">
-            <span className="text-black font-extrabold text-[11px] leading-none">قرآن</span>
-          </div>
+        <div className="flex items-center gap-2.5">
+          <img
+            src="/icon-256.png"
+            alt="Quran Video Studio"
+            className="w-6 h-6 rounded-md shadow-md shadow-amber-500/20 object-cover border border-amber-500/30"
+          />
           <span className="text-xs font-bold text-white tracking-wide">
             Quran Video Studio
           </span>
