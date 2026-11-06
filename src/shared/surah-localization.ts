@@ -712,4 +712,72 @@ export function getRevelationTypeLocalized(type: 'Meccan' | 'Medinan', langCode:
   return type;
 }
 
+/**
+ * Phonetic Bengali names for all 39 reciters for high-converting YouTube thumbnails
+ */
+export const BENGALI_RECITER_NAME_MAP: Record<string, string> = {
+  'Mishari Rashid Alafasy': 'মিশারি রাশিদ আল-আফাসি',
+  'Abdul Basit Abdus Samad': 'আব্দুল বাসিত আব্দুস সামাদ',
+  'Abdullah Basfar': 'আব্দুল্লাহ বাসফার',
+  'Abdur-Rahman as-Sudais': 'আব্দুর রহমান আস-সুদাইস',
+  'Abu Bakr al-Shatri': 'আবু বকর আল-শাত্রী',
+  'Ahmed ibn Ali al-Ajamy': 'আহমদ ইবন আলী আল-আজমী',
+  'Saad Al-Ghamdi': 'সাদ আল-গামদী',
+  'Hani ar-Rifai': 'হানি আর-রিফাই',
+  'Mahmoud Khalil Al-Husary': 'মাহমুদ খলিল আল-হুসারি',
+  'Ali Al-Hudhaify': 'আলী আল-হুজাইফী',
+  'Ibrahim Akhdar': 'ইব্রাহিম আখদার',
+  'Maher Al Muaiqly': 'মাহের আল-মুয়াইক্বলী',
+  'Mohamed Siddiq al-Minshawi': 'মুহাম্মদ সিদ্দিক আল-মিনশাবী',
+  'Muhammad Ayyoub': 'মুহাম্মদ আইয়ুব',
+  'Muhammad Jibreel': 'মুহাম্মদ জিবরীল',
+  'Mustafa Ismail': 'মুস্তফা ইসমাইল',
+  "Sa'ud ash-Shuraym": 'সউদ আশ-শুরাইম',
+  'Salah Bukhatir': 'সালাহ বুখাতির',
+  'Muhsin Al Qasim': 'মুহসিন আল-কাসিম',
+  'Abdullah Awad Al-Juhani': 'আব্দুল্লাহ আওয়াদ আল-জুহানী',
+  'Salah Al Budair': 'সালাহ আল-বুদাইর',
+  'Abdullah Matroud': 'আব্দুল্লাহ মাত্রুদ',
+  'Ahmed Nuaina': 'আহমদ নুয়াইনা',
+  'Muhammad AbdulKareem': 'মুহাম্মদ আব্দুল কারীম',
+  'Khalifa Al-Tunaiji': 'খলিফা আল-তুনাইজি',
+  'Mahmoud Ali Al-Banna': 'মাহমুদ আলী আল-বান্না',
+  'Ibrahim Al-Dosary': 'ইব্রাহিম আল-দোসারি',
+  'Yassin Al-Jazaery': 'ইয়াসিন আল-জাযায়েরী',
+  'Khalid Abdullah al-Qahtani': 'খালিদ আল-কাহতানী',
+  'Yasser Ad-Dussary': 'ইয়াসির আদ-দাওসারী',
+  'Nasser Al Qatami': 'নাসের আল-কাতামী',
+  'Sahl Yassin': 'সাহল ইয়াসিন',
+  'Aziz Alili': 'আজিজ আলিলী',
+  'Yaser Salamah': 'ইয়াসির সালামাহ',
+  'Akram Al Alaqimy': 'আকরাম আল-আলাকিমী',
+  'Ali Jaber': 'আলী জাবের',
+  'Fares Abbad': 'ফারেস আব্বাদ',
+  'Ayman Sowaid': 'আয়মান সুওয়াইদ',
+  'Mohamed al-Tablawi': 'মুহাম্মদ আত-তাবলাবী',
+  // Popular references
+  'Ahmad Al-Nufais': 'আহমদ আল নুফাইস',
+  'Haitham Al-Dukhin': 'হাইছাম আল দুখাইন',
+  'Omar Hisham Al Arabi': 'ওমর হিশাম আল আরাবি',
+  'Muhammad Dibirov': 'মুহাম্মদ দিবিরভ',
+};
+
+export function getBengaliReciterName(name?: string): string {
+  if (!name) return 'ক্বারী';
+  if (BENGALI_RECITER_NAME_MAP[name]) return BENGALI_RECITER_NAME_MAP[name];
+  const lower = name.toLowerCase();
+  for (const [key, bn] of Object.entries(BENGALI_RECITER_NAME_MAP)) {
+    if (lower.includes(key.toLowerCase()) || key.toLowerCase().includes(lower)) {
+      return bn;
+    }
+  }
+  return name;
+}
+
+export function getBengaliSurahTitle(surahNumber: number, prefix: string = 'সূরা: '): string {
+  const name = getSurahNameLocalized(surahNumber, 'bn');
+  return `${prefix}${name}`;
+}
+
+
 

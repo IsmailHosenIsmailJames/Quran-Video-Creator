@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { AbsoluteFill, useCurrentFrame, interpolate, Easing } from 'remotion';
 import { VideoTemplateConfig, AyahSequenceData, QuranWord, ScriptBlockType, TextAnimationIn, TextAnimationOut } from '../../shared/types';
-import { computeAdaptiveFontSizes } from '../../shared/typography-utils';
+import { computeAdaptiveFontSizes, computeAyahChunks } from '../../shared/typography-utils';
 import { getLocalizedHeader, getLanguageFontFamily } from '../../shared/surah-localization';
 
 interface TypographyLayerProps {
@@ -108,14 +108,12 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
   const arabicOpacity = Number((arabicIn.opacity * outValues.opacity).toFixed(4));
   const arabicTranslateY = arabicIn.translateY + outValues.translateY;
   const arabicScale = arabicIn.scale * outValues.scale;
-  const arabicTransform = `translateY(${arabicTranslateY.toFixed(2)}px) scale(${arabicScale.toFixed(4)})`;
   const arabicBlur = arabicIn.blur + outValues.blur;
   const arabicFilter = arabicBlur > 0.1 ? `blur(${arabicBlur.toFixed(1)}px)` : undefined;
 
   const subOpacity = Number((subIn.opacity * outValues.opacity).toFixed(4));
   const subTranslateY = subIn.translateY + outValues.translateY;
   const subScale = subIn.scale * outValues.scale;
-  const subTransform = `translateY(${subTranslateY.toFixed(2)}px) scale(${subScale.toFixed(4)})`;
   const subBlur = subIn.blur + outValues.blur;
   const subFilter = subBlur > 0.1 ? `blur(${subBlur.toFixed(1)}px)` : undefined;
 
@@ -126,6 +124,58 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
   const headerOpacity = Number((headerProgress * outValues.opacity).toFixed(4));
 
   const currentMs = (frame / fps) * 1000;
+
+  // Compute phrasing chunks for this Ayah based on Waqf & reciter pauses
+  const chunks = useMemo(() => {
+    return computeAyahChunks(ayahData, config);
+  }, [ayahData, config]);
+
+  // Determine active chunk based on current playback millisecond
+  const activeChunk =
+    chunks.find((c) => currentMs >= c.startMs && currentMs < c.endMs) ||
+    chunks[chunks.length - 1] ||
+    chunks[0];
+
+  const isChunked = chunks.length > 1;
+
+  // Chunk-level smooth transition for phrase-by-phrase display
+  const chunkStartFrame = Math.floor((activeChunk.startMs / 1000) * fps);
+  const chunkRelFrame = frame - chunkStartFrame;
+  const chunkTransitionType = config.chunkTransition || 'fade';
+  let chunkP = 1;
+  if (activeChunk.chunkIndex > 0 && chunkTransitionType !== 'none') {
+    chunkP = interpolate(chunkRelFrame, [0, 7], [0, 1], {
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+      easing: Easing.out(Easing.cubic),
+    });
+  }
+  const chunkTranslateY =
+    activeChunk.chunkIndex > 0 && chunkTransitionType === 'float-up' ? (1 - chunkP) * 14 : 0;
+
+  // Combine Ayah entrance/exit and chunk transition
+  const finalArabicOpacity =
+    activeChunk.chunkIndex === 0
+      ? arabicOpacity
+      : Number((chunkP * outValues.opacity).toFixed(4));
+
+  const finalSubOpacity =
+    activeChunk.chunkIndex === 0
+      ? subOpacity
+      : Number((chunkP * outValues.opacity).toFixed(4));
+
+  const finalArabicTranslateY =
+    activeChunk.chunkIndex === 0
+      ? arabicTranslateY
+      : chunkTranslateY + outValues.translateY;
+
+  const finalSubTranslateY =
+    activeChunk.chunkIndex === 0
+      ? subTranslateY
+      : chunkTranslateY + outValues.translateY;
+
+  const finalArabicTransform = `translateY(${finalArabicTranslateY.toFixed(2)}px) scale(${arabicScale.toFixed(4)})`;
+  const finalSubTransform = `translateY(${finalSubTranslateY.toFixed(2)}px) scale(${subScale.toFixed(4)})`;
 
   // Determine active word position based on current millisecond
   const activeSegment = ayahData.segments.find(
@@ -139,8 +189,18 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
   // Localized Surah & Ayah badge info (e.g., "আল-ফাতিহা • আয়াত ১" when Bangla is active)
   const localizedHeader = getLocalizedHeader(config, ayahData.surah, ayahData.ayah);
 
-  // Adaptive Font Sizing based on Ayah length (respects per-ayah manual overrides if specified)
-  const computedSizes = computeAdaptiveFontSizes(config, ayahData, override);
+  // Adaptive Font Sizing based on active chunk length (or whole Ayah if unchunked)
+  const computedSizes = computeAdaptiveFontSizes(
+    config,
+    isChunked
+      ? {
+          words: activeChunk.words,
+          primaryTranslation: activeChunk.primaryTranslation,
+          secondaryTranslation: activeChunk.secondaryTranslation,
+        }
+      : ayahData,
+    override
+  );
   const arabicFontSize = computedSizes.arabicFontSize;
   const primaryFontSize = computedSizes.primaryFontSize;
   const secondaryFontSize = computedSizes.secondaryFontSize;
@@ -161,6 +221,11 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
   const layoutOrder: ScriptBlockType[] = config.scriptLayoutOrder || ['arabic', 'secondary', 'primary'];
   const englishFirst = layoutOrder.indexOf('secondary') < layoutOrder.indexOf('primary');
 
+  // Words to render: active chunk words if chunked, or all Ayah words
+  const displayWords = isChunked ? activeChunk.words : ayahData.words;
+  const primaryTranslationText = isChunked ? activeChunk.primaryTranslation : ayahData.primaryTranslation;
+  const secondaryTranslationText = isChunked ? activeChunk.secondaryTranslation : ayahData.secondaryTranslation;
+
   const arabicBlock = (
     <div
       key="arabic"
@@ -174,8 +239,8 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
         display: 'flex',
         flexDirection: 'column',
         alignItems: flexAlignItems,
-        opacity: arabicOpacity,
-        transform: arabicTransform,
+        opacity: finalArabicOpacity,
+        transform: finalArabicTransform,
         filter: arabicFilter,
         WebkitFilter: arabicFilter,
       }}
@@ -196,7 +261,7 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
           width: '100%',
         }}
       >
-        {ayahData.words.map((w: QuranWord) => {
+        {displayWords.map((w: QuranWord) => {
           // Strip residual Presentation Forms-A ligature characters
           const displayText = (w.text || '').replace(/[\uFD00-\uFDFF]/g, '').trim();
           if (!displayText) return null;
@@ -226,7 +291,7 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
   );
 
   const primarySubtitle =
-    config.showPrimaryTranslation && ayahData.primaryTranslation ? (
+    config.showPrimaryTranslation && primaryTranslationText ? (
       <p
         key="primary"
         style={{
@@ -243,12 +308,12 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
           width: '100%',
         }}
       >
-        {ayahData.primaryTranslation}
+        {primaryTranslationText}
       </p>
     ) : null;
 
   const secondarySubtitle =
-    config.showSecondaryTranslation && ayahData.secondaryTranslation ? (
+    config.showSecondaryTranslation && secondaryTranslationText ? (
       <p
         key="secondary"
         style={{
@@ -264,7 +329,7 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
           width: '100%',
         }}
       >
-        {ayahData.secondaryTranslation}
+        {secondaryTranslationText}
       </p>
     ) : null;
 
@@ -290,8 +355,8 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
         boxShadow: showContainer ? '0 10px 25px -5px rgba(0, 0, 0, 0.5)' : 'none',
         flexShrink: 0,
         boxSizing: 'border-box',
-        opacity: subOpacity,
-        transform: subTransform,
+        opacity: finalSubOpacity,
+        transform: finalSubTransform,
         filter: subFilter,
         WebkitFilter: subFilter,
       }}

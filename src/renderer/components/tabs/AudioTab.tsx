@@ -168,11 +168,37 @@ export const AudioTab: React.FC = () => {
         </div>
 
         {reciters[config.reciterIndex] && (
-          <div className="flex items-center justify-between p-2.5 rounded-xl bg-gray-950/70 border border-gray-800 text-xs text-gray-400">
-            <span>Style: {reciters[config.reciterIndex].style}</span>
-            <span className="flex items-center gap-1 text-emerald-400 font-medium">
-              {reciters[config.reciterIndex].segments_url ? '✓ Word-Level Karaoke Sync Ready' : '• Verse Audio Only'}
-            </span>
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-950/70 border border-gray-800 text-xs text-gray-400">
+            {reciters[config.reciterIndex].local_img || reciters[config.reciterIndex].img ? (
+              <img
+                src={
+                  reciters[config.reciterIndex].local_img
+                    ? `/${reciters[config.reciterIndex].local_img}`
+                    : reciters[config.reciterIndex].img
+                }
+                alt={reciters[config.reciterIndex].name}
+                className="w-11 h-11 rounded-full object-cover border border-amber-500/40 shadow-sm shadow-amber-500/10 flex-shrink-0 bg-gray-900"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  if (reciters[config.reciterIndex].img && target.src !== reciters[config.reciterIndex].img) {
+                    target.src = reciters[config.reciterIndex].img!;
+                  } else {
+                    target.style.display = 'none';
+                  }
+                }}
+              />
+            ) : null}
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-white truncate text-xs">
+                {reciters[config.reciterIndex].name}
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-gray-400 mt-1">
+                <span>Style: {reciters[config.reciterIndex].style}</span>
+                <span className="flex items-center gap-1 text-emerald-400 font-medium">
+                  {reciters[config.reciterIndex].segments_url ? '✓ Word-Level Karaoke Sync Ready' : '• Verse Audio Only'}
+                </span>
+              </div>
+            </div>
           </div>
         )}
 

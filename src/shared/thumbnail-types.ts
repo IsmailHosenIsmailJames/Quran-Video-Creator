@@ -1,12 +1,17 @@
 import { VideoTemplateConfig, ReciterInfo } from './types';
 
 export type ThumbnailLayoutMode =
+  | 'reciter-focus'       // Dedicated YouTube Creator format with prominent reciter portrait + high-impact typography
   | 'split-screen'        // #1 Top-converting YouTube format: Left calligraphy medallion, right bold stacked text
   | 'centerpiece'         // Symmetrical grand royal layout: Central floating medallion + monumental title
   | 'cinematic-hero'      // Cinematic widescreen with deep vignette & refined luxury editorial typography
   | 'high-impact-focus';  // High-contrast punchy typography engineered for small mobile feed clicks
 
 export type ThumbnailPresetId =
+  | 'nufais-gold'
+  | 'dukhain-amber'
+  | 'minimal-studio'
+  | 'moonlit-night'
   | 'liquid-gold'
   | 'emerald-sanctuary'
   | 'midnight-sapphire'
@@ -124,6 +129,31 @@ export interface ThumbnailConfig {
   showTranslationBadge: boolean;
   translationBadgeText?: string;
 
+  // Reciter Portrait Feature (Matching YouTube Creator Reference Standards)
+  showReciterPortrait: boolean;
+  reciterPortraitSource: 'auto' | 'local_img' | 'custom' | 'captured-frame';
+  reciterPortraitCustomUrl?: string;
+  reciterPortraitPosition: 'left' | 'right';
+  reciterPortraitScale: number; // 0.7 to 1.6 (default 1.15)
+  reciterPortraitOffsetX: number; // -300 to +300 (default 0)
+  reciterPortraitOffsetY: number; // -200 to +200 (default 0)
+  reciterPortraitFlip: boolean; // Flip horizontally
+  reciterPortraitBottomFade: boolean; // Soft bottom edge alpha gradient fade
+  reciterPortraitShadow: boolean; // Ambient soft drop shadow
+  reciterPortraitGlow: boolean; // Subtle edge backlight aura
+  directionalShadowRamp: boolean; // Dark gradient behind text side
+  directionalShadowOpacity: number; // 0.0 to 1.0 (default 0.85)
+  directionalShadowWidth: number; // 0.3 to 0.9 (default 0.6)
+
+  // Language & Title Typography Settings
+  titleLanguageMode: 'bengali' | 'english' | 'calligraphy-english' | 'bilingual';
+  bengaliSurahPrefix: string; // e.g. "সূরা: "
+  bengaliSurahTitleText?: string; // e.g. "আল-আন'আম"
+  bengaliReciterNameText?: string; // e.g. "আহমদ আল নুফাইস"
+  showMicIcon: boolean; // e.g. 🎤 icon next to reciter
+  titleMetallicGold: boolean; // Luxury liquid gold/amber 3D gradient
+  titleFontSizeMultiplier: number; // 0.8 to 1.5
+
   // Clickable Eye-Catching Badges / Ribbons
   activeBadge: ThumbnailBadgeId;
   badgeCustomText?: string;
@@ -142,6 +172,90 @@ export interface ThumbnailConfig {
 }
 
 export const THUMBNAIL_PRESET_OPTIONS: ThumbnailPresetOption[] = [
+  {
+    id: 'nufais-gold',
+    name: 'Ahmad Al-Nufais Gold (Ref 1)',
+    subtitle: 'Viral Bengali YouTube Format',
+    description: 'Prominent reciter on the right, deep black shadow ramp on the left, 3D metallic liquid gold Bengali Surah title, and mic-badged reciter subtitle.',
+    layoutMode: 'reciter-focus',
+    accentColor: '#F59E0B',
+    secondaryColor: '#FDE68A',
+    badgeText: '● VIRAL YOUTUBE • 4K UHD',
+    badgeDotColor: '#F59E0B',
+    hookTitle: 'হৃদয় জুড়ানো তিলাওয়াত',
+    hookSubtitle: 'Listen With Presence of Heart',
+    bgPresetUrl: 'https://images.unsplash.com/photo-1542816417-0983c9c9ad53?q=80&w=1920&auto=format&fit=crop',
+    bgOverlayOpacity: 0.45,
+    bgOverlayColor: '#000000',
+    showArchFrame: false,
+    showArabesqueCorners: false,
+    showSunRays: false,
+    showGoldenSparks: false,
+    goldGradientText: true,
+  },
+  {
+    id: 'dukhain-amber',
+    name: 'Haitham Al-Dukhin Amber (Ref 2/3)',
+    subtitle: 'Warm Islamic Texture & Bokeh',
+    description: 'Left-side smiling reciter portrait, rich warm amber Islamic backdrop with golden light bokeh and polished golden typography.',
+    layoutMode: 'reciter-focus',
+    accentColor: '#D97706',
+    secondaryColor: '#FBBF24',
+    badgeText: '● HEART SOOTHING • 4K UHD',
+    badgeDotColor: '#FBBF24',
+    hookTitle: 'হৃদয় জুড়ানো তিলাওয়াত',
+    hookSubtitle: 'Peaceful & Relaxing Recitation',
+    bgPresetUrl: 'https://images.unsplash.com/photo-1519817650390-64a93db51149?q=80&w=1920&auto=format&fit=crop',
+    bgOverlayOpacity: 0.4,
+    bgOverlayColor: '#120a03',
+    showArchFrame: false,
+    showArabesqueCorners: true,
+    showSunRays: true,
+    showGoldenSparks: true,
+    goldGradientText: true,
+  },
+  {
+    id: 'minimal-studio',
+    name: 'Omar Hisham Studio (Ref 4)',
+    subtitle: 'Cinematic Dark Minimalism',
+    description: 'Dark studio spotlight atmosphere with contemplative reciter portrait, authentic Arabic calligraphy, and pure white typography.',
+    layoutMode: 'reciter-focus',
+    accentColor: '#E2E8F0',
+    secondaryColor: '#94A3B8',
+    badgeText: '● CONTEMPLATIVE • 4K UHD',
+    badgeDotColor: '#94A3B8',
+    hookTitle: 'SOUL TOUCHING RECITATION',
+    hookSubtitle: 'Reflect Upon The Divine Words',
+    bgPresetUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1920&auto=format&fit=crop',
+    bgOverlayOpacity: 0.65,
+    bgOverlayColor: '#050508',
+    showArchFrame: false,
+    showArabesqueCorners: false,
+    showSunRays: false,
+    showGoldenSparks: false,
+    goldGradientText: false,
+  },
+  {
+    id: 'moonlit-night',
+    name: 'Muhammad Dibirov Night (Ref 5)',
+    subtitle: 'Atmospheric Moonlit Horizon',
+    description: 'Dramatic moonlit night sky with reciter portrait, Arabic calligraphy crest, monumental bold English title, and relaxing recitation hook.',
+    layoutMode: 'reciter-focus',
+    accentColor: '#60A5FA',
+    secondaryColor: '#BFDBFE',
+    badgeText: '● DEEP FOCUS • 4K UHD',
+    badgeDotColor: '#60A5FA',
+    hookTitle: 'VERY RELAXING RECITATION',
+    hookSubtitle: 'Calm Your Heart & Mind',
+    bgPresetUrl: 'https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?q=80&w=1920&auto=format&fit=crop',
+    bgOverlayOpacity: 0.5,
+    bgOverlayColor: '#030712',
+    showArchFrame: false,
+    showArabesqueCorners: false,
+    showSunRays: false,
+    showGoldenSparks: false,
+    goldGradientText: false,
+  },
   {
     id: 'liquid-gold',
     name: 'Liquid Gold & Obsidian',
@@ -511,8 +625,8 @@ export const THUMBNAIL_BADGE_PRESETS: { id: ThumbnailBadgeId; label: string; dot
 ];
 
 export const DEFAULT_THUMBNAIL_CONFIG: ThumbnailConfig = {
-  preset: 'liquid-gold',
-  layoutMode: 'split-screen',
+  preset: 'nufais-gold',
+  layoutMode: 'reciter-focus',
   aspectRatio: '16:9',
   width: 1280,
   height: 720,
@@ -574,6 +688,31 @@ export const DEFAULT_THUMBNAIL_CONFIG: ThumbnailConfig = {
   reciterStyleText: undefined,
   showTranslationBadge: true,
   translationBadgeText: undefined,
+
+  // Reciter Portrait Feature (Default Enabled for Professional YouTube Thumbnails)
+  showReciterPortrait: true,
+  reciterPortraitSource: 'auto',
+  reciterPortraitCustomUrl: undefined,
+  reciterPortraitPosition: 'right',
+  reciterPortraitScale: 1.15,
+  reciterPortraitOffsetX: 0,
+  reciterPortraitOffsetY: 0,
+  reciterPortraitFlip: false,
+  reciterPortraitBottomFade: true,
+  reciterPortraitShadow: true,
+  reciterPortraitGlow: false,
+  directionalShadowRamp: true,
+  directionalShadowOpacity: 0.88,
+  directionalShadowWidth: 0.62,
+
+  // Language & Title Typography Settings
+  titleLanguageMode: 'bengali',
+  bengaliSurahPrefix: 'সূরা: ',
+  bengaliSurahTitleText: undefined,
+  bengaliReciterNameText: undefined,
+  showMicIcon: true,
+  titleMetallicGold: true,
+  titleFontSizeMultiplier: 1.0,
 
   // Clickable Eye-Catching Badges / Ribbons
   activeBadge: '4k-uhd',

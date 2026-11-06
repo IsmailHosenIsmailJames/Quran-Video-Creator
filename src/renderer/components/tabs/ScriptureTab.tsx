@@ -11,6 +11,8 @@ import {
 import {
   Type,
   Sparkles,
+  Smartphone,
+  Scissors,
   AlignCenter,
   AlignLeft,
   AlignRight,
@@ -97,6 +99,143 @@ export const ScriptureTab: React.FC = () => {
             onChange={(e) => updateConfig({ autoAdjustFontSizeByLength: e.target.checked })}
             className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
           />
+        </div>
+
+        {/* Global Text Scale & Mobile Optimization */}
+        <div className="p-3.5 rounded-xl bg-gray-950/80 border border-gray-800 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-200 font-semibold flex items-center gap-1.5">
+              <Smartphone className="w-3.5 h-3.5 text-amber-400" />
+              Mobile Readability & Text Scale
+            </span>
+            <span className="text-amber-400 font-mono text-xs font-bold">
+              {(config.textScaleMultiplier ?? 1.0).toFixed(2)}x
+            </span>
+          </div>
+
+          <p className="text-[11px] text-gray-400 leading-relaxed">
+            Scales Arabic scripture and translations for high readability on smartphones and vertical Shorts/Reels.
+          </p>
+
+          {/* Quick Preset Buttons */}
+          <div className="grid grid-cols-4 gap-1.5">
+            {[
+              { label: '1.0x (Desktop)', val: 1.0 },
+              { label: '1.25x (Tablet)', val: 1.25 },
+              { label: '1.50x (Mobile ⭐)', val: 1.5 },
+              { label: '1.75x (Large)', val: 1.75 },
+            ].map((p) => {
+              const active = Math.abs((config.textScaleMultiplier ?? 1.0) - p.val) < 0.03;
+              return (
+                <button
+                  key={p.val}
+                  type="button"
+                  onClick={() => updateConfig({ textScaleMultiplier: p.val })}
+                  className={`px-2 py-1.5 rounded-lg text-[10px] font-medium transition-all ${
+                    active
+                      ? 'bg-amber-500 text-gray-950 font-bold shadow-md shadow-amber-500/20'
+                      : 'bg-gray-900 hover:bg-gray-800 text-gray-300 border border-gray-800'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Fine Tuning Slider */}
+          <div className="space-y-1">
+            <input
+              type="range"
+              min={0.8}
+              max={2.0}
+              step={0.05}
+              value={config.textScaleMultiplier ?? 1.0}
+              onChange={(e) => updateConfig({ textScaleMultiplier: Number(e.target.value) })}
+              className="w-full accent-amber-500 cursor-pointer"
+            />
+            <div className="flex justify-between text-[10px] text-gray-500 font-mono">
+              <span>0.80x (Compact)</span>
+              <span>1.0x</span>
+              <span className="text-amber-400/90 font-semibold">1.50x (Mobile Optimal)</span>
+              <span>2.0x (Max)</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Smart Ayah Chunking / Waqf Phrasing */}
+        <div className="p-3.5 rounded-xl bg-gray-950/80 border border-gray-800 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <span className="text-xs text-gray-200 font-semibold flex items-center gap-1.5">
+                <Scissors className="w-3.5 h-3.5 text-amber-400" />
+                Smart Ayah Chunking (ওয়াক্ফ ও বিরতি অনুযায়ী খণ্ডকালীন প্রদর্শন)
+              </span>
+              <p className="text-[11px] text-gray-400 leading-relaxed">
+                Paginates long verses into natural Waqf phrases so text stays massive (75px+) and never crowds the screen.
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              checked={config.enableAyahChunking !== false}
+              onChange={(e) => updateConfig({ enableAyahChunking: e.target.checked })}
+              className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+            />
+          </div>
+
+          {config.enableAyahChunking !== false && (
+            <div className="pt-2 border-t border-gray-800/80 space-y-3">
+              {/* Max words per chunk */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-gray-400">Max Words Per Chunk</span>
+                  <span className="text-amber-400 font-mono text-xs">
+                    {config.maxWordsPerChunk ?? 10} words
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={6}
+                  max={16}
+                  step={1}
+                  value={config.maxWordsPerChunk ?? 10}
+                  onChange={(e) => updateConfig({ maxWordsPerChunk: Number(e.target.value) })}
+                  className="w-full accent-amber-500 cursor-pointer"
+                />
+                <div className="flex justify-between text-[10px] text-gray-500 font-mono">
+                  <span>6 (Shorter phrases)</span>
+                  <span>10 (Balanced)</span>
+                  <span>16 (Longer phrases)</span>
+                </div>
+              </div>
+
+              {/* Chunk Transition & Subtitle Sync */}
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <div className="space-y-1">
+                  <label className="text-[11px] text-gray-400">Chunk Transition</label>
+                  <select
+                    value={config.chunkTransition || 'fade'}
+                    onChange={(e) => updateConfig({ chunkTransition: e.target.value as any })}
+                    className="w-full bg-gray-900 border border-gray-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
+                  >
+                    <option value="fade">Smooth Fade</option>
+                    <option value="float-up">Float Up</option>
+                    <option value="none">Instant Cut</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center justify-between p-2 rounded-lg bg-gray-900/60 border border-gray-800">
+                  <span className="text-[11px] text-gray-300">Sync Translations</span>
+                  <input
+                    type="checkbox"
+                    checked={config.splitTranslationsWithChunks !== false}
+                    onChange={(e) => updateConfig({ splitTranslationsWithChunks: e.target.checked })}
+                    className="w-3.5 h-3.5 accent-amber-500 rounded cursor-pointer"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Font Size (Wider Range 10 to 100) & Line Height */}

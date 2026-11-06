@@ -8,6 +8,20 @@ export interface QuranWord {
   ayah: number;
   word: number;        // 1-based index within the Ayah
   text: string;        // Vocalized Arabic word or Ayah marker glyph
+  hasWaqf?: boolean;   // Whether this word carries a waqf pause sign or presentation form stop
+}
+
+export interface AyahChunk {
+  id: string;
+  chunkIndex: number;
+  totalChunks: number;
+  startWordIndex: number;
+  endWordIndex: number;
+  startMs: number;
+  endMs: number;
+  words: QuranWord[];
+  primaryTranslation?: string;
+  secondaryTranslation?: string;
 }
 
 export type ScriptType = 'qpc-nastaleeq' | 'indopak-nastaleeq' | 'imlaei';
@@ -31,6 +45,7 @@ export interface ReciterInfo {
   link: string;             // Base CDN URL
   segments_url?: string;    // Compressed timing manifest URL
   img?: string;
+  local_img?: string;       // High-resolution local portrait asset (reciter_images/<slug>.<ext>)
   bio?: string;
   source?: string;
 }
@@ -181,6 +196,11 @@ export interface VideoTemplateConfig {
   // Per-Ayah Custom Font Size Overrides (Key: `${surah}:${ayah}`)
   ayahFontOverrides?: Record<string, AyahFontOverride>;
   autoAdjustFontSizeByLength?: boolean;
+  textScaleMultiplier?: number;            // Global scale multiplier (0.8x to 2.0x, default 1.0, recommended 1.5 for mobile)
+  enableAyahChunking?: boolean;             // Divide long Ayahs into natural Waqf/pause phrases (default: true)
+  maxWordsPerChunk?: number;               // Word ceiling per chunk (6 to 18 words, default: 10)
+  chunkTransition?: 'fade' | 'float-up' | 'none'; // Transition between Ayah chunks (default: 'fade')
+  splitTranslationsWithChunks?: boolean;   // Synchronously paginate translations per chunk (default: true)
 
   // Subtitles
   showPrimaryTranslation: boolean;

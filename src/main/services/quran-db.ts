@@ -33,6 +33,13 @@ class QuranDatabaseService {
     let cleanedText = word.text;
     const isLastWord = word.word === totalWordsInAyah;
 
+    // Detect Waqf marks before stripping proprietary ligatures:
+    // 1) QPC Nastaleeq Presentation Forms-A ligature codes (0xFD00 - 0xFDFF)
+    // 2) Standard Quranic Waqf Unicode (0x06D6 to 0x06DC, 0x06EC, 0x0615)
+    const hasPresentationFormWaqf = /[\uFD00-\uFDFF]/.test(word.text);
+    const hasStandardWaqf = /[\u06D6-\u06DC\u06EC\u0615]/.test(word.text);
+    const hasWaqf = hasPresentationFormWaqf || hasStandardWaqf;
+
     // 1. Remove Arabic Presentation Forms-A ligature codes (0xFD00 - 0xFDFF)
     // which are used as proprietary waqf glyphs in qpc-nastaleeq.db and cause fallback to "ضحي"
     cleanedText = cleanedText.replace(/[\uFD00-\uFDFF]/g, '').trim();
@@ -50,6 +57,7 @@ class QuranDatabaseService {
     return {
       ...word,
       text: cleanedText || word.text,
+      hasWaqf,
     };
   }
 

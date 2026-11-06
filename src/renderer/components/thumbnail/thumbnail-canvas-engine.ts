@@ -1,7 +1,13 @@
 import { ThumbnailConfig, ThumbnailLayoutMode } from '../../../shared/thumbnail-types';
 import { VideoTemplateConfig, ReciterInfo } from '../../../shared/types';
 import { getSurahByNumber } from '../../../shared/surahs';
-import { getLocalizedHeader, getTranslationBookName } from '../../../shared/surah-localization';
+import {
+  getLocalizedHeader,
+  getTranslationBookName,
+  getBengaliSurahTitle,
+  getBengaliReciterName,
+  getSurahNameLocalized,
+} from '../../../shared/surah-localization';
 
 export interface RenderThumbnailOptions {
   config: ThumbnailConfig;
@@ -446,9 +452,337 @@ export async function renderThumbnailToCanvas(
   // =========================================================================
   // 8. LAYOUT ARCHETYPES RENDERING
   // =========================================================================
-  const layoutMode: ThumbnailLayoutMode = config.layoutMode || 'split-screen';
+  const layoutMode: ThumbnailLayoutMode = config.layoutMode || 'reciter-focus';
 
-  if (layoutMode === 'split-screen' && !isPortrait) {
+  if (layoutMode === 'reciter-focus') {
+    // -----------------------------------------------------------------------
+    // LAYOUT 0: RECITER-FOCUSED VIRAL FORMAT (References 1, 2, 3, 4, 5)
+    // One side: High-Res Reciter Portrait with soft bottom-fade & ambient drop shadow
+    // Mid layer: Directional shadow ramp behind text side
+    // Other side: High-contrast 3D Gold / Bengali / Calligraphy Typography
+    // -----------------------------------------------------------------------
+    const isRight = (config.reciterPortraitPosition || 'right') === 'right';
+    const textOnLeft = isRight;
+
+    // 1. Draw Reciter Portrait
+    if (config.showReciterPortrait !== false) {
+      let reciterSrc: string | null = null;
+      if (config.reciterPortraitSource === 'custom' && config.reciterPortraitCustomUrl) {
+        reciterSrc = config.reciterPortraitCustomUrl;
+      } else if (config.reciterPortraitSource === 'captured-frame' && config.bgCapturedDataUrl) {
+        reciterSrc = config.bgCapturedDataUrl;
+      } else if (reciterInfo?.local_img) {
+        reciterSrc = '/' + reciterInfo.local_img;
+      } else if (reciterInfo?.img) {
+        reciterSrc = reciterInfo.img;
+      }
+
+      if (reciterSrc) {
+        try {
+          const pImg = await loadCachedImage(reciterSrc);
+          if (pImg && pImg.naturalWidth > 0) {
+            const scale = (config.reciterPortraitScale || 1.15) * (isPortrait ? 1.25 : 1.0);
+            const offsetX = config.reciterPortraitOffsetX || 0;
+            const offsetY = config.reciterPortraitOffsetY || 0;
+
+            const boxW = (isPortrait ? w * 0.85 : w * 0.58) * scale;
+            const boxH = (isPortrait ? h * 0.55 : h * 1.08) * scale;
+            const centerX = isPortrait
+              ? w * 0.5 + offsetX
+              : (isRight ? w * 0.72 : w * 0.28) + offsetX;
+            const centerY = isPortrait
+              ? h * 0.35 + offsetY
+              : h * 0.52 + offsetY;
+
+            const imgRatio = pImg.naturalWidth / pImg.naturalHeight;
+            const boxRatio = boxW / boxH;
+            let drawW = boxW;
+            let drawH = boxH;
+
+            if (imgRatio > boxRatio) {
+              drawW = boxW;
+              drawH = boxW / imgRatio;
+            } else {
+              drawH = boxH;
+              drawW = boxH * imgRatio;
+            }
+
+            const drawX = centerX - drawW / 2;
+            const drawY = centerY - drawH / 2;
+
+            ctx.save();
+
+            // Ambient Edge Glow (if enabled)
+            if (config.reciterPortraitGlow) {
+              const glowGrad = ctx.createRadialGradient(
+                centerX,
+                centerY,
+                50,
+                centerX,
+                centerY,
+                Math.max(drawW, drawH) * 0.65
+              );
+              glowGrad.addColorStop(0, `${themeColor}44`);
+              glowGrad.addColorStop(0.5, `${themeColor}12`);
+              glowGrad.addColorStop(1, 'rgba(0,0,0,0)');
+              ctx.fillStyle = glowGrad;
+              ctx.beginPath();
+              ctx.arc(centerX, centerY, Math.max(drawW, drawH) * 0.65, 0, Math.PI * 2);
+              ctx.fill();
+            }
+
+            // Flip horizontally (if enabled)
+            if (config.reciterPortraitFlip) {
+              ctx.translate(centerX, centerY);
+              ctx.scale(-1, 1);
+              ctx.translate(-centerX, -centerY);
+            }
+
+            // Ambient Drop Shadow behind subject
+            if (config.reciterPortraitShadow !== false) {
+              ctx.shadowColor = 'rgba(0, 0, 0, 0.95)';
+              ctx.shadowBlur = 38;
+              ctx.shadowOffsetX = isRight ? -14 : 14;
+              ctx.shadowOffsetY = 8;
+            }
+
+            // Draw Portrait
+            ctx.drawImage(pImg, drawX, drawY, drawW, drawH);
+            ctx.restore();
+
+            // Soft Bottom Edge Fade (Smooth gradient mask so waist/chest fades seamlessly)
+            if (config.reciterPortraitBottomFade !== false) {
+              ctx.save();
+              const fadeH = isPortrait ? h * 0.25 : h * 0.35;
+              const fadeY = isPortrait ? h * 0.55 : h - fadeH;
+              const fadeGrad = ctx.createLinearGradient(0, fadeY, 0, fadeY + fadeH);
+              fadeGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+              fadeGrad.addColorStop(0.5, 'rgba(0, 0, 0, 0.7)');
+              fadeGrad.addColorStop(1, 'rgba(0, 0, 0, 0.98)');
+              ctx.fillStyle = fadeGrad;
+              ctx.fillRect(isPortrait ? 0 : (isRight ? w * 0.45 : 0), fadeY, isPortrait ? w : w * 0.55, fadeH);
+              ctx.restore();
+            }
+          }
+        } catch (e) {
+          console.warn('Could not load reciter portrait image:', e);
+        }
+      }
+    }
+
+    // 2. Directional Shadow Ramp (Dark background gradient behind text)
+    if (config.directionalShadowRamp !== false) {
+      const rampW = w * (config.directionalShadowWidth || 0.62);
+      const opacity = config.directionalShadowOpacity ?? 0.88;
+      ctx.save();
+      let rampGrad: CanvasGradient;
+      if (isPortrait) {
+        rampGrad = ctx.createLinearGradient(0, h, 0, h * 0.45);
+        rampGrad.addColorStop(0, `rgba(0, 0, 0, ${opacity})`);
+        rampGrad.addColorStop(0.5, `rgba(0, 0, 0, ${opacity * 0.85})`);
+        rampGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = rampGrad;
+        ctx.fillRect(0, h * 0.45, w, h * 0.55);
+      } else if (textOnLeft) {
+        rampGrad = ctx.createLinearGradient(0, 0, rampW, 0);
+        rampGrad.addColorStop(0, `rgba(0, 0, 0, ${opacity})`);
+        rampGrad.addColorStop(0.45, `rgba(0, 0, 0, ${opacity * 0.82})`);
+        rampGrad.addColorStop(0.8, `rgba(0, 0, 0, ${opacity * 0.4})`);
+        rampGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = rampGrad;
+        ctx.fillRect(0, 0, rampW, h);
+      } else {
+        rampGrad = ctx.createLinearGradient(w, 0, w - rampW, 0);
+        rampGrad.addColorStop(0, `rgba(0, 0, 0, ${opacity})`);
+        rampGrad.addColorStop(0.45, `rgba(0, 0, 0, ${opacity * 0.82})`);
+        rampGrad.addColorStop(0.8, `rgba(0, 0, 0, ${opacity * 0.4})`);
+        rampGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = rampGrad;
+        ctx.fillRect(w - rampW, 0, rampW, h);
+      }
+      ctx.restore();
+    }
+
+    // 3. Typography Layer
+    const textStartX = isPortrait ? w * 0.08 : (textOnLeft ? w * 0.08 : w * 0.52);
+    const fontMultiplier = (config.titleFontSizeMultiplier || 1.0) * (isPortrait ? 1.25 : 1.0);
+    const langMode = config.titleLanguageMode || 'bengali';
+
+    if (langMode === 'bengali') {
+      // ---------------------------------------------------------------------
+      // BENGALI VIRAL YOUTUBE STYLE (References 1, 2, 3)
+      // "সূরা: আল-আন'আম" in 3D liquid gold + "🎤 আহমদ আল নুফাইস"
+      // ---------------------------------------------------------------------
+      ctx.save();
+      const titleText =
+        config.bengaliSurahTitleText ||
+        getBengaliSurahTitle(videoConfig.surahNumber, config.bengaliSurahPrefix ?? 'সূরা: ');
+
+      const titleFontSize = Math.round(62 * fontMultiplier);
+      const reciterFontSize = Math.round(28 * fontMultiplier);
+
+      const contentCenterY = isPortrait ? h * 0.76 : h * 0.50;
+
+      // Top Hook Badge (if enabled)
+      let titleY = contentCenterY;
+      if (config.showHookTitle && config.hookTitleText) {
+        titleY = contentCenterY + 12;
+        const hookFontSize = Math.round(15 * fontMultiplier);
+        ctx.font = `700 ${hookFontSize}px 'Hind Siliguri', 'Inter', sans-serif`;
+        const hookMetrics = ctx.measureText(config.hookTitleText);
+        const hookPillW = hookMetrics.width + 30;
+        const hookPillH = 28 * (isPortrait ? 1.2 : 1.0);
+        const hookY = titleY - titleFontSize - (isPortrait ? 34 : 26);
+
+        roundRect(ctx, textStartX, hookY - hookPillH / 2, hookPillW, hookPillH, 6);
+        ctx.fillStyle = 'rgba(245, 158, 11, 0.2)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(245, 158, 11, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.fillStyle = '#FDE68A';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(config.hookTitleText, textStartX + 15, hookY);
+      }
+
+      // Main Surah Title: "সূরা: [নাম]"
+      ctx.font = `800 ${titleFontSize}px 'Hind Siliguri', 'Noto Sans Bengali', 'Tiro Bangla', sans-serif`;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+
+      // Deep 3D Shadow pass
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.98)';
+      ctx.shadowBlur = 28;
+      ctx.shadowOffsetX = 3;
+      ctx.shadowOffsetY = 6;
+
+      if (config.titleMetallicGold !== false) {
+        const goldGrad = ctx.createLinearGradient(
+          textStartX,
+          titleY - titleFontSize * 0.7,
+          textStartX,
+          titleY + titleFontSize * 0.4
+        );
+        goldGrad.addColorStop(0.0, '#FFFFFF'); // Specular highlight
+        goldGrad.addColorStop(0.2, '#FEF3C7'); // Light amber cream
+        goldGrad.addColorStop(0.5, '#F59E0B'); // Deep liquid gold
+        goldGrad.addColorStop(0.8, '#D97706'); // Warm gold bronze
+        goldGrad.addColorStop(1.0, '#78350F'); // Rich dark bronze base
+        ctx.fillStyle = goldGrad;
+      } else {
+        ctx.fillStyle = '#FFFFFF';
+      }
+
+      ctx.fillText(titleText, textStartX, titleY);
+
+      // Reciter Subtitle: "🎤 [কারি নাম]"
+      const reciterBn =
+        config.bengaliReciterNameText || getBengaliReciterName(reciterName);
+      const mic = config.showMicIcon !== false ? '🎤 ' : '';
+      const reciterFullText = `${mic}${reciterBn}`;
+
+      const reciterY = titleY + titleFontSize * 0.65;
+      ctx.font = `600 ${reciterFontSize}px 'Hind Siliguri', 'Noto Sans Bengali', sans-serif`;
+      ctx.shadowBlur = 18;
+      ctx.shadowOffsetY = 3;
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+      ctx.fillStyle = config.titleMetallicGold !== false ? '#FDE68A' : '#E5E7EB';
+      ctx.fillText(reciterFullText, textStartX, reciterY);
+
+      ctx.restore();
+    } else if (langMode === 'calligraphy-english' || langMode === 'bilingual') {
+      // ---------------------------------------------------------------------
+      // INTERNATIONAL CALLIGRAPHY STYLE (References 4, 5)
+      // Arabic Calligraphy crest + bold English title + relaxing hook + reciter
+      // ---------------------------------------------------------------------
+      ctx.save();
+      const contentCenterY = isPortrait ? h * 0.74 : h * 0.48;
+
+      // 1. Arabic Calligraphy Emblem
+      if (config.showSurahCalligraphy !== false) {
+        const calligSize = Math.round(92 * fontMultiplier);
+        ctx.font = `${calligSize}px 'surah-name-v1', sans-serif`;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.95)';
+        ctx.shadowBlur = 24;
+        ctx.shadowOffsetY = 5;
+
+        if (config.titleMetallicGold !== false) {
+          ctx.fillStyle = createLiquidGoldGradient(
+            ctx,
+            textStartX,
+            contentCenterY - 90,
+            textStartX + 200,
+            contentCenterY - 40
+          );
+        } else {
+          ctx.fillStyle = '#FFFFFF';
+        }
+        ctx.fillText(surahLigatureCode, textStartX, contentCenterY - 60);
+      }
+
+      // 2. English Surah Title
+      const englishTitle =
+        config.englishSurahNameText ||
+        surahMeta?.nameTransliterated?.toUpperCase() ||
+        `SURAH ${videoConfig.surahNumber}`;
+      const enFontSize = Math.round(48 * fontMultiplier);
+      ctx.font = `800 ${enFontSize}px 'Cinzel', 'Inter', serif`;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.95)';
+      ctx.shadowBlur = 24;
+      ctx.shadowOffsetY = 4;
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillText(englishTitle, textStartX, contentCenterY + 10);
+
+      // 3. Relaxing Hook
+      if (config.showHookTitle && config.hookTitleText) {
+        const hookFontSize = Math.round(18 * fontMultiplier);
+        ctx.font = `700 ${hookFontSize}px 'Inter', sans-serif`;
+        ctx.fillStyle = config.hookTitleColor || '#93C5FD';
+        ctx.shadowBlur = 12;
+        ctx.fillText(config.hookTitleText.toUpperCase(), textStartX, contentCenterY + 58);
+      }
+
+      // 4. Reciter Attribution
+      const reciterEn = (config.reciterNameText || reciterName).toUpperCase();
+      const reciterFontSize = Math.round(18 * fontMultiplier);
+      ctx.font = `600 ${reciterFontSize}px 'Inter', sans-serif`;
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.shadowBlur = 10;
+      ctx.fillText(reciterEn, textStartX, contentCenterY + 95);
+
+      ctx.restore();
+    } else {
+      // Standard English mode
+      ctx.save();
+      const englishTitle =
+        config.englishSurahNameText ||
+        surahMeta?.nameTransliterated?.toUpperCase() ||
+        `SURAH ${videoConfig.surahNumber}`;
+      const enFontSize = Math.round(54 * fontMultiplier);
+      ctx.font = `800 ${enFontSize}px 'Inter', sans-serif`;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.95)';
+      ctx.shadowBlur = 24;
+      ctx.shadowOffsetY = 4;
+      ctx.fillStyle = config.titleMetallicGold !== false
+        ? createLiquidGoldGradient(ctx, textStartX, h * 0.45, textStartX + 200, h * 0.55)
+        : '#FFFFFF';
+      ctx.fillText(englishTitle, textStartX, h * 0.48);
+
+      const reciterText = config.reciterNameText || reciterName;
+      ctx.font = `600 24px 'Inter', sans-serif`;
+      ctx.fillStyle = '#E5E7EB';
+      ctx.fillText(`🎙️ ${reciterText}`, textStartX, h * 0.58);
+      ctx.restore();
+    }
+  } else if (layoutMode === 'split-screen' && !isPortrait) {
     // -----------------------------------------------------------------------
     // LAYOUT 1: SPLIT-SCREEN (Proven #1 CTR Standard for YouTube 16:9)
     // Left: Medallion Calligraphy + Arabic Surah Title

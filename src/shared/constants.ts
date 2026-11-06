@@ -95,6 +95,11 @@ export const DEFAULT_TEMPLATE_CONFIG: VideoTemplateConfig = {
   // Per-Ayah Custom Font Size Overrides
   ayahFontOverrides: {},
   autoAdjustFontSizeByLength: true,
+  textScaleMultiplier: 1.0,
+  enableAyahChunking: true,
+  maxWordsPerChunk: 10,
+  chunkTransition: 'fade',
+  splitTranslationsWithChunks: true,
 
   // Subtitles
   showPrimaryTranslation: true,

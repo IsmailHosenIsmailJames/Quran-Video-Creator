@@ -15,6 +15,7 @@ import {
   ChevronUp,
   Type,
   Sparkles,
+  Smartphone,
 } from 'lucide-react';
 import { computeAdaptiveFontSizes } from '../../../shared/typography-utils';
 import {
@@ -111,6 +112,68 @@ export const SubtitlesTab: React.FC = () => {
                 {config.showTranslationContainer !== false ? 'Enabled' : 'Disabled'}
               </span>
             </label>
+          </div>
+        </div>
+
+        {/* Global Text Scale & Mobile Optimization */}
+        <div className="p-3.5 rounded-xl bg-gray-950/80 border border-gray-800 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-200 font-semibold flex items-center gap-1.5">
+              <Smartphone className="w-3.5 h-3.5 text-amber-400" />
+              Mobile Readability & Text Scale
+            </span>
+            <span className="text-amber-400 font-mono text-xs font-bold">
+              {(config.textScaleMultiplier ?? 1.0).toFixed(2)}x
+            </span>
+          </div>
+
+          <p className="text-[11px] text-gray-400 leading-relaxed">
+            Scales translations and Arabic scripture for high legibility on mobile screens and 9:16 Shorts.
+          </p>
+
+          {/* Quick Preset Buttons */}
+          <div className="grid grid-cols-4 gap-1.5">
+            {[
+              { label: '1.0x (Desktop)', val: 1.0 },
+              { label: '1.25x (Tablet)', val: 1.25 },
+              { label: '1.50x (Mobile ⭐)', val: 1.5 },
+              { label: '1.75x (Large)', val: 1.75 },
+            ].map((p) => {
+              const active = Math.abs((config.textScaleMultiplier ?? 1.0) - p.val) < 0.03;
+              return (
+                <button
+                  key={p.val}
+                  type="button"
+                  onClick={() => updateConfig({ textScaleMultiplier: p.val })}
+                  className={`px-2 py-1.5 rounded-lg text-[10px] font-medium transition-all ${
+                    active
+                      ? 'bg-amber-500 text-gray-950 font-bold shadow-md shadow-amber-500/20'
+                      : 'bg-gray-900 hover:bg-gray-800 text-gray-300 border border-gray-800'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Fine Tuning Slider */}
+          <div className="space-y-1">
+            <input
+              type="range"
+              min={0.8}
+              max={2.0}
+              step={0.05}
+              value={config.textScaleMultiplier ?? 1.0}
+              onChange={(e) => updateConfig({ textScaleMultiplier: Number(e.target.value) })}
+              className="w-full accent-amber-500 cursor-pointer"
+            />
+            <div className="flex justify-between text-[10px] text-gray-500 font-mono">
+              <span>0.80x (Compact)</span>
+              <span>1.0x</span>
+              <span className="text-amber-400/90 font-semibold">1.50x (Mobile Optimal)</span>
+              <span>2.0x (Max)</span>
+            </div>
           </div>
         </div>
 

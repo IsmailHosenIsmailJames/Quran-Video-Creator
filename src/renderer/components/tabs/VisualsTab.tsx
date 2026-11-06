@@ -156,7 +156,15 @@ export const VisualsTab: React.FC = () => {
             return (
               <button
                 key={item.id}
-                onClick={() => updateConfig({ aspectRatio: item.id as any })}
+                onClick={() => {
+                  const updates: any = { aspectRatio: item.id };
+                  if (item.id === '9:16' && (!config.textScaleMultiplier || config.textScaleMultiplier === 1.0)) {
+                    updates.textScaleMultiplier = 1.45;
+                  } else if (item.id === '16:9' && config.textScaleMultiplier === 1.45) {
+                    updates.textScaleMultiplier = 1.0;
+                  }
+                  updateConfig(updates);
+                }}
                 className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${
                   isSelected
                     ? 'bg-amber-500/15 border-amber-500/80 text-amber-300 shadow-md ring-1 ring-amber-500/30'

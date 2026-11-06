@@ -23,7 +23,12 @@ import {
   Maximize,
   Compass,
   Zap,
+  UserCheck,
+  User,
+  Mic,
+  RotateCcw,
 } from 'lucide-react';
+import { getBengaliSurahTitle, getBengaliReciterName } from '../../../shared/surah-localization';
 
 export const ThumbnailTab: React.FC = () => {
   const {
@@ -35,8 +40,8 @@ export const ThumbnailTab: React.FC = () => {
   } = useStudioStore();
 
   const [activeSection, setActiveSection] = useState<
-    'presets' | 'layout' | 'background' | 'scripture' | 'hook' | 'badges' | 'guides'
-  >('presets');
+    'presets' | 'reciter' | 'layout' | 'background' | 'scripture' | 'hook' | 'badges' | 'guides'
+  >('reciter');
 
   // File picker for custom background image
   const handleSelectCustomImage = async () => {
@@ -47,6 +52,19 @@ export const ThumbnailTab: React.FC = () => {
       updateThumbnailConfig({
         bgType: 'custom',
         bgCustomUrl: selected,
+      });
+    }
+  };
+
+  // File picker for custom reciter portrait image
+  const handleSelectCustomReciterImage = async () => {
+    const api = window.electronAPI;
+    if (!api) return;
+    const selected = await api.selectMediaFile('image');
+    if (selected) {
+      updateThumbnailConfig({
+        reciterPortraitSource: 'custom',
+        reciterPortraitCustomUrl: selected,
       });
     }
   };
@@ -82,7 +100,7 @@ export const ThumbnailTab: React.FC = () => {
     }
   };
 
-  const currentLayout = thumbnailConfig.layoutMode || 'split-screen';
+  const currentLayout = thumbnailConfig.layoutMode || 'reciter-focus';
 
   return (
     <div className="space-y-4 pb-8 select-none">
@@ -98,7 +116,7 @@ export const ThumbnailTab: React.FC = () => {
                 YouTube Thumbnail Studio
               </h3>
               <p className="text-[10px] text-gray-400">
-                2026 High-Converting Islamic Design Engine
+                Reciter Portraits & 3D Gold Typography
               </p>
             </div>
           </div>
@@ -123,11 +141,11 @@ export const ThumbnailTab: React.FC = () => {
       <div className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-gray-950 border border-gray-800 text-[11px] font-medium">
         {[
           { id: 'presets', label: 'Presets', icon: Star },
-          { id: 'layout', label: 'Layouts', icon: Columns },
+          { id: 'reciter', label: 'Reciter (কারি)', icon: UserCheck },
+          { id: 'scripture', label: 'Title & বাংলা', icon: Type },
           { id: 'background', label: 'Backdrop', icon: ImageIcon },
-          { id: 'scripture', label: 'Scripture', icon: Type },
-          { id: 'hook', label: 'Hook Title', icon: Sliders },
-          { id: 'badges', label: 'Ornaments', icon: Layers },
+          { id: 'layout', label: 'Layouts', icon: Columns },
+          { id: 'hook', label: 'Hooks & Badges', icon: Sliders },
         ].map((item) => {
           const Icon = item.icon;
           const isActive = activeSection === item.id;
@@ -258,7 +276,328 @@ export const ThumbnailTab: React.FC = () => {
       )}
 
       {/* ========================================================= */}
-      {/* 2. LAYOUT ARCHETYPES                                      */}
+      {/* 2. RECITER PORTRAIT (YOUTUBE REFERENCE STANDARD)          */}
+      {/* ========================================================= */}
+      {activeSection === 'reciter' && (
+        <div className="space-y-4">
+          {/* Main Toggle & Source Picker */}
+          <div className="p-3.5 rounded-xl bg-gray-950/80 border border-gray-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-xs font-semibold text-white block">
+                  Reciter High-Res Portrait (কারি ছবি)
+                </span>
+                <span className="text-[10px] text-gray-400">
+                  Featured portrait with shadow ramp and bottom fade
+                </span>
+              </div>
+              <input
+                type="checkbox"
+                checked={thumbnailConfig.showReciterPortrait !== false}
+                onChange={(e) => updateThumbnailConfig({ showReciterPortrait: e.target.checked })}
+                className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+              />
+            </div>
+
+            {thumbnailConfig.showReciterPortrait !== false && (
+              <div className="space-y-3 pt-2 border-t border-gray-850">
+                {/* Active Reciter Preview Chip */}
+                <div className="flex items-center gap-3 p-2.5 rounded-xl bg-gray-900/80 border border-gray-800">
+                  {thumbnailConfig.reciterPortraitCustomUrl ? (
+                    <img
+                      src={thumbnailConfig.reciterPortraitCustomUrl}
+                      alt="Reciter portrait"
+                      className="w-12 h-12 rounded-xl object-cover border border-amber-500/50 shadow-md flex-shrink-0 bg-gray-950"
+                    />
+                  ) : reciters[config.reciterIndex]?.local_img ? (
+                    <img
+                      src={`/${reciters[config.reciterIndex].local_img}`}
+                      alt={reciters[config.reciterIndex].name}
+                      className="w-12 h-12 rounded-xl object-cover border border-amber-500/50 shadow-md flex-shrink-0 bg-gray-950"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-xl bg-gray-800 border border-gray-700 flex items-center justify-center text-gray-400 flex-shrink-0">
+                      <User className="w-6 h-6" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-bold text-white truncate">
+                      {thumbnailConfig.reciterNameText || reciters[config.reciterIndex]?.name || 'Auto Reciter'}
+                    </div>
+                    <div className="text-[11px] text-amber-400/90 font-medium truncate">
+                      {thumbnailConfig.bengaliReciterNameText || getBengaliReciterName(reciters[config.reciterIndex]?.name)}
+                    </div>
+                    <div className="text-[9px] text-gray-500 font-mono mt-0.5">
+                      {thumbnailConfig.reciterPortraitSource === 'custom' ? 'Custom Uploaded' : 'Ultra-HD Verified'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Reciter Selector Dropdown */}
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold text-gray-300">
+                    Choose from 39 Verified High-Res Reciters
+                  </label>
+                  <select
+                    value={
+                      thumbnailConfig.reciterPortraitSource === 'custom'
+                        ? '__custom__'
+                        : thumbnailConfig.reciterNameText || reciters[config.reciterIndex]?.name || ''
+                    }
+                    onChange={(e) => {
+                      if (e.target.value === '__custom__') {
+                        handleSelectCustomReciterImage();
+                        return;
+                      }
+                      const found = reciters.find((r) => r.name === e.target.value);
+                      if (found) {
+                        updateThumbnailConfig({
+                          reciterPortraitSource: 'local_img',
+                          reciterPortraitCustomUrl: found.local_img ? `/${found.local_img}` : found.img,
+                          reciterNameText: found.name,
+                          bengaliReciterNameText: getBengaliReciterName(found.name),
+                        });
+                      }
+                    }}
+                    className="w-full bg-gray-900 border border-gray-800 rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                  >
+                    <option value="">-- Use Active Reciter from Audio Tab --</option>
+                    {reciters.map((r, idx) => (
+                      <option key={`${r.name}-${idx}`} value={r.name}>
+                        {r.name} • {getBengaliReciterName(r.name)}
+                      </option>
+                    ))}
+                    <option value="__custom__">➕ Upload Custom Portrait Image...</option>
+                  </select>
+                </div>
+
+                {/* Custom Upload Button */}
+                <button
+                  type="button"
+                  onClick={handleSelectCustomReciterImage}
+                  className="w-full flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg bg-gray-900 hover:bg-gray-850 border border-gray-750 text-xs text-gray-300 hover:text-white transition"
+                >
+                  <Upload className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Upload Personal / Custom Reciter Portrait</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Reciter Position & Framing */}
+          {thumbnailConfig.showReciterPortrait !== false && (
+            <div className="p-3.5 rounded-xl bg-gray-950/80 border border-gray-800 space-y-3">
+              <label className="text-xs font-semibold text-gray-200 block">
+                Portrait Position & Alignment
+              </label>
+
+              {/* Left / Right Position Segmented Buttons */}
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { id: 'right', label: 'Right Side (Ref 1, 3)', desc: 'Standard Bengali YouTube' },
+                  { id: 'left', label: 'Left Side (Ref 2, 4, 5)', desc: 'Western & Arabic Standard' },
+                ].map((pos) => {
+                  const isSelected = (thumbnailConfig.reciterPortraitPosition || 'right') === pos.id;
+                  return (
+                    <button
+                      key={pos.id}
+                      type="button"
+                      onClick={() =>
+                        updateThumbnailConfig({
+                          reciterPortraitPosition: pos.id as any,
+                        })
+                      }
+                      className={`p-2.5 rounded-xl border text-left transition ${
+                        isSelected
+                          ? 'bg-amber-500/15 border-amber-500 text-amber-300 ring-1 ring-amber-500/30'
+                          : 'bg-gray-900/80 border-gray-800 text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      <div className="text-xs font-bold">{pos.label}</div>
+                      <div className="text-[9px] text-gray-500 mt-0.5">{pos.desc}</div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Scale Slider */}
+              <div className="space-y-1.5 pt-1">
+                <div className="flex justify-between text-xs text-gray-300">
+                  <span>Portrait Scale / Zoom</span>
+                  <span className="font-mono text-amber-400 font-semibold">
+                    {Math.round((thumbnailConfig.reciterPortraitScale || 1.15) * 100)}%
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={0.7}
+                  max={1.6}
+                  step={0.02}
+                  value={thumbnailConfig.reciterPortraitScale ?? 1.15}
+                  onChange={(e) => updateThumbnailConfig({ reciterPortraitScale: parseFloat(e.target.value) })}
+                  className="w-full accent-amber-500 cursor-pointer"
+                />
+              </div>
+
+              {/* Offset X Slider */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-xs text-gray-300">
+                  <span>Horizontal Offset (X)</span>
+                  <span className="font-mono text-amber-400 font-semibold">
+                    {thumbnailConfig.reciterPortraitOffsetX || 0}px
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={-200}
+                  max={200}
+                  step={5}
+                  value={thumbnailConfig.reciterPortraitOffsetX ?? 0}
+                  onChange={(e) => updateThumbnailConfig({ reciterPortraitOffsetX: parseInt(e.target.value, 10) })}
+                  className="w-full accent-amber-500 cursor-pointer"
+                />
+              </div>
+
+              {/* Offset Y Slider */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-xs text-gray-300">
+                  <span>Vertical Offset (Y)</span>
+                  <span className="font-mono text-amber-400 font-semibold">
+                    {thumbnailConfig.reciterPortraitOffsetY || 0}px
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={-150}
+                  max={150}
+                  step={5}
+                  value={thumbnailConfig.reciterPortraitOffsetY ?? 0}
+                  onChange={(e) => updateThumbnailConfig({ reciterPortraitOffsetY: parseInt(e.target.value, 10) })}
+                  className="w-full accent-amber-500 cursor-pointer"
+                />
+              </div>
+
+              {/* Toggles: Flip, Bottom Fade, Drop Shadow */}
+              <div className="space-y-2 pt-2 border-t border-gray-850">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs text-gray-300 block">Flip Horizontally</span>
+                    <span className="text-[10px] text-gray-500">Face toward text side</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={thumbnailConfig.reciterPortraitFlip || false}
+                    onChange={(e) => updateThumbnailConfig({ reciterPortraitFlip: e.target.checked })}
+                    className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs text-gray-300 block">Soft Bottom Fade</span>
+                    <span className="text-[10px] text-gray-500">Dissolve torso cut at bottom</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={thumbnailConfig.reciterPortraitBottomFade !== false}
+                    onChange={(e) => updateThumbnailConfig({ reciterPortraitBottomFade: e.target.checked })}
+                    className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs text-gray-300 block">Ambient Drop Shadow</span>
+                    <span className="text-[10px] text-gray-500">Separate subject from background</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={thumbnailConfig.reciterPortraitShadow !== false}
+                    onChange={(e) => updateThumbnailConfig({ reciterPortraitShadow: e.target.checked })}
+                    className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs text-gray-300 block">Backlight Rim Glow</span>
+                    <span className="text-[10px] text-gray-500">Golden aura behind portrait</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={thumbnailConfig.reciterPortraitGlow || false}
+                    onChange={(e) => updateThumbnailConfig({ reciterPortraitGlow: e.target.checked })}
+                    className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Directional Shadow Ramp Card */}
+          <div className="p-3.5 rounded-xl bg-gray-950/80 border border-gray-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-xs font-semibold text-white block">
+                  Directional Shadow Ramp (টেক্সট শ্যাডো র‍্যাম্প)
+                </span>
+                <span className="text-[10px] text-gray-400">
+                  Dark gradient behind text area for 100% legibility (Ref 1, 3)
+                </span>
+              </div>
+              <input
+                type="checkbox"
+                checked={thumbnailConfig.directionalShadowRamp !== false}
+                onChange={(e) => updateThumbnailConfig({ directionalShadowRamp: e.target.checked })}
+                className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+              />
+            </div>
+
+            {thumbnailConfig.directionalShadowRamp !== false && (
+              <div className="space-y-3 pt-2 border-t border-gray-850">
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-xs text-gray-300">
+                    <span>Shadow Darkness</span>
+                    <span className="font-mono text-amber-400 font-semibold">
+                      {Math.round((thumbnailConfig.directionalShadowOpacity ?? 0.88) * 100)}%
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0.3}
+                    max={1.0}
+                    step={0.02}
+                    value={thumbnailConfig.directionalShadowOpacity ?? 0.88}
+                    onChange={(e) => updateThumbnailConfig({ directionalShadowOpacity: parseFloat(e.target.value) })}
+                    className="w-full accent-amber-500 cursor-pointer"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-xs text-gray-300">
+                    <span>Shadow Spread Width</span>
+                    <span className="font-mono text-amber-400 font-semibold">
+                      {Math.round((thumbnailConfig.directionalShadowWidth ?? 0.62) * 100)}%
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0.35}
+                    max={0.85}
+                    step={0.02}
+                    value={thumbnailConfig.directionalShadowWidth ?? 0.62}
+                    onChange={(e) => updateThumbnailConfig({ directionalShadowWidth: parseFloat(e.target.value) })}
+                    className="w-full accent-amber-500 cursor-pointer"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* 3. LAYOUT ARCHETYPES                                      */}
       {/* ========================================================= */}
       {activeSection === 'layout' && (
         <div className="space-y-4">
@@ -272,9 +611,16 @@ export const ThumbnailTab: React.FC = () => {
           <div className="grid grid-cols-1 gap-2.5">
             {[
               {
+                id: 'reciter-focus' as ThumbnailLayoutMode,
+                name: 'Reciter Portrait & Viral Gold',
+                badge: 'YOUTUBE TOP VIRAL',
+                desc: 'Prominent high-res reciter portrait on one side with directional shadow ramp and high-contrast Bengali/Calligraphy typography.',
+                icon: UserCheck,
+              },
+              {
                 id: 'split-screen' as ThumbnailLayoutMode,
                 name: 'Split-Screen Masterclass',
-                badge: '#1 TOP CTR ON YOUTUBE',
+                badge: '#1 CALLIGRAPHY',
                 desc: 'Left side features a grand glowing calligraphy medallion; right side features stacked high-impact typography with frosted glass badges.',
                 icon: Columns,
               },
@@ -461,6 +807,175 @@ export const ThumbnailTab: React.FC = () => {
       {/* ========================================================= */}
       {activeSection === 'scripture' && (
         <div className="space-y-4">
+          {/* Title Language & Style Mode Segmented Picker */}
+          <div className="p-3.5 rounded-xl bg-gray-950/80 border border-gray-800 space-y-2.5">
+            <label className="text-xs font-semibold text-gray-200 block">
+              Title Language & Typography Archetype
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { id: 'bengali', label: 'বাংলা (Bengali)', desc: 'Ref 1, 2, 3 Viral' },
+                { id: 'calligraphy-english', label: 'Calligraphy + EN', desc: 'Ref 4, 5 Standard' },
+                { id: 'english', label: 'English Only', desc: 'Minimal Editorial' },
+              ].map((m) => {
+                const isSelected = (thumbnailConfig.titleLanguageMode || 'bengali') === m.id;
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() =>
+                      updateThumbnailConfig({
+                        titleLanguageMode: m.id as any,
+                      })
+                    }
+                    className={`p-2 rounded-xl border text-left transition ${
+                      isSelected
+                        ? 'bg-amber-500/15 border-amber-500 text-amber-300 ring-1 ring-amber-500/30'
+                        : 'bg-gray-900 border-gray-800 text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    <div className="text-xs font-bold truncate">{m.label}</div>
+                    <div className="text-[9px] text-gray-500 mt-0.5">{m.desc}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Bengali Typography Controls (Active when Bengali or Reciter-Focus) */}
+          {(thumbnailConfig.titleLanguageMode === 'bengali' || !thumbnailConfig.titleLanguageMode) && (
+            <div className="p-3.5 rounded-xl bg-gradient-to-br from-amber-500/10 via-gray-950/90 to-gray-950 border border-amber-500/40 space-y-3.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-1 rounded-lg bg-amber-500 text-black">
+                    <Sparkles className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-white block">বাংলা ইউটিউব টাইটেল (Ref 1, 2, 3)</span>
+                    <span className="text-[10px] text-amber-400/90">সূরা ও কারির গোল্ডেন টেক্সট</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Surah Title Input */}
+              <div className="space-y-1.5 pt-1 border-t border-gray-850">
+                <div className="flex justify-between items-center text-xs text-gray-300">
+                  <span>সূরা টাইটেল (Surah Title)</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const autoTitle = getBengaliSurahTitle(
+                        config.surahNumber,
+                        thumbnailConfig.bengaliSurahPrefix ?? 'সূরা: '
+                      );
+                      updateThumbnailConfig({ bengaliSurahTitleText: autoTitle });
+                    }}
+                    className="text-[10px] text-amber-400 hover:text-amber-300 flex items-center gap-1 font-mono transition"
+                    title="Auto-fetch Surah name in Bengali from project data"
+                  >
+                    <RotateCcw className="w-2.5 h-2.5" />
+                    <span>Auto Fill</span>
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={
+                    thumbnailConfig.bengaliSurahTitleText !== undefined
+                      ? thumbnailConfig.bengaliSurahTitleText
+                      : getBengaliSurahTitle(config.surahNumber, thumbnailConfig.bengaliSurahPrefix ?? 'সূরা: ')
+                  }
+                  onChange={(e) => updateThumbnailConfig({ bengaliSurahTitleText: e.target.value })}
+                  placeholder="যেমন: সূরা: আল-আন'আম"
+                  className="w-full bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-sm text-white font-medium focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              {/* Reciter Name Input */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center text-xs text-gray-300">
+                  <span>কারির বাংলা নাম (Reciter Name)</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const autoReciter = getBengaliReciterName(reciters[config.reciterIndex]?.name);
+                      updateThumbnailConfig({ bengaliReciterNameText: autoReciter });
+                    }}
+                    className="text-[10px] text-amber-400 hover:text-amber-300 flex items-center gap-1 font-mono transition"
+                    title="Auto-translate reciter name into authentic Bengali script"
+                  >
+                    <RotateCcw className="w-2.5 h-2.5" />
+                    <span>Auto Fill</span>
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={
+                    thumbnailConfig.bengaliReciterNameText !== undefined
+                      ? thumbnailConfig.bengaliReciterNameText
+                      : getBengaliReciterName(reciters[config.reciterIndex]?.name)
+                  }
+                  onChange={(e) => updateThumbnailConfig({ bengaliReciterNameText: e.target.value })}
+                  placeholder="যেমন: আহমদ আল নুফাইস"
+                  className="w-full bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-sm text-white font-medium focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              {/* Toggles: Mic Icon & 3D Liquid Gold */}
+              <div className="space-y-2 pt-2 border-t border-gray-850">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Mic className="w-3.5 h-3.5 text-amber-400" />
+                    <div>
+                      <span className="text-xs text-gray-300 block">Show Microphone Icon (🎤)</span>
+                      <span className="text-[10px] text-gray-500">Adds 🎤 badge before reciter name (Ref 1)</span>
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={thumbnailConfig.showMicIcon !== false}
+                    onChange={(e) => updateThumbnailConfig({ showMicIcon: e.target.checked })}
+                    className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    <div>
+                      <span className="text-xs text-gray-300 block">3D Liquid Gold Metallic Gradient</span>
+                      <span className="text-[10px] text-gray-500">Luxury metallic gradient with specular shine</span>
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={thumbnailConfig.titleMetallicGold !== false}
+                    onChange={(e) => updateThumbnailConfig({ titleMetallicGold: e.target.checked })}
+                    className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+                  />
+                </div>
+
+                {/* Font Size Multiplier Slider */}
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex justify-between text-xs text-gray-300">
+                    <span>Title Font Size Multiplier</span>
+                    <span className="font-mono text-amber-400 font-semibold">
+                      {(thumbnailConfig.titleFontSizeMultiplier || 1.0).toFixed(2)}x
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0.8}
+                    max={1.4}
+                    step={0.05}
+                    value={thumbnailConfig.titleFontSizeMultiplier ?? 1.0}
+                    onChange={(e) => updateThumbnailConfig({ titleFontSizeMultiplier: parseFloat(e.target.value) })}
+                    className="w-full accent-amber-500 cursor-pointer"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Calligraphy Emblem */}
           <div className="p-3.5 rounded-xl bg-gray-950/80 border border-gray-800 space-y-3">
             <div className="flex items-center justify-between">
