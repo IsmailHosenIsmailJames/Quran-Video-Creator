@@ -11,6 +11,7 @@
     "build": "npm run build:vite && npm run bundle:remotion && electron-builder --dir",
     "lint": "tsc --noEmit",
     "test:thumbnail": "electron scripts/verify-thumbnail.cjs",
+    "test:reciter-thumbnail": "electron scripts/verify-reciter-thumbnails.cjs",
     "test:seo": "node scripts/test-youtube-seo.cjs",
     "test:chunking": "node scripts/test-scaling-and-chunking.cjs",
     "test:waveform": "node scripts/test-waveform-engine.cjs",

@@ -50,12 +50,395 @@ export async function ensureFontsLoaded(): Promise<void> {
   if (typeof document !== 'undefined' && document.fonts) {
     try {
       await document.fonts.ready;
-      await document.fonts.load("120px 'surah-name-v1'");
-      await document.fonts.load("34px 'Amiri'");
+      await Promise.allSettled([
+        document.fonts.load("800 64px 'Hind Siliguri'"),
+        document.fonts.load("700 64px 'Hind Siliguri'"),
+        document.fonts.load("600 28px 'Hind Siliguri'"),
+        document.fonts.load("700 64px 'Noto Sans Bengali'"),
+        document.fonts.load("700 64px 'Tiro Bangla'"),
+        document.fonts.load("800 54px 'Cinzel'"),
+        document.fonts.load("800 64px 'Inter'"),
+        document.fonts.load("120px 'surah-name-v1'"),
+        document.fonts.load("34px 'Amiri'"),
+      ]);
     } catch (e) {
       // Font load error fallback
     }
   }
+}
+
+/**
+ * Creates a Moorish / Andalusian pointed Islamic arch path
+ */
+function createIslamicArchPath(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number
+) {
+  const springY = y + h * 0.42;
+  const peakY = y;
+  const cx = x + w / 2;
+
+  ctx.beginPath();
+  // Bottom left
+  ctx.moveTo(x, y + h);
+  // Left jamb up to spring line
+  ctx.lineTo(x, springY);
+  // Left shoulder curve to pointed apex
+  ctx.bezierCurveTo(x, y + h * 0.16, cx - w * 0.14, peakY + h * 0.04, cx, peakY);
+  // Right shoulder curve from apex down
+  ctx.bezierCurveTo(cx + w * 0.14, peakY + h * 0.04, x + w, y + h * 0.16, x + w, springY);
+  // Right jamb down to bottom right
+  ctx.lineTo(x + w, y + h);
+  ctx.closePath();
+}
+
+/**
+ * Draws seamless feathered bleed reciter portrait using offscreen destination-in masking
+ */
+function drawFeatheredPortrait(
+  ctx: CanvasRenderingContext2D,
+  pImg: HTMLImageElement,
+  drawX: number,
+  drawY: number,
+  drawW: number,
+  drawH: number,
+  centerX: number,
+  centerY: number,
+  isRight: boolean,
+  config: ThumbnailConfig,
+  themeColor: string
+) {
+  const offCanvas = document.createElement('canvas');
+  offCanvas.width = Math.max(1, Math.ceil(drawW));
+  offCanvas.height = Math.max(1, Math.ceil(drawH));
+  const offCtx = offCanvas.getContext('2d');
+  if (!offCtx) return;
+
+  // 1. Draw image (with flip if requested)
+  if (config.reciterPortraitFlip) {
+    offCtx.translate(offCanvas.width, 0);
+    offCtx.scale(-1, 1);
+  }
+  offCtx.drawImage(pImg, 0, 0, drawW, drawH);
+  if (config.reciterPortraitFlip) {
+    offCtx.setTransform(1, 0, 0, 1, 0, 0);
+  }
+
+  // 2. Destination-in Alpha Feathering
+  offCtx.globalCompositeOperation = 'destination-in';
+
+  // Inner horizontal edge feather across the entire canvas width
+  const featherPercent = Math.min(0.65, Math.max(0.15, config.reciterPortraitFeatherWidth ?? 0.38));
+  if (isRight) {
+    // Reciter on right side: fade the left (inner) edge into background
+    const hGrad = offCtx.createLinearGradient(0, 0, drawW, 0);
+    hGrad.addColorStop(0.0, 'rgba(0, 0, 0, 0)');
+    hGrad.addColorStop(featherPercent * 0.25, 'rgba(0, 0, 0, 0.12)');
+    hGrad.addColorStop(featherPercent * 0.65, 'rgba(0, 0, 0, 0.60)');
+    hGrad.addColorStop(featherPercent, 'rgba(0, 0, 0, 1.0)');
+    hGrad.addColorStop(1.0, 'rgba(0, 0, 0, 1.0)');
+    offCtx.fillStyle = hGrad;
+    offCtx.fillRect(0, 0, drawW, drawH);
+  } else {
+    // Reciter on left side: fade the right (inner) edge into background
+    const hGrad = offCtx.createLinearGradient(0, 0, drawW, 0);
+    hGrad.addColorStop(0.0, 'rgba(0, 0, 0, 1.0)');
+    hGrad.addColorStop(1.0 - featherPercent, 'rgba(0, 0, 0, 1.0)');
+    hGrad.addColorStop(1.0 - featherPercent * 0.35, 'rgba(0, 0, 0, 0.60)');
+    hGrad.addColorStop(1.0 - featherPercent * 0.1, 'rgba(0, 0, 0, 0.12)');
+    hGrad.addColorStop(1.0, 'rgba(0, 0, 0, 0)');
+    offCtx.fillStyle = hGrad;
+    offCtx.fillRect(0, 0, drawW, drawH);
+  }
+
+  // Vertical bottom edge fade (so waist/chest dissolves seamlessly)
+  if (config.reciterPortraitBottomFade !== false) {
+    const vGrad = offCtx.createLinearGradient(0, 0, 0, drawH);
+    vGrad.addColorStop(0.0, 'rgba(0, 0, 0, 0)'); // subtle top soften
+    vGrad.addColorStop(0.06, 'rgba(0, 0, 0, 1.0)');
+    vGrad.addColorStop(0.60, 'rgba(0, 0, 0, 1.0)');
+    vGrad.addColorStop(0.85, 'rgba(0, 0, 0, 0.40)');
+    vGrad.addColorStop(1.0, 'rgba(0, 0, 0, 0)');
+    offCtx.fillStyle = vGrad;
+    offCtx.fillRect(0, 0, drawW, drawH);
+  }
+
+  // Reset offscreen context
+  offCtx.globalCompositeOperation = 'source-over';
+
+  // 3. Render onto main canvas
+  ctx.save();
+  // Backlight Rim Glow (if enabled)
+  if (config.reciterPortraitGlow) {
+    const glowGrad = ctx.createRadialGradient(
+      centerX,
+      centerY,
+      50,
+      centerX,
+      centerY,
+      Math.max(drawW, drawH) * 0.65
+    );
+    glowGrad.addColorStop(0, `${themeColor}44`);
+    glowGrad.addColorStop(0.5, `${themeColor}12`);
+    glowGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glowGrad;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, Math.max(drawW, drawH) * 0.65, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Ambient Drop Shadow
+  if (config.reciterPortraitShadow !== false) {
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
+    ctx.shadowBlur = 40;
+    ctx.shadowOffsetX = isRight ? -14 : 14;
+    ctx.shadowOffsetY = 8;
+  }
+
+  ctx.drawImage(offCanvas, drawX, drawY);
+  ctx.restore();
+}
+
+/**
+ * Draws reciter portrait framed inside an ornate 24K gold Moorish arch
+ */
+function drawArchFramedPortrait(
+  ctx: CanvasRenderingContext2D,
+  pImg: HTMLImageElement,
+  drawX: number,
+  drawY: number,
+  drawW: number,
+  drawH: number,
+  centerX: number,
+  centerY: number,
+  config: ThumbnailConfig,
+  themeColor: string
+) {
+  const archW = Math.min(drawW * 0.86, 520);
+  const archH = Math.min(drawH * 0.92, 650);
+  const ax = centerX - archW / 2;
+  const ay = centerY - archH / 2;
+
+  ctx.save();
+
+  // 1. Backlight Aura & Ambient Shadow behind arch
+  const auraGrad = ctx.createRadialGradient(centerX, centerY, 50, centerX, centerY, archW * 0.8);
+  auraGrad.addColorStop(0, `${themeColor}40`);
+  auraGrad.addColorStop(0.7, `${themeColor}08`);
+  auraGrad.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = auraGrad;
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, archW * 0.8, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Dark drop shadow behind arch
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.95)';
+  ctx.shadowBlur = 36;
+  ctx.shadowOffsetY = 12;
+
+  // 2. Clip inside Islamic Arch
+  ctx.save();
+  createIslamicArchPath(ctx, ax, ay, archW, archH);
+  ctx.fillStyle = 'rgba(5, 8, 15, 0.85)';
+  ctx.fill();
+  ctx.clip();
+
+  // Draw portrait inside arch
+  if (config.reciterPortraitFlip) {
+    ctx.translate(centerX, centerY);
+    ctx.scale(-1, 1);
+    ctx.translate(-centerX, -centerY);
+  }
+  ctx.drawImage(pImg, drawX, drawY, drawW, drawH);
+  if (config.reciterPortraitFlip) {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+  }
+
+  // Soft bottom fade inside arch
+  if (config.reciterPortraitBottomFade !== false) {
+    const fadeH = archH * 0.30;
+    const bGrad = ctx.createLinearGradient(0, ay + archH - fadeH, 0, ay + archH);
+    bGrad.addColorStop(0, 'rgba(5, 8, 15, 0)');
+    bGrad.addColorStop(0.7, 'rgba(5, 8, 15, 0.7)');
+    bGrad.addColorStop(1, 'rgba(5, 8, 15, 0.98)');
+    ctx.fillStyle = bGrad;
+    ctx.fillRect(ax - 20, ay + archH - fadeH, archW + 40, fadeH + 20);
+  }
+  ctx.restore();
+
+  // 3. Ornate 24K Gold Arch Border
+  createIslamicArchPath(ctx, ax, ay, archW, archH);
+  const goldGrad = createLiquidGoldGradient(ctx, ax, ay, ax + archW, ay + archH);
+  ctx.strokeStyle = goldGrad;
+  ctx.lineWidth = 3.5;
+  ctx.shadowColor = `${themeColor}AA`;
+  ctx.shadowBlur = 18;
+  ctx.stroke();
+
+  // Inner delicate hairline
+  ctx.save();
+  createIslamicArchPath(ctx, ax + 7, ay + 7, archW - 14, archH - 14);
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+  ctx.lineWidth = 1.0;
+  ctx.shadowBlur = 0;
+  ctx.stroke();
+  ctx.restore();
+
+  // Top Keystone Star Finial
+  ctx.save();
+  ctx.fillStyle = themeColor;
+  ctx.shadowColor = themeColor;
+  ctx.shadowBlur = 15;
+  ctx.beginPath();
+  ctx.arc(centerX, ay, 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.restore();
+}
+
+/**
+ * Draws reciter portrait framed inside a 24K gold circular medallion
+ */
+function drawMedallionPortrait(
+  ctx: CanvasRenderingContext2D,
+  pImg: HTMLImageElement,
+  drawX: number,
+  drawY: number,
+  drawW: number,
+  drawH: number,
+  centerX: number,
+  centerY: number,
+  config: ThumbnailConfig,
+  themeColor: string
+) {
+  const rad = Math.min(drawW, drawH) * 0.44;
+  ctx.save();
+
+  // Outer Aura
+  const aura = ctx.createRadialGradient(centerX, centerY, rad * 0.3, centerX, centerY, rad * 1.35);
+  aura.addColorStop(0, `${themeColor}55`);
+  aura.addColorStop(0.7, `${themeColor}0A`);
+  aura.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = aura;
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, rad * 1.35, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Clip inside circle
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, rad, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(5, 8, 15, 0.9)';
+  ctx.fill();
+  ctx.clip();
+
+  if (config.reciterPortraitFlip) {
+    ctx.translate(centerX, centerY);
+    ctx.scale(-1, 1);
+    ctx.translate(-centerX, -centerY);
+  }
+  ctx.drawImage(pImg, drawX, drawY, drawW, drawH);
+  if (config.reciterPortraitFlip) {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+  }
+
+  // Soft bottom fade
+  const fadeH = rad * 0.55;
+  const bGrad = ctx.createLinearGradient(0, centerY + rad - fadeH, 0, centerY + rad);
+  bGrad.addColorStop(0, 'rgba(5, 8, 15, 0)');
+  bGrad.addColorStop(1, 'rgba(5, 8, 15, 0.98)');
+  ctx.fillStyle = bGrad;
+  ctx.fillRect(centerX - rad, centerY + rad - fadeH, rad * 2, fadeH);
+  ctx.restore();
+
+  // Outer 24K Liquid Gold Rim
+  const goldGrad = createLiquidGoldGradient(ctx, centerX - rad, centerY - rad, centerX + rad, centerY + rad);
+  ctx.strokeStyle = goldGrad;
+  ctx.lineWidth = 3.5;
+  ctx.shadowColor = `${themeColor}AA`;
+  ctx.shadowBlur = 18;
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, rad, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Inner delicate hairline ring
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+  ctx.lineWidth = 1.0;
+  ctx.shadowBlur = 0;
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, rad - 7, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+/**
+ * Draws reciter portrait framed inside a modern glowing glass card
+ */
+function drawCardGlowPortrait(
+  ctx: CanvasRenderingContext2D,
+  pImg: HTMLImageElement,
+  drawX: number,
+  drawY: number,
+  drawW: number,
+  drawH: number,
+  centerX: number,
+  centerY: number,
+  config: ThumbnailConfig,
+  themeColor: string
+) {
+  const cardW = Math.min(drawW * 0.88, 540);
+  const cardH = Math.min(drawH * 0.92, 650);
+  const cx = centerX - cardW / 2;
+  const cy = centerY - cardH / 2;
+  const radius = 24;
+
+  ctx.save();
+  // Ambient drop shadow
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.95)';
+  ctx.shadowBlur = 36;
+  ctx.shadowOffsetY = 10;
+
+  // Clip inside rounded card
+  ctx.save();
+  roundRect(ctx, cx, cy, cardW, cardH, radius);
+  ctx.fillStyle = 'rgba(8, 12, 22, 0.85)';
+  ctx.fill();
+  ctx.clip();
+
+  if (config.reciterPortraitFlip) {
+    ctx.translate(centerX, centerY);
+    ctx.scale(-1, 1);
+    ctx.translate(-centerX, -centerY);
+  }
+  ctx.drawImage(pImg, drawX, drawY, drawW, drawH);
+  if (config.reciterPortraitFlip) {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+  }
+
+  // Soft bottom fade
+  const fadeH = cardH * 0.32;
+  const bGrad = ctx.createLinearGradient(0, cy + cardH - fadeH, 0, cy + cardH);
+  bGrad.addColorStop(0, 'rgba(8, 12, 22, 0)');
+  bGrad.addColorStop(1, 'rgba(8, 12, 22, 0.98)');
+  ctx.fillStyle = bGrad;
+  ctx.fillRect(cx, cy + cardH - fadeH, cardW, fadeH);
+  ctx.restore();
+
+  // Glowing 24K Gold Card Border
+  roundRect(ctx, cx, cy, cardW, cardH, radius);
+  const goldGrad = createLiquidGoldGradient(ctx, cx, cy, cx + cardW, cy + cardH);
+  ctx.strokeStyle = goldGrad;
+  ctx.lineWidth = 2.5;
+  ctx.shadowColor = `${themeColor}AA`;
+  ctx.shadowBlur = 16;
+  ctx.stroke();
+
+  ctx.restore();
 }
 
 /**
@@ -424,23 +807,25 @@ export async function renderThumbnailToCanvas(
     ctx.restore();
   }
 
+  const layoutMode: ThumbnailLayoutMode = config.layoutMode || 'reciter-focus';
+
   // 4. Volumetric Sunbeams & God-Rays
-  if (config.showSunRays) {
+  if (config.showSunRays && layoutMode !== 'reciter-focus') {
     drawSunRays(ctx, w, h, themeColor);
   }
 
   // 5. Golden Bokeh Particle Sparks
-  if (config.showGoldenSparks) {
+  if (config.showGoldenSparks && layoutMode !== 'reciter-focus') {
     drawGoldenSparks(ctx, w, h, themeColor);
   }
 
   // 6. Islamic Moorish Arch Frame (Optional)
-  if (config.showIslamicArchFrame) {
+  if (config.showIslamicArchFrame && layoutMode !== 'reciter-focus') {
     drawMoorishArch(ctx, w, h, themeColor);
   }
 
   // 7. Arabesque Corner Brackets (Luxury 1.5px Hairline Accents)
-  if (config.showArabesqueCorners) {
+  if (config.showArabesqueCorners && layoutMode !== 'reciter-focus') {
     const margin = isPortrait ? 52 : 36;
     const size = isPortrait ? 54 : 40;
     drawArabesqueCorner(ctx, margin, margin, size, themeColor, 'top-left');
@@ -452,8 +837,6 @@ export async function renderThumbnailToCanvas(
   // =========================================================================
   // 8. LAYOUT ARCHETYPES RENDERING
   // =========================================================================
-  const layoutMode: ThumbnailLayoutMode = config.layoutMode || 'reciter-focus';
-
   if (layoutMode === 'reciter-focus') {
     // -----------------------------------------------------------------------
     // LAYOUT 0: RECITER-FOCUSED VIRAL FORMAT (References 1, 2, 3, 4, 5)
@@ -510,58 +893,15 @@ export async function renderThumbnailToCanvas(
             const drawX = centerX - drawW / 2;
             const drawY = centerY - drawH / 2;
 
-            ctx.save();
-
-            // Ambient Edge Glow (if enabled)
-            if (config.reciterPortraitGlow) {
-              const glowGrad = ctx.createRadialGradient(
-                centerX,
-                centerY,
-                50,
-                centerX,
-                centerY,
-                Math.max(drawW, drawH) * 0.65
-              );
-              glowGrad.addColorStop(0, `${themeColor}44`);
-              glowGrad.addColorStop(0.5, `${themeColor}12`);
-              glowGrad.addColorStop(1, 'rgba(0,0,0,0)');
-              ctx.fillStyle = glowGrad;
-              ctx.beginPath();
-              ctx.arc(centerX, centerY, Math.max(drawW, drawH) * 0.65, 0, Math.PI * 2);
-              ctx.fill();
-            }
-
-            // Flip horizontally (if enabled)
-            if (config.reciterPortraitFlip) {
-              ctx.translate(centerX, centerY);
-              ctx.scale(-1, 1);
-              ctx.translate(-centerX, -centerY);
-            }
-
-            // Ambient Drop Shadow behind subject
-            if (config.reciterPortraitShadow !== false) {
-              ctx.shadowColor = 'rgba(0, 0, 0, 0.95)';
-              ctx.shadowBlur = 38;
-              ctx.shadowOffsetX = isRight ? -14 : 14;
-              ctx.shadowOffsetY = 8;
-            }
-
-            // Draw Portrait
-            ctx.drawImage(pImg, drawX, drawY, drawW, drawH);
-            ctx.restore();
-
-            // Soft Bottom Edge Fade (Smooth gradient mask so waist/chest fades seamlessly)
-            if (config.reciterPortraitBottomFade !== false) {
-              ctx.save();
-              const fadeH = isPortrait ? h * 0.25 : h * 0.35;
-              const fadeY = isPortrait ? h * 0.55 : h - fadeH;
-              const fadeGrad = ctx.createLinearGradient(0, fadeY, 0, fadeY + fadeH);
-              fadeGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
-              fadeGrad.addColorStop(0.5, 'rgba(0, 0, 0, 0.7)');
-              fadeGrad.addColorStop(1, 'rgba(0, 0, 0, 0.98)');
-              ctx.fillStyle = fadeGrad;
-              ctx.fillRect(isPortrait ? 0 : (isRight ? w * 0.45 : 0), fadeY, isPortrait ? w : w * 0.55, fadeH);
-              ctx.restore();
+            const frameStyle = config.reciterPortraitFrameStyle || 'feathered-bleed';
+            if (frameStyle === 'islamic-arch') {
+              drawArchFramedPortrait(ctx, pImg, drawX, drawY, drawW, drawH, centerX, centerY, config, themeColor);
+            } else if (frameStyle === 'circular-medallion') {
+              drawMedallionPortrait(ctx, pImg, drawX, drawY, drawW, drawH, centerX, centerY, config, themeColor);
+            } else if (frameStyle === 'card-glow') {
+              drawCardGlowPortrait(ctx, pImg, drawX, drawY, drawW, drawH, centerX, centerY, config, themeColor);
+            } else {
+              drawFeatheredPortrait(ctx, pImg, drawX, drawY, drawW, drawH, centerX, centerY, isRight, config, themeColor);
             }
           }
         } catch (e) {
@@ -652,6 +992,12 @@ export async function renderThumbnailToCanvas(
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
 
+      // Subtle dark outline for high-contrast edge definition against any background
+      ctx.strokeStyle = 'rgba(12, 6, 2, 0.95)';
+      ctx.lineWidth = Math.max(2, Math.round(titleFontSize * 0.035));
+      ctx.lineJoin = 'round';
+      ctx.strokeText(titleText, textStartX, titleY);
+
       // Deep 3D Shadow pass
       ctx.shadowColor = 'rgba(0, 0, 0, 0.98)';
       ctx.shadowBlur = 28;
@@ -666,9 +1012,9 @@ export async function renderThumbnailToCanvas(
           titleY + titleFontSize * 0.4
         );
         goldGrad.addColorStop(0.0, '#FFFFFF'); // Specular highlight
-        goldGrad.addColorStop(0.2, '#FEF3C7'); // Light amber cream
-        goldGrad.addColorStop(0.5, '#F59E0B'); // Deep liquid gold
-        goldGrad.addColorStop(0.8, '#D97706'); // Warm gold bronze
+        goldGrad.addColorStop(0.18, '#FEF08A'); // Gleaming champagne gold
+        goldGrad.addColorStop(0.48, '#F59E0B'); // Deep liquid gold
+        goldGrad.addColorStop(0.78, '#D97706'); // Warm gold bronze
         goldGrad.addColorStop(1.0, '#78350F'); // Rich dark bronze base
         ctx.fillStyle = goldGrad;
       } else {
@@ -684,11 +1030,15 @@ export async function renderThumbnailToCanvas(
       const reciterFullText = `${mic}${reciterBn}`;
 
       const reciterY = titleY + titleFontSize * 0.65;
-      ctx.font = `600 ${reciterFontSize}px 'Hind Siliguri', 'Noto Sans Bengali', sans-serif`;
+      ctx.font = `700 ${reciterFontSize}px 'Hind Siliguri', 'Noto Sans Bengali', sans-serif`;
+      ctx.strokeStyle = 'rgba(10, 5, 2, 0.85)';
+      ctx.lineWidth = 2;
+      ctx.strokeText(reciterFullText, textStartX, reciterY);
+
       ctx.shadowBlur = 18;
       ctx.shadowOffsetY = 3;
       ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
-      ctx.fillStyle = config.titleMetallicGold !== false ? '#FDE68A' : '#E5E7EB';
+      ctx.fillStyle = config.titleMetallicGold !== false ? '#FEF3C7' : '#E5E7EB';
       ctx.fillText(reciterFullText, textStartX, reciterY);
 
       ctx.restore();

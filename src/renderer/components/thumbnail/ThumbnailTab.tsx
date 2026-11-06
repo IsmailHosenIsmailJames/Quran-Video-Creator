@@ -180,7 +180,7 @@ export const ThumbnailTab: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 gap-2.5">
-            {THUMBNAIL_PRESET_OPTIONS.slice(0, 8).map((preset) => {
+            {THUMBNAIL_PRESET_OPTIONS.map((preset) => {
               const isSelected = thumbnailConfig.preset === preset.id;
               return (
                 <div
@@ -207,7 +207,9 @@ export const ThumbnailTab: React.FC = () => {
                     </div>
                     <div className="flex items-center gap-1">
                       <span className="text-[9px] uppercase font-mono px-1.5 py-0.5 rounded bg-gray-900 border border-gray-750 text-gray-300">
-                        {preset.layoutMode === 'split-screen'
+                        {preset.layoutMode === 'reciter-focus'
+                          ? 'RECITER #1'
+                          : preset.layoutMode === 'split-screen'
                           ? 'SPLIT #1 CTR'
                           : preset.layoutMode === 'centerpiece'
                           ? 'ROYAL'
@@ -419,6 +421,87 @@ export const ThumbnailTab: React.FC = () => {
                   );
                 })}
               </div>
+
+              {/* Framing Archetype Selector */}
+              <div className="space-y-1.5 pt-2 border-t border-gray-850">
+                <label className="text-xs font-semibold text-gray-200 block">
+                  Framing Archetype (ফ্রেম বা ফেড স্টাইল)
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    {
+                      id: 'feathered-bleed',
+                      label: 'Feathered Bleed (সফট ফেড)',
+                      desc: 'Seamless edge dissolve into background (Ref 1 & 2)',
+                    },
+                    {
+                      id: 'islamic-arch',
+                      label: 'Islamic Arch (মেহরাব ফ্রেম)',
+                      desc: 'Royal 24K gold Moorish arch & star finial',
+                    },
+                    {
+                      id: 'circular-medallion',
+                      label: 'Circular Medallion (স্বর্ণ মেডেল)',
+                      desc: 'Luxury gold circular coin with double rims',
+                    },
+                    {
+                      id: 'card-glow',
+                      label: 'Glass Card Glow (গ্লাস কার্ড)',
+                      desc: 'Modern floating rounded frosted card with aura',
+                    },
+                  ].map((f) => {
+                    const isSelected =
+                      (thumbnailConfig.reciterPortraitFrameStyle || 'feathered-bleed') === f.id;
+                    return (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() =>
+                          updateThumbnailConfig({
+                            reciterPortraitFrameStyle: f.id as any,
+                          })
+                        }
+                        className={`p-2 rounded-xl border text-left transition ${
+                          isSelected
+                            ? 'bg-amber-500/15 border-amber-500 text-amber-300 ring-1 ring-amber-500/30'
+                            : 'bg-gray-900/80 border-gray-800 text-gray-400 hover:text-white'
+                        }`}
+                      >
+                        <div className="text-xs font-bold">{f.label}</div>
+                        <div className="text-[9px] text-gray-500 mt-0.5 leading-tight">{f.desc}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Feather Width Slider (Only when feathered bleed is active) */}
+              {(thumbnailConfig.reciterPortraitFrameStyle || 'feathered-bleed') === 'feathered-bleed' && (
+                <div className="space-y-1.5 p-2.5 rounded-lg bg-gray-900/60 border border-gray-800">
+                  <div className="flex justify-between text-xs text-gray-300">
+                    <span>Edge Feather Dissolve Width</span>
+                    <span className="font-mono text-amber-400 font-semibold">
+                      {Math.round((thumbnailConfig.reciterPortraitFeatherWidth ?? 0.38) * 100)}%
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0.15}
+                    max={0.65}
+                    step={0.02}
+                    value={thumbnailConfig.reciterPortraitFeatherWidth ?? 0.38}
+                    onChange={(e) =>
+                      updateThumbnailConfig({
+                        reciterPortraitFeatherWidth: parseFloat(e.target.value),
+                      })
+                    }
+                    className="w-full accent-amber-500 cursor-pointer"
+                  />
+                  <p className="text-[9px] text-gray-400">
+                    Smoothly dissolves the inner edge of the reciter photo so it invisibly merges with the background with zero hard cutoff.
+                  </p>
+                </div>
+              )}
 
               {/* Scale Slider */}
               <div className="space-y-1.5 pt-1">
