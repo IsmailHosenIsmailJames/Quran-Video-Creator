@@ -1,6 +1,15 @@
 import { VideoTemplateConfig, ReciterInfo, AyahSequenceData, SurahMeta } from './types';
 import { getSurahByNumber } from './surahs';
-import { getLocalizedHeader, getTranslationBookName } from './surah-localization';
+import {
+  getLocalizedHeader,
+  getTranslationBookName,
+  getSurahNameLocalized,
+  getReciterNameLocalized,
+  getSurahMeaningLocalized,
+  getTranslationBookNameLocalized,
+  getRevelationTypeLocalized,
+  toBengaliDigits,
+} from './surah-localization';
 
 export interface YouTubeTimestampItem {
   frame: number;
@@ -30,6 +39,9 @@ export interface YouTubeSeoKit {
 }
 
 export interface YouTubeDescriptionOptions {
+  language: 'bn' | 'en';
+  mode: 'clean' | 'detailed';
+  digitFormat: 'bengali' | 'english';
   includeHook: boolean;
   includeVirtues: boolean;
   includeTimestamps: boolean;
@@ -43,13 +55,16 @@ export interface YouTubeDescriptionOptions {
 }
 
 export const DEFAULT_DESCRIPTION_OPTIONS: YouTubeDescriptionOptions = {
-  includeHook: true,
-  includeVirtues: true,
+  language: 'bn',
+  mode: 'clean',
+  digitFormat: 'bengali',
+  includeHook: false,
+  includeVirtues: false,
   includeTimestamps: true,
   includeSurahMeta: true,
   includeReciterCredits: true,
   includeTranslationCredits: true,
-  includeCallToAction: true,
+  includeCallToAction: false,
   includeHashtags: true,
   timestampFormat: 'compact',
   customChannelName: undefined,
@@ -138,10 +153,13 @@ export function formatTimeCode(seconds: number): string {
  */
 export function calculateYouTubeTimestamps(
   config: VideoTemplateConfig,
-  ayahs: AyahSequenceData[]
+  ayahs: AyahSequenceData[],
+  options?: { language?: 'bn' | 'en'; digitFormat?: 'bengali' | 'english' }
 ): YouTubeTimestampItem[] {
   const fps = config.fps || 30;
   const items: YouTubeTimestampItem[] = [];
+  const isBn = options?.language !== 'en';
+  const useBnDigits = isBn && options?.digitFormat !== 'english';
 
   // 1. Intro Duration
   const isIntroActive = Boolean(
@@ -170,7 +188,7 @@ export function calculateYouTubeTimestamps(
       frame: 0,
       seconds: 0,
       timeFormatted: '00:00',
-      label: 'Introduction & Title',
+      label: isBn ? 'ভূমিকা' : 'Introduction & Title',
       surah: config.surahNumber,
     });
     currentFrame += introDurationInFrames + titleCardDurationInFrames;
@@ -193,11 +211,19 @@ export function calculateYouTubeTimestamps(
         : ayah.primaryTranslation
       : undefined;
 
+    let label: string;
+    if (ayah.ayah === 0) {
+      label = isBn ? 'বিসমিল্লাহ' : 'Bismillah';
+    } else {
+      const ayahNumStr = useBnDigits ? toBengaliDigits(ayah.ayah) : String(ayah.ayah);
+      label = isBn ? `আয়াত ${ayahNumStr}` : `Ayah ${ayah.ayah}`;
+    }
+
     items.push({
       frame: currentFrame,
       seconds: items.length === 0 ? 0 : seconds,
       timeFormatted,
-      label: `Ayah ${ayah.ayah}`,
+      label,
       surah: ayah.surah,
       ayah: ayah.ayah,
       arabicSnippet,
@@ -220,7 +246,7 @@ export function calculateYouTubeTimestamps(
       frame: currentFrame,
       seconds: outroSeconds,
       timeFormatted: formatTimeCode(outroSeconds),
-      label: 'Sadaqallahul Azeem & Outro',
+      label: isBn ? 'সাদাকাল্লাহুল আজিম ও সমাপ্তি' : 'Sadaqallahul Azeem & Outro',
       surah: config.surahNumber,
     });
   }
@@ -253,15 +279,56 @@ export function formatTimestampsForYouTube(
  */
 export function generateYouTubeTitles(
   config: VideoTemplateConfig,
-  reciterInfo?: ReciterInfo
+  reciterInfo?: ReciterInfo,
+  options?: { language?: 'bn' | 'en'; digitFormat?: 'bengali' | 'english' }
 ): { id: string; label: string; text: string }[] {
+  const isBn = options?.language !== 'en';
+  const useBnDigits = isBn && options?.digitFormat !== 'english';
   const surah = getSurahByNumber(config.surahNumber);
+  const isFull = config.fromAyah === 1 && config.toAyah === surah.totalAyahs;
+
+  if (isBn) {
+    const surahBn = getSurahNameLocalized(config.surahNumber, 'bn');
+    const reciterBn = getReciterNameLocalized(reciterInfo?.name, 'bn');
+    const arabicName = surah.nameArabic;
+    const formatNum = useBnDigits ? toBengaliDigits : (n: number | string) => String(n);
+    const rangeText = isFull ? 'সম্পূর্ণ' : `আয়াত ${formatNum(config.fromAyah)}-${formatNum(config.toAyah)}`;
+    const fullSurahText = isFull ? 'সম্পূর্ণ তিলাওয়াত' : `আয়াত ${formatNum(config.fromAyah)}-${formatNum(config.toAyah)}`;
+
+    return [
+      {
+        id: 'bn-clean-standard',
+        label: '✨ সাধারণ ও মার্জিত (Clean Standard)',
+        text: `সূরা ${surahBn} - ${fullSurahText} | ${reciterBn}`,
+      },
+      {
+        id: 'bn-with-translation',
+        label: '📖 বাংলা অনুবাদসহ (With Translation)',
+        text: `সূরা ${surahBn} (${rangeText}) বাংলা অনুবাদসহ | ${reciterBn}`,
+      },
+      {
+        id: 'bn-pure-recitation',
+        label: '🌙 পবিত্র কুরআন তিলাওয়াত (Tilawat)',
+        text: `পবিত্র কুরআন তিলাওয়াত - সূরা ${surahBn} | ক্বারী ${reciterBn}`,
+      },
+      {
+        id: 'bn-bilingual',
+        label: '🕌 আরবি ও বাংলা দ্বৈত টাইটেল (Bilingual)',
+        text: `سورة ${arabicName} | সূরা ${surahBn} (${rangeText}) | ${reciterBn}`,
+      },
+      {
+        id: 'bn-soothing',
+        label: '🎧 সুন্দর ও স্পষ্ট তিলাওয়াত (Soothing)',
+        text: `সূরা ${surahBn} - মন জুড়ানো সুন্দর তিলাওয়াত | ${reciterBn}`,
+      },
+    ];
+  }
+
+  // English fallback titles
   const surahName = surah.nameTransliterated;
   const arabicName = surah.nameArabic;
   const reciterName = reciterInfo?.name || 'Holy Quran Recitation';
   const reciterStyle = reciterInfo?.style ? ` (${reciterInfo.style})` : '';
-
-  const isFull = config.fromAyah === 1 && config.toAyah === surah.totalAyahs;
   const rangeText = isFull ? 'Full Surah' : `Ayah ${config.fromAyah}-${config.toAyah}`;
   const meaningText = surah.nameEnglish ? ` (${surah.nameEnglish})` : '';
 
@@ -303,20 +370,191 @@ export function generateYouTubeDescription(
   reciterInfo?: ReciterInfo,
   options: YouTubeDescriptionOptions = DEFAULT_DESCRIPTION_OPTIONS
 ): string {
+  const isBn = options.language !== 'en';
+  const useBnDigits = isBn && options.digitFormat !== 'english';
+  const formatNum = useBnDigits ? toBengaliDigits : (n: number | string) => String(n);
   const surah = getSurahByNumber(config.surahNumber);
+  const isFull = config.fromAyah === 1 && config.toAyah === surah.totalAyahs;
+
+  if (isBn) {
+    const surahBn = getSurahNameLocalized(config.surahNumber, 'bn');
+    const arabicName = surah.nameArabic;
+    const meaningBn = getSurahMeaningLocalized(config.surahNumber, 'bn');
+    const meaningText = meaningBn ? ` (${meaningBn})` : '';
+    const reciterBn = getReciterNameLocalized(reciterInfo?.name, 'bn');
+    const revelationBn = getRevelationTypeLocalized(surah.revelationType, 'bn');
+    const translationBookBn = getTranslationBookNameLocalized(config, 'bn') || 'বাংলা অনুবাদ';
+    const rangeText = isFull
+      ? `সম্পূর্ণ সূরা (${formatNum(surah.totalAyahs)} আয়াত)`
+      : `আয়াত ${formatNum(config.fromAyah)} থেকে ${formatNum(config.toAyah)}`;
+
+    const sections: string[] = [];
+
+    // Mode: CLEAN (No fluff, no extra talk, simple & dignified)
+    if (options.mode === 'clean') {
+      // 1. Core Header
+      if (options.includeSurahMeta || options.includeReciterCredits || options.includeTranslationCredits) {
+        let metaCard = `সূরা ${surahBn}${meaningText}\n`;
+        metaCard += `ক্বারী: ${reciterBn}\n`;
+        metaCard += `আয়াত সংখ্যা: ${formatNum(surah.totalAyahs)} | অবস্থান: ${revelationBn}\n`;
+        if (config.showPrimaryTranslation && translationBookBn) {
+          metaCard += `অনুবাদ: ${translationBookBn}\n`;
+        }
+        if (!isFull) {
+          metaCard += `পঠিত অংশ: ${rangeText}\n`;
+        }
+        sections.push(metaCard.trim());
+      }
+
+      // 2. Timestamps / Chapters
+      if (options.includeTimestamps) {
+        const timestamps = calculateYouTubeTimestamps(config, ayahs, {
+          language: 'bn',
+          digitFormat: options.digitFormat,
+        });
+        const formatted = formatTimestampsForYouTube(timestamps, options.timestampFormat);
+        sections.push(`সময়সূচী / টাইমলাইন:\n${formatted}`);
+      }
+
+      // 3. Relevant Clean Hashtags
+      if (options.includeHashtags) {
+        const cleanSurah = surahBn.replace(/[\s-]/g, '_');
+        const cleanReciter = reciterBn.replace(/[\s-]/g, '_');
+        const tags = [
+          `#সূরা_${cleanSurah}`,
+          `#${cleanReciter}`,
+          '#কুরআন_তিলাওয়াত',
+          '#বাংলা_অনুবাদ',
+          '#Quran',
+          '#Tilawat',
+        ];
+        sections.push(tags.join(' '));
+      }
+
+      return sections.join('\n\n');
+    }
+
+    // Mode: DETAILED (Optional extended mode with Hadith & Call to Action if user enables them)
+    // 1. Hook / Intro
+    if (options.includeHook) {
+      sections.push(
+        `পবিত্র কুরআনের সূরা ${surahBn} (سورة ${arabicName})${meaningText}-এর সুন্দর ও নির্ভুল তিলাওয়াত (${rangeText})।`
+      );
+    }
+
+    // 2. Surah Virtues & Hadith (if requested)
+    if (options.includeVirtues) {
+      const virtueInfo = SURAH_VIRTUES_MAP[config.surahNumber];
+      if (virtueInfo) {
+        let virtueText = `সূরা ${surahBn}-এর ফজিলত ও গুরুত্ব:\n`;
+        virtueText += `${virtueInfo.virtue}\n`;
+        if (virtueInfo.hadithRef) {
+          virtueText += `সূত্র: ${virtueInfo.hadithRef}\n`;
+        }
+        sections.push(virtueText.trim());
+      }
+    }
+
+    // 3. Timestamps
+    if (options.includeTimestamps) {
+      const timestamps = calculateYouTubeTimestamps(config, ayahs, {
+        language: 'bn',
+        digitFormat: options.digitFormat,
+      });
+      const formatted = formatTimestampsForYouTube(timestamps, options.timestampFormat);
+      sections.push(`ভিডিও টাইমলাইন:\n${formatted}`);
+    }
+
+    // 4. Detailed Meta Card
+    if (options.includeSurahMeta) {
+      sections.push(
+        `সূরার পরিচিতি:\n` +
+        `• সূরা নম্বর: ${formatNum(surah.number)}\n` +
+        `• নাম: সূরা ${surahBn} (سورة ${arabicName})\n` +
+        `• অর্থ: "${meaningBn || surah.nameEnglish}"\n` +
+        `• আয়াত সংখ্যা: ${formatNum(surah.totalAyahs)}\n` +
+        `• অবতীর্ণ: ${revelationBn} সূরা\n` +
+        `• তিলাওয়াতকৃত অংশ: ${rangeText}`
+      );
+    }
+
+    // 5. Credits
+    if (options.includeReciterCredits || options.includeTranslationCredits) {
+      let credits = `কৃতজ্ঞতা ও তথ্য:\n`;
+      if (options.includeReciterCredits) {
+        credits += `• ক্বারী: ${reciterBn}\n`;
+      }
+      if (options.includeTranslationCredits && translationBookBn) {
+        credits += `• বাংলা অনুবাদ: ${translationBookBn}\n`;
+      }
+      sections.push(credits.trim());
+    }
+
+    // 6. Call to Action (if explicitly requested)
+    if (options.includeCallToAction) {
+      sections.push(
+        `"তোমাদের মধ্যে সর্বোত্তম ব্যক্তি সে, যে কুরআন শিখে এবং অন্যকে শেখায়।" [সহীহ বুখারী ৫০২৭]\n` +
+        `ভিডিওটি ভালো লাগলে লাইক ও শেয়ার করে সদকায়ে জারিয়াহর অংশীদার হোন।`
+      );
+    }
+
+    // 7. Hashtags
+    if (options.includeHashtags) {
+      const cleanSurah = surahBn.replace(/[\s-]/g, '_');
+      const cleanReciter = reciterBn.replace(/[\s-]/g, '_');
+      const tags = [
+        `#সূরা_${cleanSurah}`,
+        `#${cleanReciter}`,
+        '#কুরআন_তিলাওয়াত',
+        '#বাংলা_অনুবাদ',
+        '#পবিত্র_কুরআন',
+        '#Quran',
+        '#QuranRecitation',
+      ];
+      sections.push(tags.join(' '));
+    }
+
+    return sections.join('\n\n');
+  }
+
+  // ENGLISH MODE (Existing logic preserved with English options)
   const surahName = surah.nameTransliterated;
   const arabicName = surah.nameArabic;
   const reciterName = reciterInfo?.name || 'Noble Quran Recitation';
   const reciterStyle = reciterInfo?.style ? ` (${reciterInfo.style})` : '';
   const translationBook = getTranslationBookName(config);
-  const localized = getLocalizedHeader(config, config.surahNumber, 0);
-
-  const isFull = config.fromAyah === 1 && config.toAyah === surah.totalAyahs;
   const rangeText = isFull ? `Full Surah (${surah.totalAyahs} Verses)` : `Verses ${config.fromAyah} to ${config.toAyah}`;
 
   const sections: string[] = [];
 
-  // 1. Hook & Overview
+  if (options.mode === 'clean') {
+    let cleanHeader = `Surah ${surahName} (سورة ${arabicName})\n`;
+    cleanHeader += `Reciter: ${reciterName}${reciterStyle}\n`;
+    cleanHeader += `Verses: ${surah.totalAyahs} | Revelation: ${surah.revelationType}\n`;
+    if (translationBook) {
+      cleanHeader += `Translation: ${translationBook}\n`;
+    }
+    if (!isFull) {
+      cleanHeader += `Recited: ${rangeText}\n`;
+    }
+    sections.push(cleanHeader.trim());
+
+    if (options.includeTimestamps) {
+      const timestamps = calculateYouTubeTimestamps(config, ayahs, { language: 'en' });
+      const formatted = formatTimestampsForYouTube(timestamps, options.timestampFormat);
+      sections.push(`Video Chapters / Timestamps:\n${formatted}`);
+    }
+
+    if (options.includeHashtags) {
+      const cleanSurah = surahName.replace(/[^a-zA-Z0-9]/g, '');
+      const cleanReciter = reciterName.replace(/[^a-zA-Z0-9]/g, '');
+      sections.push(`#Surah${cleanSurah} #${cleanReciter} #Quran #QuranRecitation #Islam`);
+    }
+
+    return sections.join('\n\n');
+  }
+
+  // Detailed English mode:
   if (options.includeHook) {
     sections.push(
       `Heart soothing and peaceful recitation of Surah ${surahName} (سورة ${arabicName}) - ${rangeText}.\n` +
@@ -324,7 +562,6 @@ export function generateYouTubeDescription(
     );
   }
 
-  // 2. Surah Virtues & Hadith (if available)
   if (options.includeVirtues) {
     const virtueInfo = SURAH_VIRTUES_MAP[config.surahNumber];
     if (virtueInfo) {
@@ -338,16 +575,14 @@ export function generateYouTubeDescription(
     }
   }
 
-  // 3. YouTube Chapters / Timestamps Table
   if (options.includeTimestamps) {
-    const timestamps = calculateYouTubeTimestamps(config, ayahs);
+    const timestamps = calculateYouTubeTimestamps(config, ayahs, { language: 'en' });
     const formatted = formatTimestampsForYouTube(timestamps, options.timestampFormat);
     sections.push(
       `━━━━━━━━━━━━━━━━━━━━━━━━━\n⏱️ VIDEO CHAPTERS / TIMESTAMPS\n━━━━━━━━━━━━━━━━━━━━━━━━━\n${formatted}`
     );
   }
 
-  // 4. Surah Metadata & Details Card
   if (options.includeSurahMeta) {
     sections.push(
       `━━━━━━━━━━━━━━━━━━━━━━━━━\n📖 SURAH INFORMATION\n━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
@@ -361,7 +596,6 @@ export function generateYouTubeDescription(
     );
   }
 
-  // 5. Reciter & Translation Attributions
   if (options.includeReciterCredits || options.includeTranslationCredits) {
     let credits = `━━━━━━━━━━━━━━━━━━━━━━━━━\n🎙️ AUDIO & TRANSLATION CREDITS\n━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
     if (options.includeReciterCredits) {
@@ -377,7 +611,6 @@ export function generateYouTubeDescription(
     sections.push(credits);
   }
 
-  // 6. Sadaqah Jariyah & Channel Call To Action
   if (options.includeCallToAction) {
     sections.push(
       `━━━━━━━━━━━━━━━━━━━━━━━━━\n🤲 SADAQAH JARIYAH & SUPPORT\n━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
@@ -388,7 +621,6 @@ export function generateYouTubeDescription(
     );
   }
 
-  // 7. Hashtags
   if (options.includeHashtags) {
     const cleanSurah = surahName.replace(/[^a-zA-Z0-9]/g, '');
     const cleanReciter = reciterName.replace(/[^a-zA-Z0-9]/g, '');
@@ -414,35 +646,70 @@ export function generateYouTubeDescription(
  */
 export function generateYouTubeTags(
   config: VideoTemplateConfig,
-  reciterInfo?: ReciterInfo
+  reciterInfo?: ReciterInfo,
+  options?: { language?: 'bn' | 'en' }
 ): string[] {
+  const isBn = options?.language !== 'en';
   const surah = getSurahByNumber(config.surahNumber);
-  const surahName = surah.nameTransliterated;
   const arabicName = surah.nameArabic;
-  const reciterName = reciterInfo?.name || 'Quran';
+  const surahName = surah.nameTransliterated;
 
-  const baseTags = [
-    `Surah ${surahName}`,
-    `Surah ${surahName} Full`,
-    `Surah ${surahName} 4k`,
-    `Surah ${surahName} with subtitles`,
-    `Surah ${surahName} English`,
-    `سورة ${arabicName}`,
-    reciterName,
-    `${reciterName} Surah ${surahName}`,
-    `${reciterName} Quran`,
-    'Quran Recitation',
-    'Heart Soothing Quran',
-    'Beautiful Quran Recitation',
-    'Quran before sleeping',
-    'Holy Quran 4k',
-    'Quran with English translation',
-    'Peaceful Quran recitation',
-    'Islam',
-    'Full Surah',
-    'Quran tilawat',
-    'Cure for anxiety',
-  ];
+  let baseTags: string[];
+  if (isBn) {
+    const surahBn = getSurahNameLocalized(config.surahNumber, 'bn');
+    const reciterBn = getReciterNameLocalized(reciterInfo?.name, 'bn');
+    const reciterEn = reciterInfo?.name || 'Quran';
+
+    baseTags = [
+      `সূরা ${surahBn}`,
+      `সূরা ${surahBn} সম্পূর্ণ`,
+      `সূরা ${surahBn} বাংলা অনুবাদ`,
+      `সূরা ${surahBn} তিলাওয়াত`,
+      `سورة ${arabicName}`,
+      `Surah ${surahName}`,
+      `Surah ${surahName} Full`,
+      reciterBn,
+      `${reciterBn} কুরআন তিলাওয়াত`,
+      `${reciterBn} সূরা ${surahBn}`,
+      `${reciterEn} Quran`,
+      'পবিত্র কুরআন তিলাওয়াত',
+      'কুরআন মাজীদ',
+      'বাংলা অনুবাদসহ কুরআন',
+      'কুরআন তিলাওয়াত',
+      'সূরা',
+      'Quran Tilawat',
+      'Quran Recitation',
+      'Heart Soothing Quran',
+      'Beautiful Quran Recitation',
+      'Quran',
+      'Islam',
+      'Full Surah',
+    ];
+  } else {
+    const reciterName = reciterInfo?.name || 'Quran';
+    baseTags = [
+      `Surah ${surahName}`,
+      `Surah ${surahName} Full`,
+      `Surah ${surahName} 4k`,
+      `Surah ${surahName} with subtitles`,
+      `Surah ${surahName} English`,
+      `سورة ${arabicName}`,
+      reciterName,
+      `${reciterName} Surah ${surahName}`,
+      `${reciterName} Quran`,
+      'Quran Recitation',
+      'Heart Soothing Quran',
+      'Beautiful Quran Recitation',
+      'Quran before sleeping',
+      'Holy Quran 4k',
+      'Quran with English translation',
+      'Peaceful Quran recitation',
+      'Islam',
+      'Full Surah',
+      'Quran tilawat',
+      'Cure for anxiety',
+    ];
+  }
 
   // Filter to fit comfortably within YouTube's 500 character limit
   const finalTags: string[] = [];
@@ -469,10 +736,39 @@ export function formatFullYouTubeKitText(
   selectedTitle?: string,
   options: YouTubeDescriptionOptions = DEFAULT_DESCRIPTION_OPTIONS
 ): string {
-  const titles = generateYouTubeTitles(config, reciterInfo);
+  const titles = generateYouTubeTitles(config, reciterInfo, {
+    language: options.language,
+    digitFormat: options.digitFormat,
+  });
   const activeTitle = selectedTitle || titles[0].text;
   const description = generateYouTubeDescription(config, ayahs, reciterInfo, options);
-  const tags = generateYouTubeTags(config, reciterInfo);
+  const tags = generateYouTubeTags(config, reciterInfo, { language: options.language });
+  const isBn = options.language !== 'en';
+
+  if (isBn) {
+    return (
+      `================================================================================\n` +
+      `কুরআন ভিডিও স্টুডিও - ইউটিউব টাইটেল ও ডেসক্রিপশন কিট (বাংলা)\n` +
+      `তারিখ: ${new Date().toLocaleString()}\n` +
+      `================================================================================\n\n` +
+      `[১] নির্বাচিত ভিডিও টাইটেল (Video Title):\n` +
+      `--------------------------------------------------------------------------------\n` +
+      `${activeTitle}\n\n` +
+      `বিকল্প টাইটেলসমূহ (Alternative Titles):\n` +
+      titles.map((t) => `• [${t.label}]: ${t.text}`).join('\n') +
+      `\n\n` +
+      `================================================================================\n` +
+      `[২] সম্পূর্ণ ইউটিউব ডেসক্রিপশন (Video Description):\n` +
+      `--------------------------------------------------------------------------------\n` +
+      `${description}\n\n` +
+      `================================================================================\n` +
+      `[৩] ইউটিউব ট্যাগসমূহ (YouTube Tags):\n` +
+      `--------------------------------------------------------------------------------\n` +
+      `${tags.join(', ')}\n\n` +
+      `মোট ট্যাগ অক্ষর: ${tags.join(', ').length} / ৫০০\n` +
+      `================================================================================\n`
+    );
+  }
 
   return (
     `================================================================================\n` +
