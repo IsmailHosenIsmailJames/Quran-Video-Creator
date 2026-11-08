@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { useStudioStore } from '../../store/studio-store';
 import { BACKGROUND_PRESETS } from '../../../shared/constants';
 import { getMediaUrl } from '../../../shared/media-url';
-import { TransitionType, BackgroundClip } from '../../../shared/types';
+import { TransitionType, BackgroundClip, isSalatJammatManifest } from '../../../shared/types';
 import { formatDurationMs } from '../../../shared/custom-timestamp-utils';
 import {
   Image,
@@ -317,7 +317,9 @@ export const VisualsTab: React.FC = () => {
               <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-gray-950/80 border border-emerald-500/30 text-[11px]">
                 <span className="flex items-center gap-1.5 text-emerald-300 font-medium">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  Synced with Surah {customTimestamp.surah_name_en} ({customTimestamp.ayahs.length} verses)
+                  {isSalatJammatManifest(customTimestamp)
+                    ? `Synced with Salat Jama'ah (${customTimestamp.segments.reduce((acc, s) => acc + s.ayahs.length, 0)} verses across ${customTimestamp.segments.length} segments)`
+                    : `Synced with Surah ${customTimestamp.surah_name_en} (${customTimestamp.ayahs.length} verses)`}
                 </span>
                 <span className="text-[10px] text-gray-400 font-mono">
                   Word karaoke locked
