@@ -16,11 +16,21 @@ export function getMediaUrl(filePath?: string | null): string {
 
   let cleanPath = filePath;
   if (cleanPath.startsWith('app-media://local/')) {
-    cleanPath = cleanPath.slice('app-media://local/'.length);
+    cleanPath = cleanPath.slice('app-media://local'.length);
+  } else if (cleanPath.startsWith('app-media://local')) {
+    cleanPath = cleanPath.slice('app-media://local'.length);
   } else if (cleanPath.startsWith('app-media://')) {
-    cleanPath = cleanPath.replace(/^app-media:\/\/(\/)?/, '');
+    cleanPath = cleanPath.replace(/^app-media:\/\/(\/)?/, '/');
   }
   cleanPath = decodeURIComponent(cleanPath);
+
+  // On Windows, if path begins with /C:, remove the leading slash.
+  // On Unix (macOS/Linux), ensure it begins with a slash.
+  if (/^\/[a-zA-Z]:/.test(cleanPath)) {
+    cleanPath = cleanPath.slice(1);
+  } else if (!/^[a-zA-Z]:/.test(cleanPath) && !cleanPath.startsWith('/')) {
+    cleanPath = '/' + cleanPath;
+  }
 
   // If local media server port is available, use direct HTTP streaming!
   const port = typeof window !== 'undefined' ? (window as any).__MEDIA_SERVER_PORT__ : 0;

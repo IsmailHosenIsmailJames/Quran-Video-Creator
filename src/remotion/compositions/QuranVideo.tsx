@@ -110,7 +110,12 @@ export const QuranVideo: React.FC<QuranVideoCompositionProps> = ({
   ayahs,
   totalDurationInFrames,
   reciterInfo,
+  mediaServerPort,
 }) => {
+  if (typeof window !== 'undefined' && mediaServerPort) {
+    (window as any).__MEDIA_SERVER_PORT__ = mediaServerPort;
+  }
+
   // Guarantee fonts are fully loaded before capturing frames
   const [handle] = useState(() => delayRender('fonts-loader'));
 

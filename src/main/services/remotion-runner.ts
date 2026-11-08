@@ -317,16 +317,36 @@ class RemotionRunnerService {
       // Ensure local media streaming server is active so headless Chromium can fetch custom videos and audio
       await localMediaServer.start();
 
+      const cleanMediaFilePath = (rawPath?: string | null): string => {
+        if (!rawPath) return '';
+        let clean = rawPath;
+        if (clean.startsWith('app-media://local/')) {
+          clean = clean.slice('app-media://local'.length);
+        } else if (clean.startsWith('app-media://local')) {
+          clean = clean.slice('app-media://local'.length);
+        } else if (clean.startsWith('app-media://')) {
+          clean = clean.replace(/^app-media:\/\/(\/)?/, '/');
+        }
+        clean = decodeURIComponent(clean);
+        if (/^\/[a-zA-Z]:/.test(clean)) {
+          clean = clean.slice(1);
+        } else if (
+          !/^[a-zA-Z]:/.test(clean) &&
+          !clean.startsWith('/') &&
+          !clean.startsWith('http://') &&
+          !clean.startsWith('https://') &&
+          !clean.startsWith('data:') &&
+          !clean.startsWith('blob:')
+        ) {
+          clean = '/' + clean;
+        }
+        return clean;
+      };
+
       const probeDuration = async (filePath?: string | null): Promise<number | undefined> => {
         try {
           if (!filePath) return undefined;
-          let cleanPath = filePath;
-          if (cleanPath.startsWith('app-media://local/')) {
-            cleanPath = cleanPath.slice('app-media://local/'.length);
-          } else if (cleanPath.startsWith('app-media://')) {
-            cleanPath = cleanPath.replace(/^app-media:\/\/(\/)?/, '');
-          }
-          cleanPath = decodeURIComponent(cleanPath);
+          const cleanPath = cleanMediaFilePath(filePath);
           if (!fs.existsSync(cleanPath)) return undefined;
           const { Input, FilePathSource, ALL_FORMATS } = require('mediabunny');
           const input = new Input({
@@ -379,13 +399,7 @@ class RemotionRunnerService {
       // Sanitize logo path if present
       let sanitizedLogoPath: string | undefined = undefined;
       if (config.logoPath) {
-        let cleanLogo = config.logoPath;
-        if (cleanLogo.startsWith('app-media://local/')) {
-          cleanLogo = cleanLogo.slice('app-media://local/'.length);
-        } else if (cleanLogo.startsWith('app-media://')) {
-          cleanLogo = cleanLogo.replace(/^app-media:\/\/(\/)?/, '');
-        }
-        cleanLogo = decodeURIComponent(cleanLogo);
+        const cleanLogo = cleanMediaFilePath(config.logoPath);
         if (cleanLogo.startsWith('http://') || cleanLogo.startsWith('https://') || cleanLogo.startsWith('data:')) {
           sanitizedLogoPath = cleanLogo;
         } else if (fs.existsSync(cleanLogo)) {
@@ -398,13 +412,7 @@ class RemotionRunnerService {
 
       let sanitizedIntroVideoPath: string | undefined = undefined;
       if (config.introVideoPath) {
-        let cleanIntro = config.introVideoPath;
-        if (cleanIntro.startsWith('app-media://local/')) {
-          cleanIntro = cleanIntro.slice('app-media://local/'.length);
-        } else if (cleanIntro.startsWith('app-media://')) {
-          cleanIntro = cleanIntro.replace(/^app-media:\/\/(\/)?/, '');
-        }
-        cleanIntro = decodeURIComponent(cleanIntro);
+        const cleanIntro = cleanMediaFilePath(config.introVideoPath);
         if (cleanIntro.startsWith('http://') || cleanIntro.startsWith('https://')) {
           sanitizedIntroVideoPath = cleanIntro;
         } else if (fs.existsSync(cleanIntro)) {
@@ -417,13 +425,7 @@ class RemotionRunnerService {
 
       let sanitizedIntroCustomLogo: string | undefined = undefined;
       if (config.introCustomLogo) {
-        let cleanIntroLogo = config.introCustomLogo;
-        if (cleanIntroLogo.startsWith('app-media://local/')) {
-          cleanIntroLogo = cleanIntroLogo.slice('app-media://local/'.length);
-        } else if (cleanIntroLogo.startsWith('app-media://')) {
-          cleanIntroLogo = cleanIntroLogo.replace(/^app-media:\/\/(\/)?/, '');
-        }
-        cleanIntroLogo = decodeURIComponent(cleanIntroLogo);
+        const cleanIntroLogo = cleanMediaFilePath(config.introCustomLogo);
         if (cleanIntroLogo.startsWith('http://') || cleanIntroLogo.startsWith('https://') || cleanIntroLogo.startsWith('data:')) {
           sanitizedIntroCustomLogo = cleanIntroLogo;
         } else if (fs.existsSync(cleanIntroLogo)) {
@@ -435,13 +437,7 @@ class RemotionRunnerService {
 
       let sanitizedOutroVideoPath: string | undefined = undefined;
       if (config.outroVideoPath) {
-        let cleanOutro = config.outroVideoPath;
-        if (cleanOutro.startsWith('app-media://local/')) {
-          cleanOutro = cleanOutro.slice('app-media://local/'.length);
-        } else if (cleanOutro.startsWith('app-media://')) {
-          cleanOutro = cleanOutro.replace(/^app-media:\/\/(\/)?/, '');
-        }
-        cleanOutro = decodeURIComponent(cleanOutro);
+        const cleanOutro = cleanMediaFilePath(config.outroVideoPath);
         if (cleanOutro.startsWith('http://') || cleanOutro.startsWith('https://')) {
           sanitizedOutroVideoPath = cleanOutro;
         } else if (fs.existsSync(cleanOutro)) {
@@ -454,19 +450,26 @@ class RemotionRunnerService {
 
       let sanitizedOutroCustomLogo: string | undefined = undefined;
       if (config.outroCustomLogo) {
-        let cleanOutroLogo = config.outroCustomLogo;
-        if (cleanOutroLogo.startsWith('app-media://local/')) {
-          cleanOutroLogo = cleanOutroLogo.slice('app-media://local/'.length);
-        } else if (cleanOutroLogo.startsWith('app-media://')) {
-          cleanOutroLogo = cleanOutroLogo.replace(/^app-media:\/\/(\/)?/, '');
-        }
-        cleanOutroLogo = decodeURIComponent(cleanOutroLogo);
+        const cleanOutroLogo = cleanMediaFilePath(config.outroCustomLogo);
         if (cleanOutroLogo.startsWith('http://') || cleanOutroLogo.startsWith('https://') || cleanOutroLogo.startsWith('data:')) {
           sanitizedOutroCustomLogo = cleanOutroLogo;
         } else if (fs.existsSync(cleanOutroLogo)) {
           sanitizedOutroCustomLogo = localMediaServer.getMediaUrl(cleanOutroLogo);
         } else {
           sanitizedOutroCustomLogo = undefined;
+        }
+      }
+
+      // Sanitize recitation video path if present
+      let sanitizedRecitationVideoPath: string | undefined = undefined;
+      if (config.recitationVideoPath) {
+        const cleanRecitationVideo = cleanMediaFilePath(config.recitationVideoPath);
+        if (cleanRecitationVideo.startsWith('http://') || cleanRecitationVideo.startsWith('https://')) {
+          sanitizedRecitationVideoPath = cleanRecitationVideo;
+        } else if (fs.existsSync(cleanRecitationVideo)) {
+          sanitizedRecitationVideoPath = localMediaServer.getMediaUrl(cleanRecitationVideo);
+        } else {
+          sanitizedRecitationVideoPath = localMediaServer.getMediaUrl(cleanRecitationVideo);
         }
       }
 
@@ -483,6 +486,7 @@ class RemotionRunnerService {
         customAudioPath: config.customAudioPath
           ? localMediaServer.getMediaUrl(config.customAudioPath)
           : undefined,
+        recitationVideoPath: sanitizedRecitationVideoPath,
       };
 
       // Ensure all recitation audio tracks are cached locally on disk before rendering begins
@@ -540,6 +544,7 @@ class RemotionRunnerService {
         ayahs: sanitizedAyahs,
         totalDurationInFrames,
         reciterInfo: reciter,
+        mediaServerPort: localMediaServer.getPort(),
       };
 
       // 1. Resolve browser and compositor binaries

@@ -438,6 +438,7 @@ export type QuranVideoCompositionProps = {
   ayahs: AyahSequenceData[];
   totalDurationInFrames: number;
   reciterInfo?: ReciterInfo;
+  mediaServerPort?: number;
   [key: string]: unknown;
 };
 
