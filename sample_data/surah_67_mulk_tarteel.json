@@ -1,0 +1,2325 @@
+{
+  "surah_number": 67,
+  "surah_name_ar": "سُورَةُ المُلۡكِ",
+  "surah_name_en": "Al-Mulk",
+  "start_ayah": 1,
+  "end_ayah": 30,
+  "is_partial": false,
+  "total_duration_ms": 379525,
+  "parts_processed": 6,
+  "model_used": "tarteel-ai/whisper-base-ar-quran (Tarteel Base (Official SOTA • 100% Stable))",
+  "model_choice": "tarteel-base",
+  "device": "mps",
+  "compute_type": "float16",
+  "preamble": {
+    "has_istiadha": false,
+    "istiadha": null,
+    "has_basmala": true,
+    "basmala": {
+      "text": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
+      "start_ms": 0,
+      "end_ms": 2780,
+      "duration_ms": 2780
+    }
+  },
+  "ayahs": [
+    {
+      "ayah_number": 1,
+      "text_uthmani": "تَبَٰرَكَ ٱلَّذِى بِيَدِهِ ٱلْمُلْكُ وَهُوَ عَلَىٰ كُلِّ شَىْءٍۢ قَدِيرٌ",
+      "start_ms": 2780,
+      "end_ms": 11620,
+      "duration_ms": 8840,
+      "word_count": 9,
+      "words": [
+        {
+          "word_index": 1,
+          "text_uthmani": "تَبَٰرَكَ",
+          "start_ms": 2780,
+          "end_ms": 4235
+        },
+        {
+          "word_index": 2,
+          "text_uthmani": "ٱلَّذِى",
+          "start_ms": 4235,
+          "end_ms": 5027
+        },
+        {
+          "word_index": 3,
+          "text_uthmani": "بِيَدِهِ",
+          "start_ms": 5027,
+          "end_ms": 5734
+        },
+        {
+          "word_index": 4,
+          "text_uthmani": "ٱلْمُلْكُ",
+          "start_ms": 5734,
+          "end_ms": 6397
+        },
+        {
+          "word_index": 5,
+          "text_uthmani": "وَهُوَ",
+          "start_ms": 6397,
+          "end_ms": 7039
+        },
+        {
+          "word_index": 6,
+          "text_uthmani": "عَلَىٰ",
+          "start_ms": 7039,
+          "end_ms": 8045
+        },
+        {
+          "word_index": 7,
+          "text_uthmani": "كُلِّ",
+          "start_ms": 8045,
+          "end_ms": 8174
+        },
+        {
+          "word_index": 8,
+          "text_uthmani": "شَىْءٍۢ",
+          "start_ms": 8174,
+          "end_ms": 10229
+        },
+        {
+          "word_index": 9,
+          "text_uthmani": "قَدِيرٌ",
+          "start_ms": 10229,
+          "end_ms": 11620
+        }
+      ]
+    },
+    {
+      "ayah_number": 2,
+      "text_uthmani": "ٱلَّذِى خَلَقَ ٱلْمَوْتَ وَٱلْحَيَوٰةَ لِيَبْلُوَكُمْ أَيُّكُمْ أَحْسَنُ عَمَلًۭا ۚ وَهُوَ ٱلْعَزِيزُ ٱلْغَفُورُ",
+      "start_ms": 11620,
+      "end_ms": 22580,
+      "duration_ms": 10960,
+      "word_count": 11,
+      "words": [
+        {
+          "word_index": 1,
+          "text_uthmani": "ٱلَّذِى",
+          "start_ms": 11620,
+          "end_ms": 13314
+        },
+        {
+          "word_index": 2,
+          "text_uthmani": "خَلَقَ",
+          "start_ms": 13314,
+          "end_ms": 14279
+        },
+        {
+          "word_index": 3,
+          "text_uthmani": "ٱلْمَوْتَ",
+          "start_ms": 14279,
+          "end_ms": 15660
+        },
+        {
+          "word_index": 4,
+          "text_uthmani": "وَٱلْحَيَوٰةَ",
+          "start_ms": 15660,
+          "end_ms": 17302
+        },
+        {
+          "word_index": 5,
+          "text_uthmani": "لِيَبْلُوَكُمْ",
+          "start_ms": 17302,
+          "end_ms": 18475
+        },
+        {
+          "word_index": 6,
+          "text_uthmani": "أَيُّكُمْ",
+          "start_ms": 18475,
+          "end_ms": 19335
+        },
+        {
+          "word_index": 7,
+          "text_uthmani": "أَحْسَنُ",
+          "start_ms": 19335,
+          "end_ms": 19465
+        },
+        {
+          "word_index": 8,
+          "text_uthmani": "عَمَلًۭا ۚ",
+          "start_ms": 19465,
+          "end_ms": 19674
+        },
+        {
+          "word_index": 9,
+          "text_uthmani": "وَهُوَ",
+          "start_ms": 19674,
+          "end_ms": 20169
+        },
+        {
+          "word_index": 10,
+          "text_uthmani": "ٱلْعَزِيزُ",
+          "start_ms": 20169,
+          "end_ms": 21342
+        },
+        {
+          "word_index": 11,
+          "text_uthmani": "ٱلْغَفُورُ",
+          "start_ms": 21342,
+          "end_ms": 22580
+        }
+      ]
+    },
+    {
+      "ayah_number": 3,
+      "text_uthmani": "ٱلَّذِى خَلَقَ سَبْعَ سَمَٰوَٰتٍۢ طِبَاقًۭا ۖ مَّا تَرَىٰ فِى خَلْقِ ٱلرَّحْمَٰنِ مِن تَفَٰوُتٍۢ ۖ فَٱرْجِعِ ٱلْبَصَرَ هَلْ تَرَىٰ مِن فُطُورٍۢ",
+      "start_ms": 22580,
+      "end_ms": 39280,
+      "duration_ms": 16700,
+      "word_count": 18,
+      "words": [
+        {
+          "word_index": 1,
+          "text_uthmani": "ٱلَّذِى",
+          "start_ms": 22580,
+          "end_ms": 24682
+        },
+        {
+          "word_index": 2,
+          "text_uthmani": "خَلَقَ",
+          "start_ms": 24682,
+          "end_ms": 27731
+        },
+        {
+          "word_index": 3,
+          "text_uthmani": "سَبْعَ",
+          "start_ms": 27731,
+          "end_ms": 28803
+        },
+        {
+          "word_index": 4,
+          "text_uthmani": "سَمَٰوَٰتٍۢ",
+          "start_ms": 28803,
+          "end_ms": 29009
+        },
+        {
+          "word_index": 5,
+          "text_uthmani": "طِبَاقًۭا ۖ",
+          "start_ms": 29009,
+          "end_ms": 29112
+        },
+        {
+          "word_index": 6,
+          "text_uthmani": "مَّا",
+          "start_ms": 29112,
+          "end_ms": 29956
+        },
+        {
+          "word_index": 7,
+          "text_uthmani": "تَرَىٰ",
+          "start_ms": 29956,
+          "end_ms": 30008
+        },
+        {
+          "word_index": 8,
+          "text_uthmani": "فِى",
+          "start_ms": 30008,
+          "end_ms": 30667
+        },
+        {
+          "word_index": 9,
+          "text_uthmani": "خَلْقِ",
+          "start_ms": 30667,
+          "end_ms": 31739
+        },
+        {
+          "word_index": 10,
+          "text_uthmani": "ٱلرَّحْمَٰنِ",
+          "start_ms": 31739,
+          "end_ms": 33160
+        },
+        {
+          "word_index": 11,
+          "text_uthmani": "مِن",
+          "start_ms": 33160,
+          "end_ms": 34788
+        },
+        {
+          "word_index": 12,
+          "text_uthmani": "تَفَٰوُتٍۢ ۖ",
+          "start_ms": 34788,
+          "end_ms": 35015
+        },
+        {
+          "word_index": 13,
+          "text_uthmani": "فَٱرْجِعِ",
+          "start_ms": 35015,
+          "end_ms": 35242
+        },
+        {
+          "word_index": 14,
+          "text_uthmani": "ٱلْبَصَرَ",
+          "start_ms": 35242,
+          "end_ms": 36045
+        },
+        {
+          "word_index": 15,
+          "text_uthmani": "هَلْ",
+          "start_ms": 36045,
+          "end_ms": 36375
+        },
+        {
+          "word_index": 16,
+          "text_uthmani": "تَرَىٰ",
+          "start_ms": 36375,
+          "end_ms": 37117
+        },
+        {
+          "word_index": 17,
+          "text_uthmani": "مِن",
+          "start_ms": 37117,
+          "end_ms": 38003
+        },
+        {
+          "word_index": 18,
+          "text_uthmani": "فُطُورٍۢ",
+          "start_ms": 38003,
+          "end_ms": 39280
+        }
+      ]
+    },
+    {
+      "ayah_number": 4,
+      "text_uthmani": "ثُمَّ ٱرْجِعِ ٱلْبَصَرَ كَرَّتَيْنِ يَنقَلِبْ إِلَيْكَ ٱلْبَصَرُ خَاسِئًۭا وَهُوَ حَسِيرٌۭ",
+      "start_ms": 39280,
+      "end_ms": 49120,
+      "duration_ms": 9840,
+      "word_count": 10,
+      "words": [
+        {
+          "word_index": 1,
+          "text_uthmani": "ثُمَّ",
+          "start_ms": 39280,
+          "end_ms": 40182
+        },
+        {
+          "word_index": 2,
+          "text_uthmani": "ٱرْجِعِ",
+          "start_ms": 40182,
+          "end_ms": 40763
+        },
+        {
+          "word_index": 3,
+          "text_uthmani": "ٱلْبَصَرَ",
+          "start_ms": 40763,
+          "end_ms": 41565
+        },
+        {
+          "word_index": 4,
+          "text_uthmani": "كَرَّتَيْنِ",
+          "start_ms": 41565,
+          "end_ms": 42627
+        },
+        {
+          "word_index": 5,
+          "text_uthmani": "يَنقَلِبْ",
+          "start_ms": 42627,
+          "end_ms": 43809
+        },
+        {
+          "word_index": 6,
+          "text_uthmani": "إِلَيْكَ",
+          "start_ms": 43809,
+          "end_ms": 44551
+        },
+        {
+          "word_index": 7,
+          "text_uthmani": "ٱلْبَصَرُ",
+          "start_ms": 44551,
+          "end_ms": 45412
+        },
+        {
+          "word_index": 8,
+          "text_uthmani": "خَاسِئًۭا",
+          "start_ms": 45412,
+          "end_ms": 46314
+        },
+        {
+          "word_index": 9,
+          "text_uthmani": "وَهُوَ",
+          "start_ms": 46314,
+          "end_ms": 47336
+        },
+        {
+          "word_index": 10,
+          "text_uthmani": "حَسِيرٌۭ",
+          "start_ms": 47336,
+          "end_ms": 49120
+        }
+      ]
+    },
+    {
+      "ayah_number": 5,
+      "text_uthmani": "وَلَقَدْ زَيَّنَّا ٱلسَّمَآءَ ٱلدُّنْيَا بِمَصَٰبِيحَ وَجَعَلْنَٰهَا رُجُومًۭا لِّلشَّيَٰطِينِ ۖ وَأَعْتَدْنَا لَهُمْ عَذَابَ ٱلسَّعِيرِ",
+      "start_ms": 49120,
+      "end_ms": 63860,
+      "duration_ms": 14740,
+      "word_count": 12,
+      "words": [
+        {
+          "word_index": 1,
+          "text_uthmani": "وَلَقَدْ",
+          "start_ms": 49120,
+          "end_ms": 50999
+        },
+        {
+          "word_index": 2,
+          "text_uthmani": "زَيَّنَّا",
+          "start_ms": 50999,
+          "end_ms": 53449
+        },
+        {
+          "word_index": 3,
+          "text_uthmani": "ٱلسَّمَآءَ",
+          "start_ms": 53449,
+          "end_ms": 54146
+        },
+        {
+          "word_index": 4,
+          "text_uthmani": "ٱلدُّنْيَا",
+          "start_ms": 54146,
+          "end_ms": 55540
+        },
+        {
+          "word_index": 5,
+          "text_uthmani": "بِمَصَٰبِيحَ",
+          "start_ms": 55540,
+          "end_ms": 57060
+        },
+        {
+          "word_index": 6,
+          "text_uthmani": "وَجَعَلْنَٰهَا",
+          "start_ms": 57060,
+          "end_ms": 58074
+        },
+        {
+          "word_index": 7,
+          "text_uthmani": "رُجُومًۭا",
+          "start_ms": 58074,
+          "end_ms": 60270
+        },
+        {
+          "word_index": 8,
+          "text_uthmani": "لِّلشَّيَٰطِينِ ۖ",
+          "start_ms": 60270,
+          "end_ms": 60376
+        },
+        {
+          "word_index": 9,
+          "text_uthmani": "وَأَعْتَدْنَا",
+          "start_ms": 60376,
+          "end_ms": 61474
+        },
+        {
+          "word_index": 10,
+          "text_uthmani": "لَهُمْ",
+          "start_ms": 61474,
+          "end_ms": 62086
+        },
+        {
+          "word_index": 11,
+          "text_uthmani": "عَذَابَ",
+          "start_ms": 62086,
+          "end_ms": 62804
+        },
+        {
+          "word_index": 12,
+          "text_uthmani": "ٱلسَّعِيرِ",
+          "start_ms": 62804,
+          "end_ms": 63860
+        }
+      ]
+    },
+    {
+      "ayah_number": 6,
+      "text_uthmani": "وَلِلَّذِينَ كَفَرُوا۟ بِرَبِّهِمْ عَذَابُ جَهَنَّمَ ۖ وَبِئْسَ ٱلْمَصِيرُ",
+      "start_ms": 63860,
+      "end_ms": 71074,
+      "duration_ms": 7214,
+      "word_count": 7,
+      "words": [
+        {
+          "word_index": 1,
+          "text_uthmani": "وَلِلَّذِينَ",
+          "start_ms": 63860,
+          "end_ms": 65952
+        },
+        {
+          "word_index": 2,
+          "text_uthmani": "كَفَرُوا۟",
+          "start_ms": 65952,
+          "end_ms": 67020
+        },
+        {
+          "word_index": 3,
+          "text_uthmani": "بِرَبِّهِمْ",
+          "start_ms": 67020,
+          "end_ms": 67761
+        },
+        {
+          "word_index": 4,
+          "text_uthmani": "عَذَابُ",
+          "start_ms": 67761,
+          "end_ms": 69505
+        },
+        {
+          "word_index": 5,
+          "text_uthmani": "جَهَنَّمَ ۖ",
+          "start_ms": 69505,
+          "end_ms": 69766
+        },
+        {
+          "word_index": 6,
+          "text_uthmani": "وَبِئْسَ",
+          "start_ms": 69766,
+          "end_ms": 70289
+        },
+        {
+          "word_index": 7,
+          "text_uthmani": "ٱلْمَصِيرُ",
+          "start_ms": 70289,
+          "end_ms": 71074
+        }
+      ]
+    },
+    {
+      "ayah_number": 7,
+      "text_uthmani": "إِذَآ أُلْقُوا۟ فِيهَا سَمِعُوا۟ لَهَا شَهِيقًۭا وَهِىَ تَفُورُ",
+      "start_ms": 71074,
+      "end_ms": 80394,
+      "duration_ms": 9320,
+      "word_count": 8,
+      "words": [
+        {
+          "word_index": 1,
+          "text_uthmani": "إِذَآ",
+          "start_ms": 71074,
+          "end_ms": 72881
+        },
+        {
+          "word_index": 2,
+          "text_uthmani": "أُلْقُوا۟",
+          "start_ms": 72881,
+          "end_ms": 73914
+        },
+        {
+          "word_index": 3,
+          "text_uthmani": "فِيهَا",
+          "start_ms": 73914,
+          "end_ms": 74404
+        },
+        {
+          "word_index": 4,
+          "text_uthmani": "سَمِعُوا۟",
+          "start_ms": 74404,
+          "end_ms": 75747
+        },
+        {
+          "word_index": 5,
+          "text_uthmani": "لَهَا",
+          "start_ms": 75747,
+          "end_ms": 76083
+        },
+        {
+          "word_index": 6,
+          "text_uthmani": "شَهِيقًۭا",
+          "start_ms": 76083,
+          "end_ms": 77373
+        },
+        {
+          "word_index": 7,
+          "text_uthmani": "وَهِىَ",
+          "start_ms": 77373,
+          "end_ms": 78871
+        },
+        {
+          "word_index": 8,
+          "text_uthmani": "تَفُورُ",
+          "start_ms": 78871,
+          "end_ms": 80394
+        }
+      ]
+    },
+    {
+      "ayah_number": 8,
+      "text_uthmani": "تَكَادُ تَمَيَّزُ مِنَ ٱلْغَيْظِ ۖ كُلَّمَآ أُلْقِىَ فِيهَا فَوْجٌۭ سَأَلَهُمْ خَزَنَتُهَآ أَلَمْ يَأْتِكُمْ نَذِيرٌۭ",
+      "start_ms": 80394,
+      "end_ms": 99774,
+      "duration_ms": 19380,
+      "word_count": 13,
+      "words": [
+        {
+          "word_index": 1,
+          "text_uthmani": "تَكَادُ",
+          "start_ms": 80394,
+          "end_ms": 82144
+        },
+        {
+          "word_index": 2,
+          "text_uthmani": "تَمَيَّزُ",
+          "start_ms": 82144,
+          "end_ms": 82516
+        },
+        {
+          "word_index": 3,
+          "text_uthmani": "مِنَ",
+          "start_ms": 82516,
+          "end_ms": 84309
+        },
+        {
+          "word_index": 4,
+          "text_uthmani": "ٱلْغَيْظِ ۖ",
+          "start_ms": 84309,
+          "end_ms": 84812
+        },
+        {
+          "word_index": 5,
+          "text_uthmani": "كُلَّمَآ",
+          "start_ms": 84812,
+          "end_ms": 87481
+        },
+        {
+          "word_index": 6,
+          "text_uthmani": "أُلْقِىَ",
+          "start_ms": 87481,
+          "end_ms": 88203
+        },
+        {
+          "word_index": 7,
+          "text_uthmani": "فِيهَا",
+          "start_ms": 88203,
+          "end_ms": 88837
+        },
+        {
+          "word_index": 8,
+          "text_uthmani": "فَوْجٌۭ",
+          "start_ms": 88837,
+          "end_ms": 90390
+        },
+        {
+          "word_index": 9,
+          "text_uthmani": "سَأَلَهُمْ",
+          "start_ms": 90390,
+          "end_ms": 93365
+        },
+        {
+          "word_index": 10,
+          "text_uthmani": "خَزَنَتُهَآ",
+          "start_ms": 93365,
+          "end_ms": 96165
+        },
+        {
+          "word_index": 11,
+          "text_uthmani": "أَلَمْ",
+          "start_ms": 96165,
+          "end_ms": 96537
+        },
+        {
+          "word_index": 12,
+          "text_uthmani": "يَأْتِكُمْ",
+          "start_ms": 96537,
+          "end_ms": 97521
+        },
+        {
+          "word_index": 13,
+          "text_uthmani": "نَذِيرٌۭ",
+          "start_ms": 97521,
+          "end_ms": 99774
+        }
+      ]
+    },
+    {
+      "ayah_number": 9,
+      "text_uthmani": "قَالُوا۟ بَلَىٰ قَدْ جَآءَنَا نَذِيرٌۭ فَكَذَّبْنَا وَقُلْنَا مَا نَزَّلَ ٱللَّهُ مِن شَىْءٍ إِنْ أَنتُمْ إِلَّا فِى ضَلَٰلٍۢ كَبِيرٍۢ",
+      "start_ms": 99774,
+      "end_ms": 119114,
+      "duration_ms": 19340,
+      "word_count": 18,
+      "words": [
+        {
+          "word_index": 1,
+          "text_uthmani": "قَالُوا۟",
+          "start_ms": 99774,
+          "end_ms": 100695
+        },
+        {
+          "word_index": 2,
+          "text_uthmani": "بَلَىٰ",
+          "start_ms": 100695,
+          "end_ms": 101236
+        },
+        {
+          "word_index": 3,
+          "text_uthmani": "قَدْ",
+          "start_ms": 101236,
+          "end_ms": 101356
+        },
+        {
+          "word_index": 4,
+          "text_uthmani": "جَآءَنَا",
+          "start_ms": 101356,
+          "end_ms": 103278
+        },
+        {
+          "word_index": 5,
+          "text_uthmani": "نَذِيرٌۭ",
+          "start_ms": 103278,
+          "end_ms": 105220
+        },
+        {
+          "word_index": 6,
+          "text_uthmani": "فَكَذَّبْنَا",
+          "start_ms": 105220,
+          "end_ms": 106341
+        },
+        {
+          "word_index": 7,
+          "text_uthmani": "وَقُلْنَا",
+          "start_ms": 106341,
+          "end_ms": 108623
+        },
+        {
+          "word_index": 8,
+          "text_uthmani": "مَا",
+          "start_ms": 108623,
+          "end_ms": 109004
+        },
+        {
+          "word_index": 9,
+          "text_uthmani": "نَزَّلَ",
+          "start_ms": 109004,
+          "end_ms": 109704
+        },
+        {
+          "word_index": 10,
+          "text_uthmani": "ٱللَّهُ",
+          "start_ms": 109704,
+          "end_ms": 110445
+        },
+        {
+          "word_index": 11,
+          "text_uthmani": "مِن",
+          "start_ms": 110445,
+          "end_ms": 111306
+        },
+        {
+          "word_index": 12,
+          "text_uthmani": "شَىْءٍ",
+          "start_ms": 111306,
+          "end_ms": 112147
+        },
+        {
+          "word_index": 13,
+          "text_uthmani": "إِنْ",
+          "start_ms": 112147,
+          "end_ms": 112647
+        },
+        {
+          "word_index": 14,
+          "text_uthmani": "أَنتُمْ",
+          "start_ms": 112647,
+          "end_ms": 113748
+        },
+        {
+          "word_index": 15,
+          "text_uthmani": "إِلَّا",
+          "start_ms": 113748,
+          "end_ms": 114389
+        },
+        {
+          "word_index": 16,
+          "text_uthmani": "فِى",
+          "start_ms": 114389,
+          "end_ms": 114850
+        },
+        {
+          "word_index": 17,
+          "text_uthmani": "ضَلَٰلٍۢ",
+          "start_ms": 114850,
+          "end_ms": 117332
+        },
+        {
+          "word_index": 18,
+          "text_uthmani": "كَبِيرٍۢ",
+          "start_ms": 117332,
+          "end_ms": 119114
+        }
+      ]
+    },
+    {
+      "ayah_number": 10,
+      "text_uthmani": "وَقَالُوا۟ لَوْ كُنَّا نَسْمَعُ أَوْ نَعْقِلُ مَا كُنَّا فِىٓ أَصْحَٰبِ ٱلسَّعِيرِ",
+      "start_ms": 119114,
+      "end_ms": 129628,
+      "duration_ms": 10514,
+      "word_count": 11,
+      "words": [
+        {
+          "word_index": 1,
+          "text_uthmani": "وَقَالُوا۟",
+          "start_ms": 119114,
+          "end_ms": 120071
+        },
+        {
+          "word_index": 2,
+          "text_uthmani": "لَوْ",
+          "start_ms": 120071,
+          "end_ms": 120368
+        },
+        {
+          "word_index": 3,
+          "text_uthmani": "كُنَّا",
+          "start_ms": 120368,
+          "end_ms": 121623
+        },
+        {
+          "word_index": 4,
+          "text_uthmani": "نَسْمَعُ",
+          "start_ms": 121623,
+          "end_ms": 122452
+        },
+        {
+          "word_index": 5,
+          "text_uthmani": "أَوْ",
+          "start_ms": 122452,
+          "end_ms": 122856
+        },
+        {
+          "word_index": 6,
+          "text_uthmani": "نَعْقِلُ",
+          "start_ms": 122856,
+          "end_ms": 123622
+        },
+        {
+          "word_index": 7,
+          "text_uthmani": "مَا",
+          "start_ms": 123622,
+          "end_ms": 123983
+        },
+        {
+          "word_index": 8,
+          "text_uthmani": "كُنَّا",
+          "start_ms": 123983,
+          "end_ms": 125067
+        },
+        {
+          "word_index": 9,
+          "text_uthmani": "فِىٓ",
+          "start_ms": 125067,
+          "end_ms": 126768
+        },
+        {
+          "word_index": 10,
+          "text_uthmani": "أَصْحَٰبِ",
+          "start_ms": 126768,
+          "end_ms": 127555
+        },
+        {
+          "word_index": 11,
+          "text_uthmani": "ٱلسَّعِيرِ",
+          "start_ms": 127555,
+          "end_ms": 129628
+        }
+      ]
+    },
+    {
+      "ayah_number": 11,
+      "text_uthmani": "فَٱعْتَرَفُوا۟ بِذَنۢبِهِمْ فَسُحْقًۭا لِّأَصْحَٰبِ ٱلسَّعِيرِ",
+      "start_ms": 129628,
+      "end_ms": 136008,
+      "duration_ms": 6380,
+      "word_count": 5,
+      "words": [
+        {
+          "word_index": 1,
+          "text_uthmani": "فَٱعْتَرَفُوا۟",
+          "start_ms": 129628,
+          "end_ms": 130805
+        },
+        {
+          "word_index": 2,
+          "text_uthmani": "بِذَنۢبِهِمْ",
+          "start_ms": 130805,
+          "end_ms": 132457
+        },
+        {
+          "word_index": 3,
+          "text_uthmani": "فَسُحْقًۭا",
+          "start_ms": 132457,
+          "end_ms": 133406
+        },
+        {
+          "word_index": 4,
+          "text_uthmani": "لِّأَصْحَٰبِ",
+          "start_ms": 133406,
+          "end_ms": 134625
+        },
+        {
+          "word_index": 5,
+          "text_uthmani": "ٱلسَّعِيرِ",
+          "start_ms": 134625,
+          "end_ms": 136008
+        }
+      ]
+    },
+    {
+      "ayah_number": 12,
+      "text_uthmani": "إِنَّ ٱلَّذِينَ يَخْشَوْنَ رَبَّهُم بِٱلْغَيْبِ لَهُم مَّغْفِرَةٌۭ وَأَجْرٌۭ كَبِيرٌۭ",
+      "start_ms": 136008,
+      "end_ms": 146908,
+      "duration_ms": 10900,
+      "word_count": 9,
+      "words": [
+        {
+          "word_index": 1,
+          "text_uthmani": "إِنَّ",
+          "start_ms": 136008,
+          "end_ms": 136689
+        },
+        {
+          "word_index": 2,
+          "text_uthmani": "ٱلَّذِينَ",
+          "start_ms": 136689,
+          "end_ms": 137611
+        },
+        {
+          "word_index": 3,
+          "text_uthmani": "يَخْشَوْنَ",
+          "start_ms": 137611,
+          "end_ms": 138553
+        },
+        {
+          "word_index": 4,
+          "text_uthmani": "رَبَّهُم",
+          "start_ms": 138553,
+          "end_ms": 139815
+        },
+        {
+          "word_index": 5,
+          "text_uthmani": "بِٱلْغَيْبِ",
+          "start_ms": 139815,
+          "end_ms": 140877
+        },
+        {
+          "word_index": 6,
+          "text_uthmani": "لَهُم",
+          "start_ms": 140877,
+          "end_ms": 142219
+        },
+        {
+          "word_index": 7,
+          "text_uthmani": "مَّغْفِرَةٌۭ",
+          "start_ms": 142219,
+          "end_ms": 143822
+        },
+        {
+          "word_index": 8,
+          "text_uthmani": "وَأَجْرٌۭ",
+          "start_ms": 143822,
+          "end_ms": 145445
+        },
+        {
+          "word_index": 9,
+          "text_uthmani": "كَبِيرٌۭ",
+          "start_ms": 145445,
+          "end_ms": 146908
+        }
+      ]
+    },
+    {
+      "ayah_number": 13,
+      "text_uthmani": "وَأَسِرُّوا۟ قَوْلَكُمْ أَوِ ٱجْهَرُوا۟ بِهِۦٓ ۖ إِنَّهُۥ عَلِيمٌۢ بِذَاتِ ٱلصُّدُورِ",
+      "start_ms": 146908,
+      "end_ms": 155688,
+      "duration_ms": 8780,
+      "word_count": 9,
+      "words": [
+        {
+          "word_index": 1,
+          "text_uthmani": "وَأَسِرُّوا۟",
+          "start_ms": 146908,
+          "end_ms": 148961
+        },
+        {
+          "word_index": 2,
+          "text_uthmani": "قَوْلَكُمْ",
+          "start_ms": 148961,
+          "end_ms": 149220
+        },
+        {
+          "word_index": 3,
+          "text_uthmani": "أَوِ",
+          "start_ms": 149220,
+          "end_ms": 150336
+        },
+        {
+          "word_index": 4,
+          "text_uthmani": "ٱجْهَرُوا۟",
+          "start_ms": 150336,
+          "end_ms": 151433
+        },
+        {
+          "word_index": 5,
+          "text_uthmani": "بِهِۦٓ ۖ",
+          "start_ms": 151433,
+          "end_ms": 151482
+        },
+        {
+          "word_index": 6,
+          "text_uthmani": "إِنَّهُۥ",
+          "start_ms": 151482,
+          "end_ms": 152320
+        },
+        {
+          "word_index": 7,
+          "text_uthmani": "عَلِيمٌۢ",
+          "start_ms": 152320,
+          "end_ms": 153974
+        },
+        {
+          "word_index": 8,
+          "text_uthmani": "بِذَاتِ",
+          "start_ms": 153974,
+          "end_ms": 154612
+        },
+        {
+          "word_index": 9,
+          "text_uthmani": "ٱلصُّدُورِ",
+          "start_ms": 154612,
+          "end_ms": 155688
+        }
+      ]
+    },
+    {
+      "ayah_number": 14,
+      "text_uthmani": "أَلَا يَعْلَمُ مَنْ خَلَقَ وَهُوَ ٱللَّطِيفُ ٱلْخَبِيرُ",
+      "start_ms": 155688,
+      "end_ms": 161528,
+      "duration_ms": 5840,
+      "word_count": 7,
+      "words": [
+        {
+          "word_index": 1,
+          "text_uthmani": "أَلَا",
+          "start_ms": 155688,
+          "end_ms": 156658
+        },
+        {
+          "word_index": 2,
+          "text_uthmani": "يَعْلَمُ",
+          "start_ms": 156658,
+          "end_ms": 157543
+        },
+        {
+          "word_index": 3,
+          "text_uthmani": "مَنْ",
+          "start_ms": 157543,
+          "end_ms": 157902
+        },
+        {
+          "word_index": 4,
+          "text_uthmani": "خَلَقَ",
+          "start_ms": 157902,
+          "end_ms": 158471
+        },
+        {
+          "word_index": 5,
+          "text_uthmani": "وَهُوَ",
+          "start_ms": 158471,
+          "end_ms": 158998
+        },
+        {
+          "word_index": 6,
+          "text_uthmani": "ٱللَّطِيفُ",
+          "start_ms": 158998,
+          "end_ms": 160137
+        },
+        {
+          "word_index": 7,
+          "text_uthmani": "ٱلْخَبِيرُ",
+          "start_ms": 160137,
+          "end_ms": 161528
+        }
+      ]
+    },
+    {
+      "ayah_number": 15,
+      "text_uthmani": "هُوَ ٱلَّذِى جَعَلَ لَكُمُ ٱلْأَرْضَ ذَلُولًۭا فَٱمْشُوا۟ فِى مَنَاكِبِهَا وَكُلُوا۟ مِن رِّزْقِهِۦ ۖ وَإِلَيْهِ ٱلنُّشُورُ",
+      "start_ms": 161528,
+      "end_ms": 177268,
+      "duration_ms": 15740,
+      "word_count": 14,
+      "words": [
+        {
+          "word_index": 1,
+          "text_uthmani": "هُوَ",
+          "start_ms": 161528,
+          "end_ms": 162592
+        },
+        {
+          "word_index": 2,
+          "text_uthmani": "ٱلَّذِى",
+          "start_ms": 162592,
+          "end_ms": 163188
+        },
+        {
+          "word_index": 3,
+          "text_uthmani": "جَعَلَ",
+          "start_ms": 163188,
+          "end_ms": 163827
+        },
+        {
+          "word_index": 4,
+          "text_uthmani": "لَكُمُ",
+          "start_ms": 163827,
+          "end_ms": 164593
+        },
+        {
+          "word_index": 5,
+          "text_uthmani": "ٱلْأَرْضَ",
+          "start_ms": 164593,
+          "end_ms": 166487
+        },
+        {
+          "word_index": 6,
+          "text_uthmani": "ذَلُولًۭا",
+          "start_ms": 166487,
+          "end_ms": 169127
+        },
+        {
+          "word_index": 7,
+          "text_uthmani": "فَٱمْشُوا۟",
+          "start_ms": 169127,
+          "end_ms": 170468
+        },
+        {
+          "word_index": 8,
+          "text_uthmani": "فِى",
+          "start_ms": 170468,
+          "end_ms": 171766
+        },
+        {
+          "word_index": 9,
+          "text_uthmani": "مَنَاكِبِهَا",
+          "start_ms": 171766,
+          "end_ms": 173086
+        },
+        {
+          "word_index": 10,
+          "text_uthmani": "وَكُلُوا۟",
+          "start_ms": 173086,
+          "end_ms": 173277
+        },
+        {
+          "word_index": 11,
+          "text_uthmani": "مِن",
+          "start_ms": 173277,
+          "end_ms": 174299
+        },
+        {
+          "word_index": 12,
+          "text_uthmani": "رِّزْقِهِۦ ۖ",
+          "start_ms": 174299,
+          "end_ms": 174352
+        },
+        {
+          "word_index": 13,
+          "text_uthmani": "وَإِلَيْهِ",
+          "start_ms": 174352,
+          "end_ms": 175140
+        },
+        {
+          "word_index": 14,
+          "text_uthmani": "ٱلنُّشُورُ",
+          "start_ms": 175140,
+          "end_ms": 177268
+        }
+      ]
+    },
+    {
+      "ayah_number": 16,
+      "text_uthmani": "ءَأَمِنتُم مَّن فِى ٱلسَّمَآءِ أَن يَخْسِفَ بِكُمُ ٱلْأَرْضَ فَإِذَا هِىَ تَمُورُ",
+      "start_ms": 187028,
+      "end_ms": 198122,
+      "duration_ms": 11094,
+      "word_count": 11,
+      "words": [
+        {
+          "word_index": 1,
+          "text_uthmani": "ءَأَمِنتُم",
+          "start_ms": 187028,
+          "end_ms": 188768
+        },
+        {
+          "word_index": 2,
+          "text_uthmani": "مَّن",
+          "start_ms": 188768,
+          "end_ms": 189287
+        },
+        {
+          "word_index": 3,
+          "text_uthmani": "فِى",
+          "start_ms": 189287,
+          "end_ms": 189626
+        },
+        {
+          "word_index": 4,
+          "text_uthmani": "ٱلسَّمَآءِ",
+          "start_ms": 189626,
+          "end_ms": 192677
+        },
+        {
+          "word_index": 5,
+          "text_uthmani": "أَن",
+          "start_ms": 192677,
+          "end_ms": 193242
+        },
+        {
+          "word_index": 6,
+          "text_uthmani": "يَخْسِفَ",
+          "start_ms": 193242,
+          "end_ms": 194123
+        },
+        {
+          "word_index": 7,
+          "text_uthmani": "بِكُمُ",
+          "start_ms": 194123,
+          "end_ms": 194801
+        },
+        {
+          "word_index": 8,
+          "text_uthmani": "ٱلْأَرْضَ",
+          "start_ms": 194801,
+          "end_ms": 195524
+        },
+        {
+          "word_index": 9,
+          "text_uthmani": "فَإِذَا",
+          "start_ms": 195524,
+          "end_ms": 196450
+        },
+        {
+          "word_index": 10,
+          "text_uthmani": "هِىَ",
+          "start_ms": 196450,
+          "end_ms": 196924
+        },
+        {
+          "word_index": 11,
+          "text_uthmani": "تَمُورُ",
+          "start_ms": 196924,
+          "end_ms": 198122
+        }
+      ]
+    },
+    {
+      "ayah_number": 17,
+      "text_uthmani": "أَمْ أَمِنتُم مَّن فِى ٱلسَّمَآءِ أَن يُرْسِلَ عَلَيْكُمْ حَاصِبًۭا ۖ فَسَتَعْلَمُونَ كَيْفَ نَذِيرِ",
+      "start_ms": 198122,
+      "end_ms": 210702,
+      "duration_ms": 12580,
+      "word_count": 12,
+      "words": [
+        {
+          "word_index": 1,
+          "text_uthmani": "أَمْ",
+          "start_ms": 198122,
+          "end_ms": 200302
+        },
+        {
+          "word_index": 2,
+          "text_uthmani": "أَمِنتُم",
+          "start_ms": 200302,
+          "end_ms": 200945
+        },
+        {
+          "word_index": 3,
+          "text_uthmani": "مَّن",
+          "start_ms": 200945,
+          "end_ms": 201381
+        },
+        {
+          "word_index": 4,
+          "text_uthmani": "فِى",
+          "start_ms": 201381,
+          "end_ms": 203478
+        },
+        {
+          "word_index": 5,
+          "text_uthmani": "ٱلسَّمَآءِ",
+          "start_ms": 203478,
+          "end_ms": 204163
+        },
+        {
+          "word_index": 6,
+          "text_uthmani": "أَن",
+          "start_ms": 204163,
+          "end_ms": 204889
+        },
+        {
+          "word_index": 7,
+          "text_uthmani": "يُرْسِلَ",
+          "start_ms": 204889,
+          "end_ms": 205844
+        },
+        {
+          "word_index": 8,
+          "text_uthmani": "عَلَيْكُمْ",
+          "start_ms": 205844,
+          "end_ms": 207381
+        },
+        {
+          "word_index": 9,
+          "text_uthmani": "حَاصِبًۭا ۖ",
+          "start_ms": 207381,
+          "end_ms": 207609
+        },
+        {
+          "word_index": 10,
+          "text_uthmani": "فَسَتَعْلَمُونَ",
+          "start_ms": 207609,
+          "end_ms": 209041
+        },
+        {
+          "word_index": 11,
+          "text_uthmani": "كَيْفَ",
+          "start_ms": 209041,
+          "end_ms": 209726
+        },
+        {
+          "word_index": 12,
+          "text_uthmani": "نَذِيرِ",
+          "start_ms": 209726,
+          "end_ms": 210702
+        }
+      ]
+    },
+    {
+      "ayah_number": 18,
+      "text_uthmani": "وَلَقَدْ كَذَّبَ ٱلَّذِينَ مِن قَبْلِهِمْ فَكَيْفَ كَانَ نَكِيرِ",
+      "start_ms": 210702,
+      "end_ms": 218662,
+      "duration_ms": 7960,
+      "word_count": 8,
+      "words": [
+        {
+          "word_index": 1,
+          "text_uthmani": "وَلَقَدْ",
+          "start_ms": 210702,
+          "end_ms": 211502
+        },
+        {
+          "word_index": 2,
+          "text_uthmani": "كَذَّبَ",
+          "start_ms": 211502,
+          "end_ms": 212281
+        },
+        {
+          "word_index": 3,
+          "text_uthmani": "ٱلَّذِينَ",
+          "start_ms": 212281,
+          "end_ms": 213319
+        },
+        {
+          "word_index": 4,
+          "text_uthmani": "مِن",
+          "start_ms": 213319,
+          "end_ms": 214855
+        },
+        {
+          "word_index": 5,
+          "text_uthmani": "قَبْلِهِمْ",
+          "start_ms": 214855,
+          "end_ms": 216196
+        },
+        {
+          "word_index": 6,
+          "text_uthmani": "فَكَيْفَ",
+          "start_ms": 216196,
+          "end_ms": 217061
+        },
+        {
+          "word_index": 7,
+          "text_uthmani": "كَانَ",
+          "start_ms": 217061,
+          "end_ms": 217667
+        },
+        {
+          "word_index": 8,
+          "text_uthmani": "نَكِيرِ",
+          "start_ms": 217667,
+          "end_ms": 218662
+        }
+      ]
+    },
+    {
+      "ayah_number": 19,
+      "text_uthmani": "أَوَلَمْ يَرَوْا۟ إِلَى ٱلطَّيْرِ فَوْقَهُمْ صَٰٓفَّٰتٍۢ وَيَقْبِضْنَ ۚ مَا يُمْسِكُهُنَّ إِلَّا ٱلرَّحْمَٰنُ ۚ إِنَّهُۥ بِكُلِّ شَىْءٍۭ بَصِيرٌ",
+      "start_ms": 218662,
+      "end_ms": 238602,
+      "duration_ms": 19940,
+      "word_count": 15,
+      "words": [
+        {
+          "word_index": 1,
+          "text_uthmani": "أَوَلَمْ",
+          "start_ms": 218662,
+          "end_ms": 220414
+        },
+        {
+          "word_index": 2,
+          "text_uthmani": "يَرَوْا۟",
+          "start_ms": 220414,
+          "end_ms": 221301
+        },
+        {
+          "word_index": 3,
+          "text_uthmani": "إِلَى",
+          "start_ms": 221301,
+          "end_ms": 222453
+        },
+        {
+          "word_index": 4,
+          "text_uthmani": "ٱلطَّيْرِ",
+          "start_ms": 222453,
+          "end_ms": 224133
+        },
+        {
+          "word_index": 5,
+          "text_uthmani": "فَوْقَهُمْ",
+          "start_ms": 224133,
+          "end_ms": 225861
+        },
+        {
+          "word_index": 6,
+          "text_uthmani": "صَٰٓفَّٰتٍۢ",
+          "start_ms": 225861,
+          "end_ms": 226077
+        },
+        {
+          "word_index": 7,
+          "text_uthmani": "وَيَقْبِضْنَ ۚ",
+          "start_ms": 226077,
+          "end_ms": 226340
+        },
+        {
+          "word_index": 8,
+          "text_uthmani": "مَا",
+          "start_ms": 226340,
+          "end_ms": 228236
+        },
+        {
+          "word_index": 9,
+          "text_uthmani": "يُمْسِكُهُنَّ",
+          "start_ms": 228236,
+          "end_ms": 228860
+        },
+        {
+          "word_index": 10,
+          "text_uthmani": "إِلَّا",
+          "start_ms": 228860,
+          "end_ms": 231068
+        },
+        {
+          "word_index": 11,
+          "text_uthmani": "ٱلرَّحْمَٰنُ ۚ",
+          "start_ms": 231068,
+          "end_ms": 233299
+        },
+        {
+          "word_index": 12,
+          "text_uthmani": "إِنَّهُۥ",
+          "start_ms": 233299,
+          "end_ms": 234691
+        },
+        {
+          "word_index": 13,
+          "text_uthmani": "بِكُلِّ",
+          "start_ms": 234691,
+          "end_ms": 235459
+        },
+        {
+          "word_index": 14,
+          "text_uthmani": "شَىْءٍۭ",
+          "start_ms": 235459,
+          "end_ms": 237450
+        },
+        {
+          "word_index": 15,
+          "text_uthmani": "بَصِيرٌ",
+          "start_ms": 237450,
+          "end_ms": 238602
+        }
+      ]
+    },
+    {
+      "ayah_number": 20,
+      "text_uthmani": "أَمَّنْ هَٰذَا ٱلَّذِى هُوَ جُندٌۭ لَّكُمْ يَنصُرُكُم مِّن دُونِ ٱلرَّحْمَٰنِ ۚ إِنِ ٱلْكَٰفِرُونَ إِلَّا فِى غُرُورٍ",
+      "start_ms": 238602,
+      "end_ms": 253542,
+      "duration_ms": 14940,
+      "word_count": 15,
+      "words": [
+        {
+          "word_index": 1,
+          "text_uthmani": "أَمَّنْ",
+          "start_ms": 238602,
+          "end_ms": 240166
+        },
+        {
+          "word_index": 2,
+          "text_uthmani": "هَٰذَا",
+          "start_ms": 240166,
+          "end_ms": 240937
+        },
+        {
+          "word_index": 3,
+          "text_uthmani": "ٱلَّذِى",
+          "start_ms": 240937,
+          "end_ms": 241279
+        },
+        {
+          "word_index": 4,
+          "text_uthmani": "هُوَ",
+          "start_ms": 241279,
+          "end_ms": 242693
+        },
+        {
+          "word_index": 5,
+          "text_uthmani": "جُندٌۭ",
+          "start_ms": 242693,
+          "end_ms": 243121
+        },
+        {
+          "word_index": 6,
+          "text_uthmani": "لَّكُمْ",
+          "start_ms": 243121,
+          "end_ms": 245263
+        },
+        {
+          "word_index": 7,
+          "text_uthmani": "يَنصُرُكُم",
+          "start_ms": 245263,
+          "end_ms": 245927
+        },
+        {
+          "word_index": 8,
+          "text_uthmani": "مِّن",
+          "start_ms": 245927,
+          "end_ms": 246741
+        },
+        {
+          "word_index": 9,
+          "text_uthmani": "دُونِ",
+          "start_ms": 246741,
+          "end_ms": 249140
+        },
+        {
+          "word_index": 10,
+          "text_uthmani": "ٱلرَّحْمَٰنِ ۚ",
+          "start_ms": 249140,
+          "end_ms": 249526
+        },
+        {
+          "word_index": 11,
+          "text_uthmani": "إِنِ",
+          "start_ms": 249526,
+          "end_ms": 249579
+        },
+        {
+          "word_index": 12,
+          "text_uthmani": "ٱلْكَٰفِرُونَ",
+          "start_ms": 249579,
+          "end_ms": 251015
+        },
+        {
+          "word_index": 13,
+          "text_uthmani": "إِلَّا",
+          "start_ms": 251015,
+          "end_ms": 251679
+        },
+        {
+          "word_index": 14,
+          "text_uthmani": "فِى",
+          "start_ms": 251679,
+          "end_ms": 252193
+        },
+        {
+          "word_index": 15,
+          "text_uthmani": "غُرُورٍ",
+          "start_ms": 252193,
+          "end_ms": 253542
+        }
+      ]
+    },
+    {
+      "ayah_number": 21,
+      "text_uthmani": "أَمَّنْ هَٰذَا ٱلَّذِى يَرْزُقُكُمْ إِنْ أَمْسَكَ رِزْقَهُۥ ۚ بَل لَّجُّوا۟ فِى عُتُوٍّۢ وَنُفُورٍ",
+      "start_ms": 253542,
+      "end_ms": 263657,
+      "duration_ms": 10115,
+      "word_count": 12,
+      "words": [
+        {
+          "word_index": 1,
+          "text_uthmani": "أَمَّنْ",
+          "start_ms": 253542,
+          "end_ms": 254965
+        },
+        {
+          "word_index": 2,
+          "text_uthmani": "هَٰذَا",
+          "start_ms": 254965,
+          "end_ms": 255717
+        },
+        {
+          "word_index": 3,
+          "text_uthmani": "ٱلَّذِى",
+          "start_ms": 255717,
+          "end_ms": 256958
+        },
+        {
+          "word_index": 4,
+          "text_uthmani": "يَرْزُقُكُمْ",
+          "start_ms": 256958,
+          "end_ms": 257303
+        },
+        {
+          "word_index": 5,
+          "text_uthmani": "إِنْ",
+          "start_ms": 257303,
+          "end_ms": 258096
+        },
+        {
+          "word_index": 6,
+          "text_uthmani": "أَمْسَكَ",
+          "start_ms": 258096,
+          "end_ms": 259377
+        },
+        {
+          "word_index": 7,
+          "text_uthmani": "رِزْقَهُۥ ۚ",
+          "start_ms": 259377,
+          "end_ms": 259428
+        },
+        {
+          "word_index": 8,
+          "text_uthmani": "بَل",
+          "start_ms": 259428,
+          "end_ms": 259631
+        },
+        {
+          "word_index": 9,
+          "text_uthmani": "لَّجُّوا۟",
+          "start_ms": 259631,
+          "end_ms": 260567
+        },
+        {
+          "word_index": 10,
+          "text_uthmani": "فِى",
+          "start_ms": 260567,
+          "end_ms": 260668
+        },
+        {
+          "word_index": 11,
+          "text_uthmani": "عُتُوٍّۢ",
+          "start_ms": 260668,
+          "end_ms": 262396
+        },
+        {
+          "word_index": 12,
+          "text_uthmani": "وَنُفُورٍ",
+          "start_ms": 262396,
+          "end_ms": 263657
+        }
+      ]
+    },
+    {
+      "ayah_number": 22,
+      "text_uthmani": "أَفَمَن يَمْشِى مُكِبًّا عَلَىٰ وَجْهِهِۦٓ أَهْدَىٰٓ أَمَّن يَمْشِى سَوِيًّا عَلَىٰ صِرَٰطٍۢ مُّسْتَقِيمٍۢ",
+      "start_ms": 263657,
+      "end_ms": 280337,
+      "duration_ms": 16680,
+      "word_count": 12,
+      "words": [
+        {
+          "word_index": 1,
+          "text_uthmani": "أَفَمَن",
+          "start_ms": 263657,
+          "end_ms": 264264
+        },
+        {
+          "word_index": 2,
+          "text_uthmani": "يَمْشِى",
+          "start_ms": 264264,
+          "end_ms": 265362
+        },
+        {
+          "word_index": 3,
+          "text_uthmani": "مُكِبًّا",
+          "start_ms": 265362,
+          "end_ms": 266484
+        },
+        {
+          "word_index": 4,
+          "text_uthmani": "عَلَىٰ",
+          "start_ms": 266484,
+          "end_ms": 267395
+        },
+        {
+          "word_index": 5,
+          "text_uthmani": "وَجْهِهِۦٓ",
+          "start_ms": 267395,
+          "end_ms": 269544
+        },
+        {
+          "word_index": 6,
+          "text_uthmani": "أَهْدَىٰٓ",
+          "start_ms": 269544,
+          "end_ms": 271343
+        },
+        {
+          "word_index": 7,
+          "text_uthmani": "أَمَّن",
+          "start_ms": 271343,
+          "end_ms": 271740
+        },
+        {
+          "word_index": 8,
+          "text_uthmani": "يَمْشِى",
+          "start_ms": 271740,
+          "end_ms": 273375
+        },
+        {
+          "word_index": 9,
+          "text_uthmani": "سَوِيًّا",
+          "start_ms": 273375,
+          "end_ms": 274100
+        },
+        {
+          "word_index": 10,
+          "text_uthmani": "عَلَىٰ",
+          "start_ms": 274100,
+          "end_ms": 277066
+        },
+        {
+          "word_index": 11,
+          "text_uthmani": "صِرَٰطٍۢ",
+          "start_ms": 277066,
+          "end_ms": 278678
+        },
+        {
+          "word_index": 12,
+          "text_uthmani": "مُّسْتَقِيمٍۢ",
+          "start_ms": 278678,
+          "end_ms": 280337
+        }
+      ]
+    },
+    {
+      "ayah_number": 23,
+      "text_uthmani": "قُلْ هُوَ ٱلَّذِىٓ أَنشَأَكُمْ وَجَعَلَ لَكُمُ ٱلسَّمْعَ وَٱلْأَبْصَٰرَ وَٱلْأَفْـِٔدَةَ ۖ قَلِيلًۭا مَّا تَشْكُرُونَ",
+      "start_ms": 280337,
+      "end_ms": 297417,
+      "duration_ms": 17080,
+      "word_count": 12,
+      "words": [
+        {
+          "word_index": 1,
+          "text_uthmani": "قُلْ",
+          "start_ms": 280337,
+          "end_ms": 281018
+        },
+        {
+          "word_index": 2,
+          "text_uthmani": "هُوَ",
+          "start_ms": 281018,
+          "end_ms": 284112
+        },
+        {
+          "word_index": 3,
+          "text_uthmani": "ٱلَّذِىٓ",
+          "start_ms": 284112,
+          "end_ms": 285968
+        },
+        {
+          "word_index": 4,
+          "text_uthmani": "أَنشَأَكُمْ",
+          "start_ms": 285968,
+          "end_ms": 287175
+        },
+        {
+          "word_index": 5,
+          "text_uthmani": "وَجَعَلَ",
+          "start_ms": 287175,
+          "end_ms": 288073
+        },
+        {
+          "word_index": 6,
+          "text_uthmani": "لَكُمُ",
+          "start_ms": 288073,
+          "end_ms": 288506
+        },
+        {
+          "word_index": 7,
+          "text_uthmani": "ٱلسَّمْعَ",
+          "start_ms": 288506,
+          "end_ms": 290672
+        },
+        {
+          "word_index": 8,
+          "text_uthmani": "وَٱلْأَبْصَٰرَ",
+          "start_ms": 290672,
+          "end_ms": 292745
+        },
+        {
+          "word_index": 9,
+          "text_uthmani": "وَٱلْأَفْـِٔدَةَ ۖ",
+          "start_ms": 292745,
+          "end_ms": 293240
+        },
+        {
+          "word_index": 10,
+          "text_uthmani": "قَلِيلًۭا",
+          "start_ms": 293240,
+          "end_ms": 294601
+        },
+        {
+          "word_index": 11,
+          "text_uthmani": "مَّا",
+          "start_ms": 294601,
+          "end_ms": 295220
+        },
+        {
+          "word_index": 12,
+          "text_uthmani": "تَشْكُرُونَ",
+          "start_ms": 295220,
+          "end_ms": 297417
+        }
+      ]
+    },
+    {
+      "ayah_number": 24,
+      "text_uthmani": "قُلْ هُوَ ٱلَّذِى ذَرَأَكُمْ فِى ٱلْأَرْضِ وَإِلَيْهِ تُحْشَرُونَ",
+      "start_ms": 297417,
+      "end_ms": 303857,
+      "duration_ms": 6440,
+      "word_count": 8,
+      "words": [
+        {
+          "word_index": 1,
+          "text_uthmani": "قُلْ",
+          "start_ms": 297417,
+          "end_ms": 297522
+        },
+        {
+          "word_index": 2,
+          "text_uthmani": "هُوَ",
+          "start_ms": 297522,
+          "end_ms": 297856
+        },
+        {
+          "word_index": 3,
+          "text_uthmani": "ٱلَّذِى",
+          "start_ms": 297856,
+          "end_ms": 298734
+        },
+        {
+          "word_index": 4,
+          "text_uthmani": "ذَرَأَكُمْ",
+          "start_ms": 298734,
+          "end_ms": 299717
+        },
+        {
+          "word_index": 5,
+          "text_uthmani": "فِى",
+          "start_ms": 299717,
+          "end_ms": 299989
+        },
+        {
+          "word_index": 6,
+          "text_uthmani": "ٱلْأَرْضِ",
+          "start_ms": 299989,
+          "end_ms": 300679
+        },
+        {
+          "word_index": 7,
+          "text_uthmani": "وَإِلَيْهِ",
+          "start_ms": 300679,
+          "end_ms": 301662
+        },
+        {
+          "word_index": 8,
+          "text_uthmani": "تُحْشَرُونَ",
+          "start_ms": 301662,
+          "end_ms": 303857
+        }
+      ]
+    },
+    {
+      "ayah_number": 25,
+      "text_uthmani": "وَيَقُولُونَ مَتَىٰ هَٰذَا ٱلْوَعْدُ إِن كُنتُمْ صَٰدِقِينَ",
+      "start_ms": 303857,
+      "end_ms": 310997,
+      "duration_ms": 7140,
+      "word_count": 7,
+      "words": [
+        {
+          "word_index": 1,
+          "text_uthmani": "وَيَقُولُونَ",
+          "start_ms": 303857,
+          "end_ms": 305003
+        },
+        {
+          "word_index": 2,
+          "text_uthmani": "مَتَىٰ",
+          "start_ms": 305003,
+          "end_ms": 306046
+        },
+        {
+          "word_index": 3,
+          "text_uthmani": "هَٰذَا",
+          "start_ms": 306046,
+          "end_ms": 306128
+        },
+        {
+          "word_index": 4,
+          "text_uthmani": "ٱلْوَعْدُ",
+          "start_ms": 306128,
+          "end_ms": 306864
+        },
+        {
+          "word_index": 5,
+          "text_uthmani": "إِن",
+          "start_ms": 306864,
+          "end_ms": 307662
+        },
+        {
+          "word_index": 6,
+          "text_uthmani": "كُنتُمْ",
+          "start_ms": 307662,
+          "end_ms": 308849
+        },
+        {
+          "word_index": 7,
+          "text_uthmani": "صَٰدِقِينَ",
+          "start_ms": 308849,
+          "end_ms": 310997
+        }
+      ]
+    },
+    {
+      "ayah_number": 26,
+      "text_uthmani": "قُلْ إِنَّمَا ٱلْعِلْمُ عِندَ ٱللَّهِ وَإِنَّمَآ أَنَا۠ نَذِيرٌۭ مُّبِينٌۭ",
+      "start_ms": 310997,
+      "end_ms": 321531,
+      "duration_ms": 10534,
+      "word_count": 9,
+      "words": [
+        {
+          "word_index": 1,
+          "text_uthmani": "قُلْ",
+          "start_ms": 310997,
+          "end_ms": 311218
+        },
+        {
+          "word_index": 2,
+          "text_uthmani": "إِنَّمَا",
+          "start_ms": 311218,
+          "end_ms": 312143
+        },
+        {
+          "word_index": 3,
+          "text_uthmani": "ٱلْعِلْمُ",
+          "start_ms": 312143,
+          "end_ms": 312846
+        },
+        {
+          "word_index": 4,
+          "text_uthmani": "عِندَ",
+          "start_ms": 312846,
+          "end_ms": 313811
+        },
+        {
+          "word_index": 5,
+          "text_uthmani": "ٱللَّهِ",
+          "start_ms": 313811,
+          "end_ms": 316023
+        },
+        {
+          "word_index": 6,
+          "text_uthmani": "وَإِنَّمَآ",
+          "start_ms": 316023,
+          "end_ms": 318717
+        },
+        {
+          "word_index": 7,
+          "text_uthmani": "أَنَا۠",
+          "start_ms": 318717,
+          "end_ms": 319038
+        },
+        {
+          "word_index": 8,
+          "text_uthmani": "نَذِيرٌۭ",
+          "start_ms": 319038,
+          "end_ms": 320566
+        },
+        {
+          "word_index": 9,
+          "text_uthmani": "مُّبِينٌۭ",
+          "start_ms": 320566,
+          "end_ms": 321531
+        }
+      ]
+    },
+    {
+      "ayah_number": 27,
+      "text_uthmani": "فَلَمَّا رَأَوْهُ زُلْفَةًۭ سِيٓـَٔتْ وُجُوهُ ٱلَّذِينَ كَفَرُوا۟ وَقِيلَ هَٰذَا ٱلَّذِى كُنتُم بِهِۦ تَدَّعُونَ",
+      "start_ms": 321531,
+      "end_ms": 336391,
+      "duration_ms": 14860,
+      "word_count": 13,
+      "words": [
+        {
+          "word_index": 1,
+          "text_uthmani": "فَلَمَّا",
+          "start_ms": 321531,
+          "end_ms": 322512
+        },
+        {
+          "word_index": 2,
+          "text_uthmani": "رَأَوْهُ",
+          "start_ms": 322512,
+          "end_ms": 323330
+        },
+        {
+          "word_index": 3,
+          "text_uthmani": "زُلْفَةًۭ",
+          "start_ms": 323330,
+          "end_ms": 325394
+        },
+        {
+          "word_index": 4,
+          "text_uthmani": "سِيٓـَٔتْ",
+          "start_ms": 325394,
+          "end_ms": 326723
+        },
+        {
+          "word_index": 5,
+          "text_uthmani": "وُجُوهُ",
+          "start_ms": 326723,
+          "end_ms": 327356
+        },
+        {
+          "word_index": 6,
+          "text_uthmani": "ٱلَّذِينَ",
+          "start_ms": 327356,
+          "end_ms": 328338
+        },
+        {
+          "word_index": 7,
+          "text_uthmani": "كَفَرُوا۟",
+          "start_ms": 328338,
+          "end_ms": 329625
+        },
+        {
+          "word_index": 8,
+          "text_uthmani": "وَقِيلَ",
+          "start_ms": 329625,
+          "end_ms": 330239
+        },
+        {
+          "word_index": 9,
+          "text_uthmani": "هَٰذَا",
+          "start_ms": 330239,
+          "end_ms": 330811
+        },
+        {
+          "word_index": 10,
+          "text_uthmani": "ٱلَّذِى",
+          "start_ms": 330811,
+          "end_ms": 331588
+        },
+        {
+          "word_index": 11,
+          "text_uthmani": "كُنتُم",
+          "start_ms": 331588,
+          "end_ms": 333264
+        },
+        {
+          "word_index": 12,
+          "text_uthmani": "بِهِۦ",
+          "start_ms": 333264,
+          "end_ms": 334367
+        },
+        {
+          "word_index": 13,
+          "text_uthmani": "تَدَّعُونَ",
+          "start_ms": 334367,
+          "end_ms": 336391
+        }
+      ]
+    },
+    {
+      "ayah_number": 28,
+      "text_uthmani": "قُلْ أَرَءَيْتُمْ إِنْ أَهْلَكَنِىَ ٱللَّهُ وَمَن مَّعِىَ أَوْ رَحِمَنَا فَمَن يُجِيرُ ٱلْكَٰفِرِينَ مِنْ عَذَابٍ أَلِيمٍۢ",
+      "start_ms": 336391,
+      "end_ms": 348631,
+      "duration_ms": 12240,
+      "word_count": 15,
+      "words": [
+        {
+          "word_index": 1,
+          "text_uthmani": "قُلْ",
+          "start_ms": 336391,
+          "end_ms": 336531
+        },
+        {
+          "word_index": 2,
+          "text_uthmani": "أَرَءَيْتُمْ",
+          "start_ms": 336531,
+          "end_ms": 337713
+        },
+        {
+          "word_index": 3,
+          "text_uthmani": "إِنْ",
+          "start_ms": 337713,
+          "end_ms": 338034
+        },
+        {
+          "word_index": 4,
+          "text_uthmani": "أَهْلَكَنِىَ",
+          "start_ms": 338034,
+          "end_ms": 339135
+        },
+        {
+          "word_index": 5,
+          "text_uthmani": "ٱللَّهُ",
+          "start_ms": 339135,
+          "end_ms": 339837
+        },
+        {
+          "word_index": 6,
+          "text_uthmani": "وَمَن",
+          "start_ms": 339837,
+          "end_ms": 340638
+        },
+        {
+          "word_index": 7,
+          "text_uthmani": "مَّعِىَ",
+          "start_ms": 340638,
+          "end_ms": 341459
+        },
+        {
+          "word_index": 8,
+          "text_uthmani": "أَوْ",
+          "start_ms": 341459,
+          "end_ms": 341620
+        },
+        {
+          "word_index": 9,
+          "text_uthmani": "رَحِمَنَا",
+          "start_ms": 341620,
+          "end_ms": 342902
+        },
+        {
+          "word_index": 10,
+          "text_uthmani": "فَمَن",
+          "start_ms": 342902,
+          "end_ms": 343503
+        },
+        {
+          "word_index": 11,
+          "text_uthmani": "يُجِيرُ",
+          "start_ms": 343503,
+          "end_ms": 344745
+        },
+        {
+          "word_index": 12,
+          "text_uthmani": "ٱلْكَٰفِرِينَ",
+          "start_ms": 344745,
+          "end_ms": 346087
+        },
+        {
+          "word_index": 13,
+          "text_uthmani": "مِنْ",
+          "start_ms": 346087,
+          "end_ms": 346427
+        },
+        {
+          "word_index": 14,
+          "text_uthmani": "عَذَابٍ",
+          "start_ms": 346427,
+          "end_ms": 347389
+        },
+        {
+          "word_index": 15,
+          "text_uthmani": "أَلِيمٍۢ",
+          "start_ms": 347389,
+          "end_ms": 348631
+        }
+      ]
+    },
+    {
+      "ayah_number": 29,
+      "text_uthmani": "قُلْ هُوَ ٱلرَّحْمَٰنُ ءَامَنَّا بِهِۦ وَعَلَيْهِ تَوَكَّلْنَا ۖ فَسَتَعْلَمُونَ مَنْ هُوَ فِى ضَلَٰلٍۢ مُّبِينٍۢ",
+      "start_ms": 348631,
+      "end_ms": 360951,
+      "duration_ms": 12320,
+      "word_count": 13,
+      "words": [
+        {
+          "word_index": 1,
+          "text_uthmani": "قُلْ",
+          "start_ms": 348631,
+          "end_ms": 349138
+        },
+        {
+          "word_index": 2,
+          "text_uthmani": "هُوَ",
+          "start_ms": 349138,
+          "end_ms": 350414
+        },
+        {
+          "word_index": 3,
+          "text_uthmani": "ٱلرَّحْمَٰنُ",
+          "start_ms": 350414,
+          "end_ms": 351772
+        },
+        {
+          "word_index": 4,
+          "text_uthmani": "ءَامَنَّا",
+          "start_ms": 351772,
+          "end_ms": 352623
+        },
+        {
+          "word_index": 5,
+          "text_uthmani": "بِهِۦ",
+          "start_ms": 352623,
+          "end_ms": 353373
+        },
+        {
+          "word_index": 6,
+          "text_uthmani": "وَعَلَيْهِ",
+          "start_ms": 353373,
+          "end_ms": 355034
+        },
+        {
+          "word_index": 7,
+          "text_uthmani": "تَوَكَّلْنَا ۖ",
+          "start_ms": 355034,
+          "end_ms": 355298
+        },
+        {
+          "word_index": 8,
+          "text_uthmani": "فَسَتَعْلَمُونَ",
+          "start_ms": 355298,
+          "end_ms": 356696
+        },
+        {
+          "word_index": 9,
+          "text_uthmani": "مَنْ",
+          "start_ms": 356696,
+          "end_ms": 357020
+        },
+        {
+          "word_index": 10,
+          "text_uthmani": "هُوَ",
+          "start_ms": 357020,
+          "end_ms": 357425
+        },
+        {
+          "word_index": 11,
+          "text_uthmani": "فِى",
+          "start_ms": 357425,
+          "end_ms": 357810
+        },
+        {
+          "word_index": 12,
+          "text_uthmani": "ضَلَٰلٍۢ",
+          "start_ms": 357810,
+          "end_ms": 359938
+        },
+        {
+          "word_index": 13,
+          "text_uthmani": "مُّبِينٍۢ",
+          "start_ms": 359938,
+          "end_ms": 360951
+        }
+      ]
+    },
+    {
+      "ayah_number": 30,
+      "text_uthmani": "قُلْ أَرَءَيْتُمْ إِنْ أَصْبَحَ مَآؤُكُمْ غَوْرًۭا فَمَن يَأْتِيكُم بِمَآءٍۢ مَّعِينٍۭ",
+      "start_ms": 360951,
+      "end_ms": 379025,
+      "duration_ms": 18074,
+      "word_count": 10,
+      "words": [
+        {
+          "word_index": 1,
+          "text_uthmani": "قُلْ",
+          "start_ms": 360951,
+          "end_ms": 361448
+        },
+        {
+          "word_index": 2,
+          "text_uthmani": "أَرَءَيْتُمْ",
+          "start_ms": 361448,
+          "end_ms": 363650
+        },
+        {
+          "word_index": 3,
+          "text_uthmani": "إِنْ",
+          "start_ms": 363650,
+          "end_ms": 364324
+        },
+        {
+          "word_index": 4,
+          "text_uthmani": "أَصْبَحَ",
+          "start_ms": 364324,
+          "end_ms": 365780
+        },
+        {
+          "word_index": 5,
+          "text_uthmani": "مَآؤُكُمْ",
+          "start_ms": 365780,
+          "end_ms": 368585
+        },
+        {
+          "word_index": 6,
+          "text_uthmani": "غَوْرًۭا",
+          "start_ms": 368585,
+          "end_ms": 371000
+        },
+        {
+          "word_index": 7,
+          "text_uthmani": "فَمَن",
+          "start_ms": 371000,
+          "end_ms": 372136
+        },
+        {
+          "word_index": 8,
+          "text_uthmani": "يَأْتِيكُم",
+          "start_ms": 372136,
+          "end_ms": 373202
+        },
+        {
+          "word_index": 9,
+          "text_uthmani": "بِمَآءٍۢ",
+          "start_ms": 373202,
+          "end_ms": 375545
+        },
+        {
+          "word_index": 10,
+          "text_uthmani": "مَّعِينٍۭ",
+          "start_ms": 375545,
+          "end_ms": 379025
+        }
+      ]
+    }
+  ]
+}

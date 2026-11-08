@@ -64,6 +64,8 @@ const api = {
     ipcRenderer.invoke('dialog:select-media-file', type),
   selectMediaFiles: (type: 'video' | 'audio' | 'image' | 'media'): Promise<string[]> =>
     ipcRenderer.invoke('dialog:select-media-files', type),
+  selectTimestampJsonFile: (): Promise<{ filePath: string; fileName: string; content: string } | null> =>
+    ipcRenderer.invoke('dialog:select-json-file'),
   selectSavePath: (defaultFileName: string): Promise<string | null> =>
     ipcRenderer.invoke('dialog:select-save-path', defaultFileName),
   showInFolder: (filePath: string): Promise<void> =>

@@ -162,6 +162,20 @@ export const QuranVideo: React.FC<QuranVideoCompositionProps> = ({
   const scriptureStartFrame = introDurationInFrames + titleCardDurationInFrames;
   const outroStartFrame = scriptureStartFrame + scriptureDurationInFrames;
 
+  // Single continuous audio track mode (full surah MP3 file)
+  const isFullAudioMode = Boolean(
+    config.customAudioPath &&
+    (config.recitationAudioMode === 'full-surah-file' || config.hasCustomTimestamp)
+  );
+
+  let fullAudioStartFromFrame = 0;
+  if (isFullAudioMode && ayahs && ayahs.length > 0) {
+    const firstAyah = ayahs[0];
+    const offsetMs = firstAyah.audioStartMs || 0;
+    const speed = config.recitationSpeed || 1.0;
+    fullAudioStartFromFrame = Math.max(0, Math.round((offsetMs / 1000) * config.fps * speed));
+  }
+
   return (
     <AbsoluteFill
       style={{
@@ -325,27 +339,58 @@ export const QuranVideo: React.FC<QuranVideoCompositionProps> = ({
             fps={config.fps}
           />
 
+          {/* Continuous Recitation Audio Track across full scripture timeline (Single MP3 Mode) */}
+          {isFullAudioMode && config.customAudioPath && (
+            <Audio
+              src={getMediaUrl(config.customAudioPath)}
+              startFrom={fullAudioStartFromFrame}
+              playbackRate={config.recitationSpeed || 1.0}
+            />
+          )}
+
+          {/* Audio-Reactive Waveform across Full Scripture Timeline (Single MP3 Mode) */}
+          {isFullAudioMode && config.showWaveform && config.customAudioPath && (
+            <WaveformLayer
+              audioUrl={config.customAudioPath}
+              initialFrameOffset={fullAudioStartFromFrame}
+              type={config.waveformType}
+              color={config.waveformColor}
+              colorSecondary={config.waveformColorSecondary}
+              height={config.waveformHeight}
+              width={config.waveformWidth ?? 92}
+              amplitude={config.waveformAmplitude ?? 2.2}
+              positionY={config.waveformPositionY}
+              glow={config.waveformGlow ?? true}
+              glowIntensity={config.waveformGlowIntensity ?? 1.5}
+              fillArea={config.waveformFillArea ?? false}
+              barWidth={config.waveformBarWidth ?? 6}
+              sampleCount={config.waveformSampleCount ?? 64}
+              circularRadius={config.waveformCircularRadius ?? 130}
+              opacity={config.waveformOpacity ?? 0.9}
+            />
+          )}
+
           {/* Sequential Ayah Audio & Typography Display */}
           {ayahs && ayahs.length > 0 ? (
             <Series>
               {ayahs.map((ayahData: AyahSequenceData, index: number) => {
-                const audioSrc = getMediaUrl(ayahData.audioUrl);
+                const audioSrc = !isFullAudioMode ? getMediaUrl(ayahData.audioUrl) : '';
 
                 return (
                   <Series.Sequence
                     key={`${ayahData.surah}:${ayahData.ayah}_${index}`}
                     durationInFrames={Math.max(1, ayahData.durationInFrames)}
                   >
-                    {/* Recitation Audio Track */}
-                    {audioSrc && (
+                    {/* Per-Ayah Recitation Audio Track (Standard CDN Mode Only) */}
+                    {!isFullAudioMode && audioSrc && (
                       <Audio
                         src={audioSrc}
                         playbackRate={config.recitationSpeed || 1.0}
                       />
                     )}
 
-                    {/* Layer 2: Audio-Reactive Waveform */}
-                    {config.showWaveform && (
+                    {/* Per-Ayah Waveform (Standard CDN Mode Only) */}
+                    {!isFullAudioMode && config.showWaveform && audioSrc && (
                       <WaveformLayer
                         audioUrl={audioSrc}
                         type={config.waveformType}

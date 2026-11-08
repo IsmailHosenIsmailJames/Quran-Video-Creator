@@ -72,6 +72,54 @@ export interface AyahAudioData {
   segments: WordSegment[];
 }
 
+export interface WhisperWordTiming {
+  word_index: number;
+  text_uthmani: string;
+  start_ms: number;
+  end_ms: number;
+}
+
+export interface WhisperAyahTiming {
+  ayah_number: number;
+  text_uthmani: string;
+  start_ms: number;
+  end_ms: number;
+  duration_ms: number;
+  word_count: number;
+  words: WhisperWordTiming[];
+}
+
+export interface WhisperPreambleItem {
+  text: string;
+  start_ms: number;
+  end_ms: number;
+  duration_ms: number;
+}
+
+export interface WhisperPreamble {
+  has_istiadha: boolean;
+  istiadha?: WhisperPreambleItem | null;
+  has_basmala: boolean;
+  basmala?: WhisperPreambleItem | null;
+}
+
+export interface WhisperTimestampManifest {
+  surah_number: number;
+  surah_name_ar: string;
+  surah_name_en: string;
+  start_ayah: number;
+  end_ayah: number;
+  is_partial: boolean;
+  total_duration_ms: number;
+  parts_processed?: number;
+  model_used?: string;
+  model_choice?: string;
+  device?: string;
+  compute_type?: string;
+  preamble?: WhisperPreamble;
+  ayahs: WhisperAyahTiming[];
+}
+
 // ==========================================
 // 3. Translation Data Models
 // ==========================================
@@ -99,6 +147,8 @@ export interface AyahSequenceData {
   audioUrl: string;
   durationInFrames: number;
   segments: WordSegment[];
+  audioStartMs?: number;
+  audioEndMs?: number;
 }
 
 export type TransitionType =
@@ -243,7 +293,12 @@ export interface VideoTemplateConfig {
   // Audio & Waveform
   reciterIndex: number;
   recitationSpeed: number;      // 0.75x to 1.25x (default 1.0)
+  recitationAudioMode?: 'cdn-per-ayah' | 'full-surah-file';
   customAudioPath?: string;
+  customAudioDurationSeconds?: number;
+  customAudioFileName?: string;
+  customTimestampPath?: string;
+  hasCustomTimestamp?: boolean;
   showWaveform: boolean;
   waveformType: WaveformType;
   waveformColor: string;

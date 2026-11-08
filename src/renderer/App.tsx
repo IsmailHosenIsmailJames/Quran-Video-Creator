@@ -84,8 +84,7 @@ export const App: React.FC = () => {
         case 'upload-custom-audio': {
           const path = await api.selectMediaFile('audio');
           if (path) {
-            store.updateConfig({ customAudioPath: path });
-            store.refreshAyahSequence();
+            await store.selectFullRecitationAudio(path);
           }
           break;
         }

@@ -9,6 +9,7 @@ import {
   WordSegment,
   AyahFontOverride,
   QuranWord,
+  WhisperTimestampManifest,
 } from '../../shared/types';
 import {
   DEFAULT_TEMPLATE_CONFIG,
@@ -23,6 +24,11 @@ import {
 } from '../../shared/thumbnail-types';
 import { SURAHS_LIST, getSurahByNumber } from '../../shared/surahs';
 import { getLocalizedHeader } from '../../shared/surah-localization';
+import {
+  validateAndParseTimestampJson,
+  convertAyahToRelativeSegments,
+  convertBasmalaToRelativeSegments,
+} from '../../shared/custom-timestamp-utils';
 
 interface StudioState {
   config: VideoTemplateConfig;
@@ -45,6 +51,11 @@ interface StudioState {
   isThumbnailModalOpen: boolean;
   thumbnailConfig: ThumbnailConfig;
 
+  // Custom AI / Whisper Alignment Data
+  customTimestamp: WhisperTimestampManifest | null;
+  customTimestampPath: string | null;
+  customTimestampError: string | null;
+
   // Actions
   setActiveTab: (tab: 'scripture' | 'subtitles' | 'visuals' | 'audio' | 'branding' | 'thumbnail' | 'youtube') => void;
   setExportModalOpen: (open: boolean) => void;
@@ -54,6 +65,10 @@ interface StudioState {
   setCurrentFrame: (currentFrame: number) => void;
   setIsPlaying: (isPlaying: boolean) => void;
   updateConfig: (partial: Partial<VideoTemplateConfig>) => void;
+  loadCustomTimestamp: (content: string | unknown, filePath?: string) => Promise<{ success: boolean; message?: string }>;
+  clearCustomTimestamp: () => Promise<void>;
+  selectFullRecitationAudio: (filePath: string) => Promise<void>;
+  clearFullRecitationAudio: () => Promise<void>;
   updateAyahFontOverride: (surah: number, ayah: number, overrides: Partial<AyahFontOverride>) => void;
   resetAyahFontOverride: (surah: number, ayah: number) => void;
   setRecitationSpeed: (speed: number) => Promise<void>;
@@ -91,6 +106,10 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   isExportModalOpen: false,
   isThumbnailModalOpen: false,
   thumbnailConfig: DEFAULT_THUMBNAIL_CONFIG,
+
+  customTimestamp: null,
+  customTimestampPath: null,
+  customTimestampError: null,
 
   setActiveTab: (activeTab) => set({ activeTab }),
   setExportModalOpen: (isExportModalOpen) => set({ isExportModalOpen }),
@@ -181,10 +200,102 @@ export const useStudioStore = create<StudioState>((set, get) => ({
       partial.outroVideoDurationSeconds !== undefined ||
       partial.skipOutroForShorts !== undefined ||
       partial.outroMuted !== undefined ||
-      partial.outroTransition !== undefined
+      partial.outroTransition !== undefined ||
+      partial.customAudioPath !== undefined ||
+      partial.customTimestampPath !== undefined
     ) {
       get().refreshAyahSequence();
     }
+  },
+
+  loadCustomTimestamp: async (content: string | unknown, filePath?: string) => {
+    const result = validateAndParseTimestampJson(content);
+    if (!result.success || !result.data) {
+      const err = result.error || 'Failed to parse timestamp JSON';
+      set({ customTimestampError: err, statusMessage: `Timestamp Error: ${err}` });
+      return { success: false, message: err };
+    }
+
+    const manifest = result.data;
+    const fileName = filePath ? filePath.split(/[/\\]/).pop() || 'custom_timestamps.json' : 'custom_timestamps.json';
+
+    set((state) => ({
+      customTimestamp: manifest,
+      customTimestampPath: filePath || fileName,
+      customTimestampError: null,
+      config: {
+        ...state.config,
+        surahNumber: manifest.surah_number,
+        fromAyah: manifest.start_ayah,
+        toAyah: manifest.end_ayah,
+        customTimestampPath: filePath || fileName,
+        hasCustomTimestamp: true,
+        includeBismillah: manifest.preamble?.has_basmala ? true : state.config.includeBismillah,
+      },
+      statusMessage: `Loaded Whisper alignment for Surah ${manifest.surah_name_en} (${manifest.start_ayah}–${manifest.end_ayah})`,
+    }));
+
+    await get().refreshAyahSequence();
+    return {
+      success: true,
+      message: `Successfully loaded ${manifest.ayahs.length} verses (${manifest.surah_name_en}) from ${fileName}`,
+    };
+  },
+
+  clearCustomTimestamp: async () => {
+    set((state) => ({
+      customTimestamp: null,
+      customTimestampPath: null,
+      customTimestampError: null,
+      config: {
+        ...state.config,
+        customTimestampPath: undefined,
+        hasCustomTimestamp: false,
+      },
+      statusMessage: 'Reset to standard recitation timing',
+    }));
+    await get().refreshAyahSequence();
+  },
+
+  selectFullRecitationAudio: async (filePath: string) => {
+    let probedDuration = 0;
+    try {
+      if (window.electronAPI?.probeMediaDuration) {
+        probedDuration = await window.electronAPI.probeMediaDuration(filePath);
+      }
+    } catch (e) {
+      console.warn('Failed to probe audio duration:', e);
+    }
+
+    const fileName = filePath.split(/[/\\]/).pop() || 'recitation.mp3';
+
+    set((state) => ({
+      config: {
+        ...state.config,
+        customAudioPath: filePath,
+        recitationAudioMode: 'full-surah-file',
+        customAudioDurationSeconds: probedDuration > 0 ? probedDuration : undefined,
+        customAudioFileName: fileName,
+      },
+      statusMessage: `Selected full recitation audio: ${fileName}`,
+    }));
+
+    await get().refreshAyahSequence();
+  },
+
+  clearFullRecitationAudio: async () => {
+    set((state) => ({
+      config: {
+        ...state.config,
+        customAudioPath: undefined,
+        recitationAudioMode: 'cdn-per-ayah',
+        customAudioDurationSeconds: undefined,
+        customAudioFileName: undefined,
+      },
+      statusMessage: 'Reverted to standard CDN recitation audio',
+    }));
+
+    await get().refreshAyahSequence();
   },
 
   updateAyahFontOverride: (surah: number, ayah: number, overrides: Partial<AyahFontOverride>) => {
@@ -501,7 +612,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   },
 
   refreshAyahSequence: async () => {
-    const { config } = get();
+    const { config, customTimestamp } = get();
     const api = window.electronAPI;
     if (!api) return;
 
@@ -509,6 +620,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
 
     try {
       const surahMeta = getSurahByNumber(config.surahNumber);
+      const isCustomTimingActive = Boolean(customTimestamp && customTimestamp.surah_number === config.surahNumber);
 
       // Fetch Words, Translations, and Timing/Audio Data concurrently in parallel
       const [wordsMap, primaryTransMap, secondaryTransMap, audioMap] = await Promise.all([
@@ -596,21 +708,31 @@ export const useStudioStore = create<StudioState>((set, get) => ({
             text: w.text,
           }));
 
-          const bDurationInSeconds = (bismillahAudio.durationInSeconds || 5) / speed;
-          const bDurationInFrames = Math.max(
-            30,
-            Math.round(bDurationInSeconds * config.fps)
-          );
-
-          totalFrames += bDurationInFrames;
-
-          const scaledBismillahSegments = (bismillahAudio.segments || [])
+          let bDurationInSeconds = (bismillahAudio.durationInSeconds || 5) / speed;
+          let scaledBismillahSegments: WordSegment[] = (bismillahAudio.segments || [])
             .filter((seg: WordSegment) => seg.wordIndex <= 4)
             .map((seg: WordSegment) => ({
               wordIndex: seg.wordIndex,
               startMs: Math.round(seg.startMs / speed),
               endMs: Math.round(seg.endMs / speed),
             }));
+          let bStartMs: number | undefined;
+          let bEndMs: number | undefined;
+
+          if (isCustomTimingActive && customTimestamp?.preamble?.has_basmala && customTimestamp.preamble.basmala) {
+            const basmala = customTimestamp.preamble.basmala;
+            bDurationInSeconds = (basmala.duration_ms / 1000) / speed;
+            scaledBismillahSegments = convertBasmalaToRelativeSegments(basmala, speed);
+            bStartMs = basmala.start_ms;
+            bEndMs = basmala.end_ms;
+          }
+
+          const bDurationInFrames = Math.max(
+            30,
+            Math.round(bDurationInSeconds * config.fps)
+          );
+
+          totalFrames += bDurationInFrames;
 
           const localizedBismillah = getLocalizedHeader(config, config.surahNumber, 0);
           sequence.push({
@@ -626,6 +748,8 @@ export const useStudioStore = create<StudioState>((set, get) => ({
             audioUrl: config.customAudioPath || bismillahAudio.audioUrl,
             durationInFrames: bDurationInFrames,
             segments: scaledBismillahSegments,
+            audioStartMs: bStartMs,
+            audioEndMs: bEndMs,
           });
         } catch (bErr) {
           console.warn('Failed to prepend Bismillah:', bErr);
@@ -634,26 +758,41 @@ export const useStudioStore = create<StudioState>((set, get) => ({
 
       for (let a = config.fromAyah; a <= config.toAyah; a++) {
         const words = wordsMap[a] || [];
-        const audioData = audioMap[a] || {
-          audioUrl: '',
-          durationInSeconds: 5,
-          segments: [],
-        };
+        const customAyahTiming = isCustomTimingActive
+          ? customTimestamp?.ayahs.find((item) => item.ayah_number === a)
+          : undefined;
 
-        const durationInSeconds = (audioData.durationInSeconds || 5) / speed;
+        let durationInSeconds: number;
+        let scaledSegments: WordSegment[];
+        let audioStartMs: number | undefined;
+        let audioEndMs: number | undefined;
+
+        if (customAyahTiming) {
+          const rawDurationMs = customAyahTiming.duration_ms || (customAyahTiming.end_ms - customAyahTiming.start_ms);
+          durationInSeconds = (rawDurationMs / 1000) / speed;
+          scaledSegments = convertAyahToRelativeSegments(customAyahTiming, speed);
+          audioStartMs = customAyahTiming.start_ms;
+          audioEndMs = customAyahTiming.end_ms;
+        } else {
+          const audioData = audioMap[a] || {
+            audioUrl: '',
+            durationInSeconds: 5,
+            segments: [],
+          };
+          durationInSeconds = (audioData.durationInSeconds || 5) / speed;
+          scaledSegments = (audioData.segments || []).map((seg: WordSegment) => ({
+            wordIndex: seg.wordIndex,
+            startMs: Math.round(seg.startMs / speed),
+            endMs: Math.round(seg.endMs / speed),
+          }));
+        }
+
         const durationInFrames = Math.max(
           30,
           Math.round(durationInSeconds * config.fps)
         );
 
         totalFrames += durationInFrames;
-
-        // Scale word timestamps by recitationSpeed so karaoke highlights stay in sync:
-        const scaledSegments = (audioData.segments || []).map((seg: WordSegment) => ({
-          wordIndex: seg.wordIndex,
-          startMs: Math.round(seg.startMs / speed),
-          endMs: Math.round(seg.endMs / speed),
-        }));
 
         const localizedAyah = getLocalizedHeader(config, config.surahNumber, a);
         sequence.push({
@@ -666,9 +805,11 @@ export const useStudioStore = create<StudioState>((set, get) => ({
           words,
           primaryTranslation: primaryTransMap[a] || '',
           secondaryTranslation: secondaryTransMap[a] || '',
-          audioUrl: config.customAudioPath || audioData.audioUrl,
+          audioUrl: config.customAudioPath || audioMap[a]?.audioUrl || '',
           durationInFrames,
           segments: scaledSegments,
+          audioStartMs,
+          audioEndMs,
         });
       }
 

@@ -157,6 +157,12 @@ export const DEFAULT_TEMPLATE_CONFIG: VideoTemplateConfig = {
   // Audio & Waveform
   reciterIndex: 0, // Mishary Rashid Alafasy
   recitationSpeed: 1.0,
+  recitationAudioMode: 'cdn-per-ayah',
+  customAudioPath: undefined,
+  customAudioDurationSeconds: undefined,
+  customAudioFileName: undefined,
+  customTimestampPath: undefined,
+  hasCustomTimestamp: false,
   showWaveform: true,
   waveformType: 'smooth-wave',
   waveformColor: '#F59E0B',

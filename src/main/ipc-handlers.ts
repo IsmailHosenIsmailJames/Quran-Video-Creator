@@ -146,6 +146,37 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
     }
   );
 
+  ipcMain.handle('dialog:select-json-file', async () => {
+    const defaultPath = settingsService.getLastDirectory('json') || undefined;
+
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: 'Select Recitation Timestamp JSON File',
+      properties: ['openFile'],
+      filters: [
+        { name: 'JSON Timestamp Files', extensions: ['json'] },
+        { name: 'All Files', extensions: ['*'] },
+      ],
+      defaultPath,
+    });
+
+    if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
+      return null;
+    }
+
+    const chosen = result.filePaths[0];
+    const dir = path.dirname(chosen);
+    if (dir && fs.existsSync(dir)) {
+      settingsService.setLastDirectory('json', dir);
+    }
+
+    const content = await fs.promises.readFile(chosen, 'utf-8');
+    return {
+      filePath: chosen,
+      fileName: path.basename(chosen),
+      content,
+    };
+  });
+
   ipcMain.handle('dialog:select-save-path', async (_, defaultFileName: string) => {
     const lastExportDir = settingsService.getLastDirectory('export');
     let defaultPath = defaultFileName || 'Quran_Video_Export.mp4';

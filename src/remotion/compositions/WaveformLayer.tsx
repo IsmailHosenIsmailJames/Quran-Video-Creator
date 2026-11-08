@@ -6,6 +6,7 @@ import { WaveformType } from '../../shared/types';
 
 interface WaveformLayerProps {
   audioUrl: string;
+  initialFrameOffset?: number;
   type: WaveformType;
   color: string;
   colorSecondary?: string;
@@ -24,6 +25,7 @@ interface WaveformLayerProps {
 
 export const WaveformLayer: React.FC<WaveformLayerProps> = ({
   audioUrl,
+  initialFrameOffset = 0,
   type = 'smooth-wave',
   color = '#F59E0B',
   colorSecondary,
@@ -40,6 +42,7 @@ export const WaveformLayer: React.FC<WaveformLayerProps> = ({
   opacity = 0.9,
 }) => {
   const frame = useCurrentFrame();
+  const effectiveFrame = frame + (initialFrameOffset || 0);
   const gradId = useId().replace(/:/g, '');
 
   const resolvedAudioSrc = getMediaUrl(audioUrl);
@@ -63,7 +66,7 @@ export const WaveformLayer: React.FC<WaveformLayerProps> = ({
     try {
       samples = visualizeAudioWaveform({
         audioData,
-        frame,
+        frame: effectiveFrame,
         fps: 30,
         numberOfSamples: effectiveSampleCount,
         windowInSeconds: 0.1,
@@ -80,11 +83,11 @@ export const WaveformLayer: React.FC<WaveformLayerProps> = ({
     samples = Array.from({ length: effectiveSampleCount }, (_, i) => {
       const norm = i / (effectiveSampleCount - 1);
       const bell = Math.sin(norm * Math.PI); // Taper ends gracefully to 0
-      const wave1 = Math.sin(norm * 14 + frame * 0.14) * 0.45;
-      const wave2 = Math.cos(norm * 22 - frame * 0.1) * 0.32;
-      const wave3 = Math.sin(norm * 8 + frame * 0.06) * 0.38;
+      const wave1 = Math.sin(norm * 14 + effectiveFrame * 0.14) * 0.45;
+      const wave2 = Math.cos(norm * 22 - effectiveFrame * 0.1) * 0.32;
+      const wave3 = Math.sin(norm * 8 + effectiveFrame * 0.06) * 0.38;
       // Vocal cadence modulation
-      const pulse = Math.abs(Math.sin(frame * 0.08)) * 0.45 + 0.55;
+      const pulse = Math.abs(Math.sin(effectiveFrame * 0.08)) * 0.45 + 0.55;
       return (wave1 + wave2 + wave3) * bell * pulse;
     });
   }

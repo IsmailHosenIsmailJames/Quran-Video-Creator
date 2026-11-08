@@ -3,15 +3,17 @@ import { useStudioStore } from '../store/studio-store';
 import { SURAHS_LIST, getSurahByNumber } from '../../shared/surahs';
 import { getSurahNameLocalized } from '../../shared/surah-localization';
 import { ScriptType } from '../../shared/types';
-import { BookOpen, Hash, Layers } from 'lucide-react';
+import { BookOpen, Hash, Layers, FileJson, Sparkles } from 'lucide-react';
 
 export const VerseSelector: React.FC = () => {
-  const { config, changeSurah, changeAyahRange, changeScript, updateConfig } = useStudioStore();
+  const { config, changeSurah, changeAyahRange, changeScript, updateConfig, customTimestamp, setActiveTab } = useStudioStore();
   const currentSurah = getSurahByNumber(config.surahNumber);
   const localizedSurahName = getSurahNameLocalized(
     config.surahNumber,
     config.headerLanguage && config.headerLanguage !== 'auto' ? config.headerLanguage : config.primaryTranslationLang
   );
+
+  const isCustomTimingActive = Boolean(customTimestamp && customTimestamp.surah_number === config.surahNumber);
 
   return (
     <div className="space-y-6">
@@ -57,6 +59,23 @@ export const VerseSelector: React.FC = () => {
             {currentSurah.totalAyahs} Verses
           </span>
         </div>
+
+        {isCustomTimingActive && customTimestamp && (
+          <div className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-xs">
+            <div className="flex items-center gap-2 text-emerald-300">
+              <FileJson className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+              <span>
+                Timings driven by <strong>Whisper JSON</strong> ({customTimestamp.start_ayah}–{customTimestamp.end_ayah})
+              </span>
+            </div>
+            <button
+              onClick={() => setActiveTab('audio')}
+              className="text-[11px] underline text-emerald-400 hover:text-emerald-200 transition"
+            >
+              Manage in Audio Tab
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Ayah Range */}
