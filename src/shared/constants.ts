@@ -153,6 +153,11 @@ export const DEFAULT_TEMPLATE_CONFIG: VideoTemplateConfig = {
   overlayOpacity: 0.45,
   vignetteIntensity: 0.85,
   kenBurnsEffect: true,
+  recitationVideoPath: undefined,
+  useRecitationVideoAsBackground: false,
+  useRecitationVideoAudio: false,
+  recitationVideoDurationSeconds: undefined,
+  recitationVideoFileName: undefined,
 
   // Audio & Waveform
   reciterIndex: 0, // Mishary Rashid Alafasy

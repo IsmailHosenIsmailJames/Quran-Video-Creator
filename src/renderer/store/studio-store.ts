@@ -69,6 +69,10 @@ interface StudioState {
   clearCustomTimestamp: () => Promise<void>;
   selectFullRecitationAudio: (filePath: string) => Promise<void>;
   clearFullRecitationAudio: () => Promise<void>;
+  selectRecitationVideo: (filePath: string) => Promise<void>;
+  clearRecitationVideo: () => Promise<void>;
+  toggleRecitationVideoBackground: (enabled: boolean) => void;
+  toggleRecitationVideoAudio: (enabled: boolean) => Promise<void>;
   updateAyahFontOverride: (surah: number, ayah: number, overrides: Partial<AyahFontOverride>) => void;
   resetAyahFontOverride: (surah: number, ayah: number) => void;
   setRecitationSpeed: (speed: number) => Promise<void>;
@@ -202,7 +206,10 @@ export const useStudioStore = create<StudioState>((set, get) => ({
       partial.outroMuted !== undefined ||
       partial.outroTransition !== undefined ||
       partial.customAudioPath !== undefined ||
-      partial.customTimestampPath !== undefined
+      partial.customTimestampPath !== undefined ||
+      partial.recitationVideoPath !== undefined ||
+      partial.useRecitationVideoAudio !== undefined ||
+      partial.useRecitationVideoAsBackground !== undefined
     ) {
       get().refreshAyahSequence();
     }
@@ -295,6 +302,68 @@ export const useStudioStore = create<StudioState>((set, get) => ({
       statusMessage: 'Reverted to standard CDN recitation audio',
     }));
 
+    await get().refreshAyahSequence();
+  },
+
+  selectRecitationVideo: async (filePath: string) => {
+    let probedDuration = 0;
+    try {
+      if (window.electronAPI?.probeMediaDuration) {
+        probedDuration = await window.electronAPI.probeMediaDuration(filePath);
+      }
+    } catch (e) {
+      console.warn('Failed to probe recitation video duration:', e);
+    }
+
+    const fileName = filePath.split(/[/\\]/).pop() || 'recitation_video.mp4';
+
+    set((state) => ({
+      config: {
+        ...state.config,
+        recitationVideoPath: filePath,
+        useRecitationVideoAsBackground: true,
+        useRecitationVideoAudio: state.config.useRecitationVideoAudio !== false,
+        recitationVideoDurationSeconds: probedDuration > 0 ? probedDuration : undefined,
+        recitationVideoFileName: fileName,
+      },
+      statusMessage: `Loaded recitation video background: ${fileName}`,
+    }));
+
+    await get().refreshAyahSequence();
+  },
+
+  clearRecitationVideo: async () => {
+    set((state) => ({
+      config: {
+        ...state.config,
+        recitationVideoPath: undefined,
+        useRecitationVideoAsBackground: false,
+        useRecitationVideoAudio: false,
+        recitationVideoDurationSeconds: undefined,
+        recitationVideoFileName: undefined,
+      },
+      statusMessage: 'Removed recitation video background',
+    }));
+
+    await get().refreshAyahSequence();
+  },
+
+  toggleRecitationVideoBackground: (enabled: boolean) => {
+    set((state) => ({
+      config: {
+        ...state.config,
+        useRecitationVideoAsBackground: enabled,
+      },
+    }));
+  },
+
+  toggleRecitationVideoAudio: async (enabled: boolean) => {
+    set((state) => ({
+      config: {
+        ...state.config,
+        useRecitationVideoAudio: enabled,
+      },
+    }));
     await get().refreshAyahSequence();
   },
 
@@ -745,7 +814,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
             words: bismillahWords,
             primaryTranslation: bismillahPrimaryTranslation,
             secondaryTranslation: bismillahSecondaryTranslation,
-            audioUrl: config.customAudioPath || bismillahAudio.audioUrl,
+            audioUrl: (config.useRecitationVideoAudio && config.recitationVideoPath) || config.customAudioPath || bismillahAudio.audioUrl,
             durationInFrames: bDurationInFrames,
             segments: scaledBismillahSegments,
             audioStartMs: bStartMs,
@@ -805,7 +874,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
           words,
           primaryTranslation: primaryTransMap[a] || '',
           secondaryTranslation: secondaryTransMap[a] || '',
-          audioUrl: config.customAudioPath || audioMap[a]?.audioUrl || '',
+          audioUrl: (config.useRecitationVideoAudio && config.recitationVideoPath) || config.customAudioPath || audioMap[a]?.audioUrl || '',
           durationInFrames,
           segments: scaledSegments,
           audioStartMs,

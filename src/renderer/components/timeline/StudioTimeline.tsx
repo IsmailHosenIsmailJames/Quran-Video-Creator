@@ -128,7 +128,29 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
     rightStartPct: number;
   } | null>(null);
 
-  const clips = config.backgroundClips && config.backgroundClips.length > 0
+  const isRecitationVideoActive = Boolean(
+    config.useRecitationVideoAsBackground && config.recitationVideoPath
+  );
+
+  const clips = isRecitationVideoActive
+    ? [
+        {
+          id: 'recitation-video-bg',
+          type: 'video' as const,
+          source: config.recitationVideoPath!,
+          name: config.recitationVideoFileName || 'Recitation Video Background',
+          percentage: 100,
+          durationRatio: 1.0,
+          speed: 1.0,
+          autoFitSpeed: false,
+          sourceDurationSeconds: config.recitationVideoDurationSeconds,
+          trimStartSeconds: 0,
+          kenBurns: false,
+          transition: 'cut' as TransitionType,
+          transitionDurationFrames: 0,
+        },
+      ]
+    : config.backgroundClips && config.backgroundClips.length > 0
     ? config.backgroundClips
     : [
         {

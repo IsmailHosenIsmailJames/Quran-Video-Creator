@@ -88,6 +88,13 @@ export const App: React.FC = () => {
           }
           break;
         }
+        case 'upload-recitation-video': {
+          const path = await api.selectMediaFile('video');
+          if (path) {
+            await store.selectRecitationVideo(path);
+          }
+          break;
+        }
         case 'about':
           alert('Quran Video Studio v1.0\nDesktop Motion Graphics & Recitation Studio powered by Remotion');
           break;

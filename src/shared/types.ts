@@ -289,6 +289,11 @@ export interface VideoTemplateConfig {
   overlayOpacity: number;       // 0.2 to 0.85
   vignetteIntensity: number;    // 0.0 to 1.0
   kenBurnsEffect: boolean;
+  recitationVideoPath?: string;
+  useRecitationVideoAsBackground?: boolean;
+  useRecitationVideoAudio?: boolean;
+  recitationVideoDurationSeconds?: number;
+  recitationVideoFileName?: string;
 
   // Audio & Waveform
   reciterIndex: number;

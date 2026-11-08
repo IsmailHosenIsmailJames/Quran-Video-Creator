@@ -12,6 +12,8 @@ interface BackgroundLayerProps {
   kenBurnsEffect: boolean;
   totalDurationInFrames: number;
   fps?: number;
+  recitationVideoPath?: string;
+  recitationVideoStartFromFrame?: number;
 }
 
 interface ClipItemProps {
@@ -197,6 +199,8 @@ export const BackgroundLayer: React.FC<BackgroundLayerProps> = ({
   kenBurnsEffect,
   totalDurationInFrames,
   fps = 30,
+  recitationVideoPath,
+  recitationVideoStartFromFrame = 0,
 }) => {
   const activeClips = clips && clips.length > 0 ? clips : null;
 
@@ -254,9 +258,23 @@ export const BackgroundLayer: React.FC<BackgroundLayerProps> = ({
         height: '100%',
       }}
     >
-      {/* Background Media: Multi-Clip Sequence or Single Fallback */}
+      {/* Background Media: Continuous Recitation Video, Multi-Clip Sequence, or Single Fallback */}
       <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-        {clipSequences.length > 0 ? (
+        {recitationVideoPath ? (
+          <OffthreadVideo
+            src={getMediaUrl(recitationVideoPath)}
+            startFrom={recitationVideoStartFromFrame}
+            playbackRate={1.0}
+            pauseWhenBuffering
+            muted
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              objectPosition: 'center center',
+            }}
+          />
+        ) : clipSequences.length > 0 ? (
           clipSequences.map(({ clip, startFrame, durationFrames }, index) => (
             <Sequence
               key={`${clip.id}_${index}`}

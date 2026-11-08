@@ -99,6 +99,12 @@ function createApplicationMenu(window: BrowserWindow): void {
           window.webContents.send('menu:action', 'upload-custom-audio');
         },
       },
+      {
+        label: 'Upload Recitation Video (Task 3)...',
+        click: () => {
+          window.webContents.send('menu:action', 'upload-recitation-video');
+        },
+      },
       { type: 'separator' },
       isMac ? { role: 'close' } : { role: 'quit' },
     ],

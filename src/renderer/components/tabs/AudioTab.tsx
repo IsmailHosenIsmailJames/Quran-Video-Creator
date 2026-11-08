@@ -21,6 +21,7 @@ import {
   FileAudio,
   Volume2,
   Radio,
+  Film,
 } from 'lucide-react';
 import { WaveformType } from '../../../shared/types';
 import { formatDurationMs } from '../../../shared/custom-timestamp-utils';
@@ -136,6 +137,7 @@ export const AudioTab: React.FC = () => {
     clearCustomTimestamp,
     selectFullRecitationAudio,
     clearFullRecitationAudio,
+    toggleRecitationVideoAudio,
   } = useStudioStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -440,6 +442,39 @@ export const AudioTab: React.FC = () => {
           onChange={handleAudioFileInputChange}
           className="hidden"
         />
+
+        {/* Recitation Video Audio Track Option (when recitation video is loaded) */}
+        {config.recitationVideoPath && (
+          <div className="p-3.5 rounded-xl bg-gradient-to-r from-emerald-950/40 via-gray-950 to-gray-950 border border-emerald-500/40 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
+                <Film className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-white">Recitation Video Audio Track</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono">
+                    {config.recitationVideoFileName || config.recitationVideoPath.split(/[/\\]/).pop()}
+                  </span>
+                </div>
+                <div className="text-[11px] text-gray-400 truncate">
+                  {config.useRecitationVideoAudio
+                    ? '✓ Using native audio track directly from uploaded recitation video'
+                    : 'Video audio is muted; using separate recitation audio below'}
+                </div>
+              </div>
+            </div>
+            <label className="flex items-center gap-2 text-xs text-emerald-300 font-medium cursor-pointer shrink-0">
+              <span>{config.useRecitationVideoAudio ? 'Active' : 'Muted'}</span>
+              <input
+                type="checkbox"
+                checked={config.useRecitationVideoAudio ?? false}
+                onChange={(e) => toggleRecitationVideoAudio(e.target.checked)}
+                className="rounded border-gray-700 text-emerald-500 focus:ring-0 cursor-pointer"
+              />
+            </label>
+          </div>
+        )}
 
         {config.customAudioPath ? (
           /* Full Recitation Audio File Active Card */

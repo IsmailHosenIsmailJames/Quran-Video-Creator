@@ -162,10 +162,18 @@ export const QuranVideo: React.FC<QuranVideoCompositionProps> = ({
   const scriptureStartFrame = introDurationInFrames + titleCardDurationInFrames;
   const outroStartFrame = scriptureStartFrame + scriptureDurationInFrames;
 
-  // Single continuous audio track mode (full surah MP3 file)
+  // Effective audio source (recitation video audio or custom audio MP3)
+  const effectiveAudioPath =
+    config.useRecitationVideoAudio && config.recitationVideoPath
+      ? config.recitationVideoPath
+      : config.customAudioPath;
+
+  // Single continuous audio track mode (full surah MP3 file or recitation video audio)
   const isFullAudioMode = Boolean(
-    config.customAudioPath &&
-    (config.recitationAudioMode === 'full-surah-file' || config.hasCustomTimestamp)
+    effectiveAudioPath &&
+    (config.recitationAudioMode === 'full-surah-file' ||
+      config.hasCustomTimestamp ||
+      (config.useRecitationVideoAudio && Boolean(config.recitationVideoPath)))
   );
 
   let fullAudioStartFromFrame = 0;
@@ -337,21 +345,27 @@ export const QuranVideo: React.FC<QuranVideoCompositionProps> = ({
             kenBurnsEffect={config.kenBurnsEffect}
             totalDurationInFrames={scriptureDurationInFrames}
             fps={config.fps}
+            recitationVideoPath={
+              config.useRecitationVideoAsBackground && config.recitationVideoPath
+                ? config.recitationVideoPath
+                : undefined
+            }
+            recitationVideoStartFromFrame={fullAudioStartFromFrame}
           />
 
-          {/* Continuous Recitation Audio Track across full scripture timeline (Single MP3 Mode) */}
-          {isFullAudioMode && config.customAudioPath && (
+          {/* Continuous Recitation Audio Track across full scripture timeline (Single MP3 Mode or Recitation Video Audio) */}
+          {isFullAudioMode && effectiveAudioPath && (
             <Audio
-              src={getMediaUrl(config.customAudioPath)}
+              src={getMediaUrl(effectiveAudioPath)}
               startFrom={fullAudioStartFromFrame}
               playbackRate={config.recitationSpeed || 1.0}
             />
           )}
 
-          {/* Audio-Reactive Waveform across Full Scripture Timeline (Single MP3 Mode) */}
-          {isFullAudioMode && config.showWaveform && config.customAudioPath && (
+          {/* Audio-Reactive Waveform across Full Scripture Timeline */}
+          {isFullAudioMode && config.showWaveform && effectiveAudioPath && (
             <WaveformLayer
-              audioUrl={config.customAudioPath}
+              audioUrl={effectiveAudioPath}
               initialFrameOffset={fullAudioStartFromFrame}
               type={config.waveformType}
               color={config.waveformColor}
