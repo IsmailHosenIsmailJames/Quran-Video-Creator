@@ -2,7 +2,7 @@ import React from 'react';
 import { useStudioStore } from '../store/studio-store';
 import { SURAHS_LIST, getSurahByNumber } from '../../shared/surahs';
 import { getSurahNameLocalized } from '../../shared/surah-localization';
-import { ScriptType } from '../../shared/types';
+import { ScriptType, isSalatJammatManifest } from '../../shared/types';
 import { BookOpen, Hash, Layers, FileJson, Sparkles } from 'lucide-react';
 
 export const VerseSelector: React.FC = () => {
@@ -13,7 +13,12 @@ export const VerseSelector: React.FC = () => {
     config.headerLanguage && config.headerLanguage !== 'auto' ? config.headerLanguage : config.primaryTranslationLang
   );
 
-  const isCustomTimingActive = Boolean(customTimestamp && customTimestamp.surah_number === config.surahNumber);
+  const isSalat = isSalatJammatManifest(customTimestamp);
+  const isCustomTimingActive = Boolean(
+    customTimestamp &&
+    !isSalat &&
+    (customTimestamp as any).surah_number === config.surahNumber
+  );
 
   return (
     <div className="space-y-6">
@@ -60,7 +65,53 @@ export const VerseSelector: React.FC = () => {
           </span>
         </div>
 
-        {isCustomTimingActive && customTimestamp && (
+        {isSalat && customTimestamp && (
+          <div className="p-3.5 rounded-xl bg-gradient-to-br from-emerald-950/40 via-gray-900 to-gray-950 border border-emerald-500/40 space-y-2.5 text-xs shadow-lg shadow-emerald-950/20">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-emerald-300 font-semibold">
+                <Sparkles className="w-4 h-4 text-emerald-400" />
+                <span>Salat Jama'ah Recitation Mode</span>
+              </div>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono border border-emerald-500/30">
+                {(customTimestamp as any).segments?.length || 0} Segments
+              </span>
+            </div>
+            <div className="space-y-1.5 pt-0.5">
+              {(customTimestamp as any).segments?.map((seg: any) => (
+                <div
+                  key={seg.segment_id}
+                  className="flex items-center justify-between px-3 py-2 rounded-lg bg-gray-950/80 border border-gray-800 text-[11px]"
+                >
+                  <div className="min-w-0">
+                    <span className="text-white font-medium block truncate">
+                      {seg.label}
+                    </span>
+                    <span className="text-gray-400 text-[10px]">
+                      Surah {seg.surah_name_en} ({seg.surah_name_ar})
+                    </span>
+                  </div>
+                  <span className="text-emerald-400 font-mono text-right shrink-0">
+                    v{seg.start_ayah}–{seg.end_ayah} <span className="text-gray-500">({Math.round(seg.duration_ms / 1000)}s)</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center justify-between pt-1 border-t border-gray-800/80 text-[11px]">
+              <span className="text-gray-400">
+                Multi-Surah prayer with automatic gap alignment
+              </span>
+              <button
+                type="button"
+                onClick={() => setActiveTab('audio')}
+                className="text-emerald-400 hover:text-emerald-200 underline font-medium transition"
+              >
+                Audio Settings
+              </button>
+            </div>
+          </div>
+        )}
+
+        {isCustomTimingActive && customTimestamp && !isSalat && (
           <div className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-xs">
             <div className="flex items-center gap-2 text-emerald-300">
               <FileJson className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />

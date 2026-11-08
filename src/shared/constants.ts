@@ -82,6 +82,8 @@ export const DEFAULT_TEMPLATE_CONFIG: VideoTemplateConfig = {
   fromAyah: 1,
   toAyah: 7,
   includeBismillah: true,
+  recitationMode: 'single-surah',
+  salatSegments: undefined,
 
   // Scripture Typography
   script: 'qpc-nastaleeq',

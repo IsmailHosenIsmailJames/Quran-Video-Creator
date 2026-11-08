@@ -17,6 +17,104 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
 }) => {
   const frame = useCurrentFrame();
 
+  // If this item is a Prayer Segment Interstitial / Transition Card
+  if (ayahData.isInterstitial) {
+    const totalFrames = Math.max(1, ayahData.durationInFrames);
+    const fadeFrames = Math.min(15, Math.floor(totalFrames / 3));
+    let opacity = 1;
+    if (frame < fadeFrames) {
+      opacity = interpolate(frame, [0, fadeFrames], [0, 1], {
+        extrapolateLeft: 'clamp',
+        extrapolateRight: 'clamp',
+      });
+    } else if (frame > totalFrames - fadeFrames) {
+      opacity = interpolate(frame, [totalFrames - fadeFrames, totalFrames], [1, 0], {
+        extrapolateLeft: 'clamp',
+        extrapolateRight: 'clamp',
+      });
+    }
+
+    const surahLigatureCode = `surah${String(ayahData.surah).padStart(3, '0')}`;
+
+    return (
+      <AbsoluteFill
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          pointerEvents: 'none',
+          userSelect: 'none',
+          opacity,
+          padding: '32px',
+          boxSizing: 'border-box',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px 44px',
+            borderRadius: '24px',
+            backgroundColor: 'rgba(0, 0, 0, 0.65)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            border: '1px solid rgba(245, 158, 11, 0.35)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
+            maxWidth: '85%',
+            textAlign: 'center',
+            gap: '12px',
+          }}
+        >
+          {ayahData.surah > 0 && (
+            <span
+              className="surah-calligraphy-title"
+              style={{
+                fontFamily: "'surah-name-v1', sans-serif",
+                fontSize: '48px',
+                lineHeight: 1,
+                color: '#FCD34D',
+                filter: 'drop-shadow(0 2px 10px rgba(245, 158, 11, 0.4))',
+              }}
+            >
+              {surahLigatureCode}
+            </span>
+          )}
+
+          {ayahData.interstitialTitle && (
+            <span
+              style={{
+                fontSize: '22px',
+                fontWeight: 600,
+                color: '#FFFFFF',
+                letterSpacing: '0.5px',
+                fontFamily: "'Inter', sans-serif",
+              }}
+            >
+              {ayahData.interstitialTitle}
+            </span>
+          )}
+
+          {ayahData.interstitialSubtitle && (
+            <span
+              style={{
+                fontSize: '18px',
+                fontWeight: 400,
+                color: '#D1D5DB',
+                fontFamily: "'Amiri', serif",
+                direction: 'rtl',
+              }}
+            >
+              {ayahData.interstitialSubtitle}
+            </span>
+          )}
+        </div>
+      </AbsoluteFill>
+    );
+  }
+
   // Per-Ayah In/Out Animation Overrides (with fallback to global config)
   const ayahKey = `${ayahData.surah}:${ayahData.ayah}`;
   const override = config.ayahFontOverrides?.[ayahKey];

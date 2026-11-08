@@ -10,6 +10,11 @@ import {
   AyahFontOverride,
   QuranWord,
   WhisperTimestampManifest,
+  SalatJammatManifest,
+  WhisperSalatSegment,
+  WhisperSalatAyahTiming,
+  UnifiedTimestampManifest,
+  isSalatJammatManifest,
 } from '../../shared/types';
 import {
   DEFAULT_TEMPLATE_CONFIG,
@@ -51,8 +56,8 @@ interface StudioState {
   isThumbnailModalOpen: boolean;
   thumbnailConfig: ThumbnailConfig;
 
-  // Custom AI / Whisper Alignment Data
-  customTimestamp: WhisperTimestampManifest | null;
+  // Custom AI / Whisper Alignment Data (Single Surah or Salat Jama'ah)
+  customTimestamp: UnifiedTimestampManifest | null;
   customTimestampPath: string | null;
   customTimestampError: string | null;
 
@@ -226,27 +231,61 @@ export const useStudioStore = create<StudioState>((set, get) => ({
     const manifest = result.data;
     const fileName = filePath ? filePath.split(/[/\\]/).pop() || 'custom_timestamps.json' : 'custom_timestamps.json';
 
-    set((state) => ({
-      customTimestamp: manifest,
-      customTimestampPath: filePath || fileName,
-      customTimestampError: null,
-      config: {
-        ...state.config,
-        surahNumber: manifest.surah_number,
-        fromAyah: manifest.start_ayah,
-        toAyah: manifest.end_ayah,
-        customTimestampPath: filePath || fileName,
-        hasCustomTimestamp: true,
-        includeBismillah: manifest.preamble?.has_basmala ? true : state.config.includeBismillah,
-      },
-      statusMessage: `Loaded Whisper alignment for Surah ${manifest.surah_name_en} (${manifest.start_ayah}–${manifest.end_ayah})`,
-    }));
+    if (isSalatJammatManifest(manifest)) {
+      const firstSeg = manifest.segments[0];
+      const lastSeg = manifest.segments[manifest.segments.length - 1];
+      const totalAyahs = manifest.all_ayahs?.length || manifest.segments.reduce((acc, s) => acc + s.ayahs.length, 0);
 
-    await get().refreshAyahSequence();
-    return {
-      success: true,
-      message: `Successfully loaded ${manifest.ayahs.length} verses (${manifest.surah_name_en}) from ${fileName}`,
-    };
+      set((state) => ({
+        customTimestamp: manifest,
+        customTimestampPath: filePath || fileName,
+        customTimestampError: null,
+        config: {
+          ...state.config,
+          recitationMode: 'salat-jammat',
+          salatSegments: manifest.segments,
+          surahNumber: firstSeg ? firstSeg.surah_number : state.config.surahNumber,
+          fromAyah: firstSeg ? firstSeg.start_ayah : state.config.fromAyah,
+          toAyah: lastSeg ? lastSeg.end_ayah : state.config.toAyah,
+          customTimestampPath: filePath || fileName,
+          hasCustomTimestamp: true,
+          includeBismillah: false, // Salat recitations have Bismillah integrated or silent
+          customAudioFileName: manifest.filename || state.config.customAudioFileName,
+          recitationVideoFileName: manifest.filename || state.config.recitationVideoFileName,
+        },
+        statusMessage: `Loaded Salat Jama'ah Alignment (${manifest.segments.length} segments, ${totalAyahs} ayahs)`,
+      }));
+
+      await get().refreshAyahSequence();
+      return {
+        success: true,
+        message: `Successfully loaded Salat Jama'ah (${manifest.segments.length} segments, ${totalAyahs} ayahs) from ${fileName}`,
+      };
+    } else {
+      set((state) => ({
+        customTimestamp: manifest,
+        customTimestampPath: filePath || fileName,
+        customTimestampError: null,
+        config: {
+          ...state.config,
+          recitationMode: 'single-surah',
+          salatSegments: undefined,
+          surahNumber: manifest.surah_number,
+          fromAyah: manifest.start_ayah,
+          toAyah: manifest.end_ayah,
+          customTimestampPath: filePath || fileName,
+          hasCustomTimestamp: true,
+          includeBismillah: manifest.preamble?.has_basmala ? true : state.config.includeBismillah,
+        },
+        statusMessage: `Loaded Whisper alignment for Surah ${manifest.surah_name_en} (${manifest.start_ayah}–${manifest.end_ayah})`,
+      }));
+
+      await get().refreshAyahSequence();
+      return {
+        success: true,
+        message: `Successfully loaded ${manifest.ayahs.length} verses (${manifest.surah_name_en}) from ${fileName}`,
+      };
+    }
   },
 
   clearCustomTimestamp: async () => {
@@ -256,6 +295,8 @@ export const useStudioStore = create<StudioState>((set, get) => ({
       customTimestampError: null,
       config: {
         ...state.config,
+        recitationMode: 'single-surah',
+        salatSegments: undefined,
         customTimestampPath: undefined,
         hasCustomTimestamp: false,
       },
@@ -688,8 +729,260 @@ export const useStudioStore = create<StudioState>((set, get) => ({
     set({ isLoading: true, statusMessage: 'Loading scripture and synchronization...' });
 
     try {
+      if (isSalatJammatManifest(customTimestamp)) {
+        const salatAyahs = customTimestamp.all_ayahs && customTimestamp.all_ayahs.length > 0
+          ? customTimestamp.all_ayahs
+          : customTimestamp.segments.flatMap((s) => s.ayahs);
+
+        if (salatAyahs.length === 0) {
+          set({ isLoading: false });
+          return;
+        }
+
+        // 1. Identify all unique Surahs present in the Salat recording
+        const uniqueSurahs = Array.from(new Set(salatAyahs.map((a) => a.surah_number)));
+
+        // 2. Fetch words and translations for all unique Surahs in parallel
+        const surahDataPromises = uniqueSurahs.map(async (sNum) => {
+          const ayahsOfSurah = salatAyahs.filter((a) => a.surah_number === sNum);
+          const minA = Math.min(...ayahsOfSurah.map((a) => a.ayah_number));
+          const maxA = Math.max(...ayahsOfSurah.map((a) => a.ayah_number));
+
+          const [words, primaryTrans, secondaryTrans] = await Promise.all([
+            api.getAyahRangeWords(config.script, sNum, minA, maxA),
+            config.showPrimaryTranslation
+              ? api.getVerseRangeTranslations(
+                  config.primaryTranslationLang,
+                  config.primaryTranslationFile,
+                  sNum,
+                  minA,
+                  maxA
+                )
+              : Promise.resolve({} as Record<number, string>),
+            config.showSecondaryTranslation
+              ? api.getVerseRangeTranslations(
+                  config.secondaryTranslationLang,
+                  config.secondaryTranslationFile,
+                  sNum,
+                  minA,
+                  maxA
+                )
+              : Promise.resolve({} as Record<number, string>),
+          ]);
+
+          return { sNum, words, primaryTrans, secondaryTrans };
+        });
+
+        const surahResults = await Promise.all(surahDataPromises);
+        const wordsBySurah: Record<number, Record<number, QuranWord[]>> = {};
+        const primaryBySurah: Record<number, Record<number, string>> = {};
+        const secondaryBySurah: Record<number, Record<number, string>> = {};
+
+        surahResults.forEach((res) => {
+          wordsBySurah[res.sNum] = res.words;
+          primaryBySurah[res.sNum] = res.primaryTrans;
+          secondaryBySurah[res.sNum] = res.secondaryTrans;
+        });
+
+        const sequence: AyahSequenceData[] = [];
+        let totalFrames = 0;
+        const speed = config.recitationSpeed || 1.0;
+        const effectiveAudioUrl =
+          (config.useRecitationVideoAudio && config.recitationVideoPath) ||
+          config.customAudioPath ||
+          '';
+
+        // 3. Pre-recitation silence / initial spacer (e.g. 0 to 1230ms)
+        const firstAyah = salatAyahs[0];
+        if (firstAyah && firstAyah.start_ms > 350) {
+          const initialSpacerFrames = Math.max(
+            15,
+            Math.round(((firstAyah.start_ms / 1000) / speed) * config.fps)
+          );
+          totalFrames += initialSpacerFrames;
+          sequence.push({
+            surah: firstAyah.surah_number,
+            ayah: 0,
+            surahNameArabic: firstAyah.surah_name_ar,
+            surahNameTransliterated: firstAyah.surah_name_en,
+            words: [],
+            audioUrl: effectiveAudioUrl,
+            durationInFrames: initialSpacerFrames,
+            segments: [],
+            audioStartMs: 0,
+            audioEndMs: firstAyah.start_ms,
+            isInterstitial: true,
+            interstitialTitle: firstAyah.segment_label || `Surah ${firstAyah.surah_name_en}`,
+            interstitialSubtitle: firstAyah.surah_name_ar,
+          });
+        }
+
+        // 4. Build sequence for all Salat Ayahs with Wall-Clock Lockstep
+        for (let idx = 0; idx < salatAyahs.length; idx++) {
+          const ayah = salatAyahs[idx];
+          const nextAyah = salatAyahs[idx + 1];
+          const sWords = wordsBySurah[ayah.surah_number]?.[ayah.ayah_number] || [];
+          const sPrimary = primaryBySurah[ayah.surah_number]?.[ayah.ayah_number] || '';
+          const sSecondary = secondaryBySurah[ayah.surah_number]?.[ayah.ayah_number] || '';
+          const scaledSegments = convertAyahToRelativeSegments(ayah, speed);
+
+          // Check if there is an inter-segment transition gap
+          const isCrossSegment = nextAyah && nextAyah.segment_id !== ayah.segment_id;
+          const gapToNextMs = nextAyah ? nextAyah.start_ms - ayah.end_ms : 0;
+
+          if (isCrossSegment && gapToNextMs > 2500) {
+            // A. Recited Ayah
+            const ayahDurationFrames = Math.max(
+              30,
+              Math.round(((ayah.duration_ms / 1000) / speed) * config.fps)
+            );
+            totalFrames += ayahDurationFrames;
+            sequence.push({
+              surah: ayah.surah_number,
+              ayah: ayah.ayah_number,
+              surahNameArabic: ayah.surah_name_ar,
+              surahNameTransliterated: ayah.surah_name_en,
+              words: sWords,
+              primaryTranslation: sPrimary,
+              secondaryTranslation: sSecondary,
+              audioUrl: effectiveAudioUrl,
+              durationInFrames: ayahDurationFrames,
+              segments: scaledSegments,
+              audioStartMs: ayah.start_ms,
+              audioEndMs: ayah.end_ms,
+              segmentId: ayah.segment_id,
+              segmentLabel: ayah.segment_label,
+            });
+
+            // B. Segment transition card during the pause
+            const interstitialFrames = Math.max(
+              30,
+              Math.round(((gapToNextMs / 1000) / speed) * config.fps)
+            );
+            totalFrames += interstitialFrames;
+            sequence.push({
+              surah: nextAyah.surah_number,
+              ayah: 0,
+              surahNameArabic: nextAyah.surah_name_ar,
+              surahNameTransliterated: nextAyah.surah_name_en,
+              words: [],
+              audioUrl: effectiveAudioUrl,
+              durationInFrames: interstitialFrames,
+              segments: [],
+              audioStartMs: ayah.end_ms,
+              audioEndMs: nextAyah.start_ms,
+              isInterstitial: true,
+              interstitialTitle: nextAyah.segment_label || `Surah ${nextAyah.surah_name_en}`,
+              interstitialSubtitle: nextAyah.surah_name_ar,
+            });
+          } else {
+            // Smooth wall-clock extension until next verse starts
+            const displayMs = nextAyah
+              ? nextAyah.start_ms - ayah.start_ms
+              : ayah.duration_ms;
+
+            const ayahDurationFrames = Math.max(
+              30,
+              Math.round(((displayMs / 1000) / speed) * config.fps)
+            );
+            totalFrames += ayahDurationFrames;
+            sequence.push({
+              surah: ayah.surah_number,
+              ayah: ayah.ayah_number,
+              surahNameArabic: ayah.surah_name_ar,
+              surahNameTransliterated: ayah.surah_name_en,
+              words: sWords,
+              primaryTranslation: sPrimary,
+              secondaryTranslation: sSecondary,
+              audioUrl: effectiveAudioUrl,
+              durationInFrames: ayahDurationFrames,
+              segments: scaledSegments,
+              audioStartMs: ayah.start_ms,
+              audioEndMs: ayah.end_ms,
+              segmentId: ayah.segment_id,
+              segmentLabel: ayah.segment_label,
+            });
+          }
+        }
+
+        // 5. Post-recitation trailing silence or prayer completion spacer (e.g. Ruku / outro)
+        const lastSalatAyah = salatAyahs[salatAyahs.length - 1];
+        if (lastSalatAyah && customTimestamp.total_duration_ms > lastSalatAyah.end_ms) {
+          const tailMs = customTimestamp.total_duration_ms - lastSalatAyah.end_ms;
+          if (tailMs > 1500) {
+            const tailFrames = Math.max(
+              15,
+              Math.round(((tailMs / 1000) / speed) * config.fps)
+            );
+            totalFrames += tailFrames;
+            sequence.push({
+              surah: lastSalatAyah.surah_number,
+              ayah: 0,
+              surahNameArabic: lastSalatAyah.surah_name_ar,
+              surahNameTransliterated: lastSalatAyah.surah_name_en,
+              words: [],
+              audioUrl: effectiveAudioUrl,
+              durationInFrames: tailFrames,
+              segments: [],
+              audioStartMs: lastSalatAyah.end_ms,
+              audioEndMs: customTimestamp.total_duration_ms,
+              isInterstitial: true,
+              interstitialTitle: "Salat Jama'ah",
+              interstitialSubtitle: 'رُكُوعٌ وَسُجُودٌ',
+            });
+          }
+        }
+
+        // 6. Zero-drift alignment with total_duration_ms
+        const targetFrames = Math.round(((customTimestamp.total_duration_ms / 1000) / speed) * config.fps);
+        const drift = targetFrames - totalFrames;
+        if (Math.abs(drift) > 0 && Math.abs(drift) <= 45 && sequence.length > 0) {
+          sequence[sequence.length - 1].durationInFrames += drift;
+          totalFrames = targetFrames;
+        }
+
+        const isIntroActive = Boolean(
+          config.enableIntroVideo &&
+          (config.introMode === 'custom-video' ? config.introVideoPath : true) &&
+          !(config.skipIntroForShorts !== false && config.aspectRatio === '9:16')
+        );
+        const introFrames = isIntroActive
+          ? Math.max(1, Math.round((config.introVideoDurationSeconds || 4) * config.fps))
+          : 0;
+
+        const isTitleCardActive = Boolean(
+          config.enableSurahTitleCard &&
+          !(config.skipTitleCardForShorts !== false && config.aspectRatio === '9:16')
+        );
+        const titleCardFrames = isTitleCardActive
+          ? Math.max(1, Math.round((config.titleCardDurationSeconds || 3.5) * config.fps))
+          : 0;
+
+        const isOutroActive = Boolean(
+          config.enableOutroVideo &&
+          (config.outroMode === 'custom-video' ? config.outroVideoPath : true) &&
+          !(config.skipOutroForShorts !== false && config.aspectRatio === '9:16')
+        );
+        const outroFrames = isOutroActive
+          ? Math.max(1, Math.round((config.outroVideoDurationSeconds || 4.5) * config.fps))
+          : 0;
+
+        set({
+          ayahs: sequence,
+          totalDurationInFrames: totalFrames + introFrames + titleCardFrames + outroFrames,
+          isLoading: false,
+          statusMessage: `Loaded Salat Jama'ah: ${salatAyahs.length} ayahs across ${uniqueSurahs.length} surahs`,
+        });
+        return;
+      }
+
       const surahMeta = getSurahByNumber(config.surahNumber);
-      const isCustomTimingActive = Boolean(customTimestamp && customTimestamp.surah_number === config.surahNumber);
+      const singleManifest = customTimestamp && !isSalatJammatManifest(customTimestamp)
+        ? (customTimestamp as WhisperTimestampManifest)
+        : null;
+      const isCustomTimingActive = Boolean(
+        singleManifest && singleManifest.surah_number === config.surahNumber
+      );
 
       // Fetch Words, Translations, and Timing/Audio Data concurrently in parallel
       const [wordsMap, primaryTransMap, secondaryTransMap, audioMap] = await Promise.all([
@@ -788,8 +1081,8 @@ export const useStudioStore = create<StudioState>((set, get) => ({
           let bStartMs: number | undefined;
           let bEndMs: number | undefined;
 
-          if (isCustomTimingActive && customTimestamp?.preamble?.has_basmala && customTimestamp.preamble.basmala) {
-            const basmala = customTimestamp.preamble.basmala;
+          if (isCustomTimingActive && singleManifest?.preamble?.has_basmala && singleManifest.preamble.basmala) {
+            const basmala = singleManifest.preamble.basmala;
             bDurationInSeconds = (basmala.duration_ms / 1000) / speed;
             scaledBismillahSegments = convertBasmalaToRelativeSegments(basmala, speed);
             bStartMs = basmala.start_ms;
@@ -828,7 +1121,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
       for (let a = config.fromAyah; a <= config.toAyah; a++) {
         const words = wordsMap[a] || [];
         const customAyahTiming = isCustomTimingActive
-          ? customTimestamp?.ayahs.find((item) => item.ayah_number === a)
+          ? singleManifest?.ayahs.find((item) => item.ayah_number === a)
           : undefined;
 
         let durationInSeconds: number;

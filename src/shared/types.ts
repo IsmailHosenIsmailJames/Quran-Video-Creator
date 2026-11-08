@@ -120,6 +120,60 @@ export interface WhisperTimestampManifest {
   ayahs: WhisperAyahTiming[];
 }
 
+export interface WhisperSalatAyahTiming extends WhisperAyahTiming {
+  segment_id?: number;
+  segment_label?: string;
+  surah_number: number;
+  surah_name_en: string;
+  surah_name_ar: string;
+}
+
+export interface WhisperSalatSegment {
+  segment_id: number;
+  label: string;
+  surah_number: number;
+  surah_name_ar: string;
+  surah_name_en: string;
+  start_ayah: number;
+  end_ayah: number;
+  is_partial: boolean;
+  start_sec: number;
+  end_sec: number;
+  start_ms: number;
+  end_ms: number;
+  duration_ms: number;
+  preamble?: WhisperPreamble;
+  ayahs: WhisperSalatAyahTiming[];
+}
+
+export interface SalatJammatManifest {
+  mode: 'salat_jammat' | string;
+  total_duration_ms: number;
+  segments_count: number;
+  model_used?: string;
+  model_choice?: string;
+  device?: string;
+  compute_type?: string;
+  segments: WhisperSalatSegment[];
+  all_ayahs?: WhisperSalatAyahTiming[];
+  is_video?: boolean;
+  video_url?: string;
+  audio_url?: string;
+  filename?: string;
+}
+
+export type UnifiedTimestampManifest = WhisperTimestampManifest | SalatJammatManifest;
+
+export function isSalatJammatManifest(
+  manifest: UnifiedTimestampManifest | null | undefined
+): manifest is SalatJammatManifest {
+  if (!manifest) return false;
+  return (
+    (manifest as SalatJammatManifest).mode === 'salat_jammat' ||
+    Array.isArray((manifest as SalatJammatManifest).segments)
+  );
+}
+
 // ==========================================
 // 3. Translation Data Models
 // ==========================================
@@ -149,6 +203,11 @@ export interface AyahSequenceData {
   segments: WordSegment[];
   audioStartMs?: number;
   audioEndMs?: number;
+  isInterstitial?: boolean;
+  interstitialTitle?: string;
+  interstitialSubtitle?: string;
+  segmentId?: number;
+  segmentLabel?: string;
 }
 
 export type TransitionType =
@@ -233,6 +292,8 @@ export interface VideoTemplateConfig {
   fromAyah: number;
   toAyah: number;
   includeBismillah?: boolean;
+  recitationMode?: 'single-surah' | 'salat-jammat';
+  salatSegments?: WhisperSalatSegment[];
 
   // Scripture Typography & Styling
   script: ScriptType;

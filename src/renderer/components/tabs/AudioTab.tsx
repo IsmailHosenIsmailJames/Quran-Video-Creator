@@ -23,7 +23,7 @@ import {
   Radio,
   Film,
 } from 'lucide-react';
-import { WaveformType } from '../../../shared/types';
+import { WaveformType, isSalatJammatManifest } from '../../../shared/types';
 import { formatDurationMs } from '../../../shared/custom-timestamp-utils';
 import { getMediaUrl } from '../../../shared/media-url';
 
@@ -279,77 +279,177 @@ export const AudioTab: React.FC = () => {
         />
 
         {customTimestamp ? (
-          /* Active Custom Timestamp State */
-          <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-950/30 to-gray-950 border border-emerald-500/40 space-y-3.5 shadow-lg shadow-emerald-950/20">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shadow-inner">
-                  <CheckCircle2 className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="font-semibold text-white text-xs flex items-center gap-2">
-                    <span>Surah {customTimestamp.surah_name_en}</span>
-                    <span className="text-gray-400 font-normal">({customTimestamp.surah_name_ar})</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-mono">
-                      #{customTimestamp.surah_number}
-                    </span>
+          isSalatJammatManifest(customTimestamp) ? (
+            /* Salat Jama'ah Active Manifest State */
+            <div className="p-4 rounded-xl bg-gradient-to-br from-indigo-950/40 via-purple-950/20 to-gray-950 border border-indigo-500/40 space-y-3.5 shadow-lg shadow-indigo-950/20">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400 shadow-inner">
+                    <CheckCircle2 className="w-5 h-5" />
                   </div>
-                  <div className="text-[11px] text-gray-400 mt-0.5">
-                    Verses: <span className="text-gray-200 font-medium">{customTimestamp.start_ayah} to {customTimestamp.end_ayah}</span> ({customTimestamp.ayahs.length} total ayahs synced)
+                  <div>
+                    <div className="font-semibold text-white text-xs flex items-center gap-2">
+                      <span>Salat Jama'ah Prayer Recitation</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-indigo-500/30 text-indigo-300 font-mono font-medium">
+                        {customTimestamp.segments.length} Segments
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-gray-400 mt-0.5">
+                      Multi-Surah prayer recording with synchronized pauses & transitions
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={clearCustomTimestamp}
+                  className="flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-lg bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-800/40 transition hover:border-red-600"
+                  title="Remove JSON alignment and revert to standard CDN timings"
+                >
+                  <Trash2 className="w-3 h-3 text-red-400" />
+                  Remove JSON
+                </button>
+              </div>
+
+              {/* Segments Breakdown */}
+              <div className="space-y-1.5">
+                <div className="text-[10px] font-medium text-gray-400 uppercase tracking-wider px-0.5">
+                  Prayer Segments ({customTimestamp.segments.reduce((acc, s) => acc + s.ayahs.length, 0)} total verses)
+                </div>
+                <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
+                  {customTimestamp.segments.map((seg, idx) => (
+                    <div
+                      key={seg.segment_id || idx}
+                      className="p-2 rounded-lg bg-gray-950/80 border border-indigo-900/30 flex items-center justify-between text-[11px]"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-950/80 border border-indigo-800/40 text-indigo-300 flex-shrink-0">
+                          {seg.label || `Seg ${idx + 1}`}
+                        </span>
+                        <div className="truncate">
+                          <span className="text-white font-medium">
+                            Surah {seg.surah_name_en}
+                          </span>
+                          <span className="text-gray-400 ml-1.5">
+                            (Verses {seg.start_ayah}–{seg.end_ayah})
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-[10px] font-mono text-gray-400 flex-shrink-0 ml-2">
+                        {formatDurationMs(seg.end_ms - seg.start_ms)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Metadata Stats Grid */}
+              <div className="grid grid-cols-2 gap-2 pt-1 text-[11px]">
+                <div className="p-2.5 rounded-lg bg-gray-950/80 border border-gray-800 flex items-center gap-2">
+                  <Clock className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <div className="text-gray-400 text-[10px]">Total Audio Timeline</div>
+                    <div className="text-white font-mono font-medium truncate">
+                      {formatDurationMs(customTimestamp.total_duration_ms)} ({Math.round(customTimestamp.total_duration_ms / 1000)}s)
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-lg bg-gray-950/80 border border-gray-800 flex items-center gap-2">
+                  <Cpu className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <div className="text-gray-400 text-[10px]">Alignment Model</div>
+                    <div className="text-white font-medium truncate" title={customTimestamp.model_choice || customTimestamp.model_used || 'Salat Jama\'ah Alignment'}>
+                      {customTimestamp.model_choice || customTimestamp.model_used || "Salat Jama'ah Alignment"}
+                    </div>
                   </div>
                 </div>
               </div>
-              <button
-                onClick={clearCustomTimestamp}
-                className="flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-lg bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-800/40 transition hover:border-red-600"
-                title="Remove JSON alignment and revert to standard CDN timings"
-              >
-                <Trash2 className="w-3 h-3 text-red-400" />
-                Remove JSON
-              </button>
-            </div>
 
-            {/* Metadata Stats Grid */}
-            <div className="grid grid-cols-2 gap-2 pt-1 text-[11px]">
-              <div className="p-2.5 rounded-lg bg-gray-950/80 border border-gray-800 flex items-center gap-2">
-                <Clock className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
-                <div className="min-w-0">
-                  <div className="text-gray-400 text-[10px]">Total Audio Timeline</div>
-                  <div className="text-white font-mono font-medium truncate">
-                    {formatDurationMs(customTimestamp.total_duration_ms)} ({Math.round(customTimestamp.total_duration_ms / 1000)}s)
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-2.5 rounded-lg bg-gray-950/80 border border-gray-800 flex items-center gap-2">
-                <Cpu className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
-                <div className="min-w-0">
-                  <div className="text-gray-400 text-[10px]">Forced Alignment Model</div>
-                  <div className="text-white font-medium truncate" title={customTimestamp.model_choice || customTimestamp.model_used || 'Whisper'}>
-                    {customTimestamp.model_choice || customTimestamp.model_used || 'Whisper SOTA'}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Preamble / Basmala Note */}
-            <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-gray-950/60 border border-gray-800 text-[11px] text-gray-400">
-              <span className="flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                Basmala Preface:
-                <span className={customTimestamp.preamble?.has_basmala ? 'text-emerald-400 font-medium' : 'text-gray-500'}>
-                  {customTimestamp.preamble?.has_basmala
-                    ? `Included (${((customTimestamp.preamble.basmala?.duration_ms || 0) / 1000).toFixed(2)}s)`
-                    : 'None in recording'}
-                </span>
-              </span>
+              {/* Path and Info footer */}
               {customTimestampPath && (
-                <span className="text-[10px] text-gray-500 font-mono truncate max-w-[140px]" title={customTimestampPath}>
-                  {customTimestampPath.split(/[/\\]/).pop()}
-                </span>
+                <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-gray-950/60 border border-gray-800 text-[11px] text-gray-400">
+                  <span className="flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Mode: <strong className="text-indigo-300">Salat Jama'ah</strong></span>
+                  </span>
+                  <span className="text-[10px] text-gray-500 font-mono truncate max-w-[160px]" title={customTimestampPath}>
+                    {customTimestampPath.split(/[/\\]/).pop()}
+                  </span>
+                </div>
               )}
             </div>
-          </div>
+          ) : (
+            /* Active Custom Timestamp State (Single Surah) */
+            <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-950/30 to-gray-950 border border-emerald-500/40 space-y-3.5 shadow-lg shadow-emerald-950/20">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shadow-inner">
+                    <CheckCircle2 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-white text-xs flex items-center gap-2">
+                      <span>Surah {customTimestamp.surah_name_en}</span>
+                      <span className="text-gray-400 font-normal">({customTimestamp.surah_name_ar})</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-mono">
+                        #{customTimestamp.surah_number}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-gray-400 mt-0.5">
+                      Verses: <span className="text-gray-200 font-medium">{customTimestamp.start_ayah} to {customTimestamp.end_ayah}</span> ({customTimestamp.ayahs.length} total ayahs synced)
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={clearCustomTimestamp}
+                  className="flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-lg bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-800/40 transition hover:border-red-600"
+                  title="Remove JSON alignment and revert to standard CDN timings"
+                >
+                  <Trash2 className="w-3 h-3 text-red-400" />
+                  Remove JSON
+                </button>
+              </div>
+
+              {/* Metadata Stats Grid */}
+              <div className="grid grid-cols-2 gap-2 pt-1 text-[11px]">
+                <div className="p-2.5 rounded-lg bg-gray-950/80 border border-gray-800 flex items-center gap-2">
+                  <Clock className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <div className="text-gray-400 text-[10px]">Total Audio Timeline</div>
+                    <div className="text-white font-mono font-medium truncate">
+                      {formatDurationMs(customTimestamp.total_duration_ms)} ({Math.round(customTimestamp.total_duration_ms / 1000)}s)
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-lg bg-gray-950/80 border border-gray-800 flex items-center gap-2">
+                  <Cpu className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <div className="text-gray-400 text-[10px]">Forced Alignment Model</div>
+                    <div className="text-white font-medium truncate" title={customTimestamp.model_choice || customTimestamp.model_used || 'Whisper'}>
+                      {customTimestamp.model_choice || customTimestamp.model_used || 'Whisper SOTA'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Preamble / Basmala Note */}
+              <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-gray-950/60 border border-gray-800 text-[11px] text-gray-400">
+                <span className="flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  Basmala Preface:
+                  <span className={customTimestamp.preamble?.has_basmala ? 'text-emerald-400 font-medium' : 'text-gray-500'}>
+                    {customTimestamp.preamble?.has_basmala
+                      ? `Included (${((customTimestamp.preamble.basmala?.duration_ms || 0) / 1000).toFixed(2)}s)`
+                      : 'None in recording'}
+                  </span>
+                </span>
+                {customTimestampPath && (
+                  <span className="text-[10px] text-gray-500 font-mono truncate max-w-[140px]" title={customTimestampPath}>
+                    {customTimestampPath.split(/[/\\]/).pop()}
+                  </span>
+                )}
+              </div>
+            </div>
+          )
         ) : (
           /* Empty / Upload Dropzone State */
           <div
