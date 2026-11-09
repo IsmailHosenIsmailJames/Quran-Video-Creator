@@ -1041,18 +1041,34 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
                     className={`h-full border-r border-black/40 last:border-r-0 px-1 flex items-center justify-between text-[10px] font-mono truncate cursor-pointer transition select-none ${
                       isAyahSelected
                         ? 'bg-amber-500/40 text-amber-200 ring-2 ring-inset ring-amber-400 z-10 shadow-[0_0_8px_rgba(245,158,11,0.5)] font-bold'
+                        : ayah.isInterstitial
+                        ? config.showSalatInterstitialCards !== false && !(ayah.segmentId !== undefined && config.hiddenSalatSegmentCards?.includes(ayah.segmentId))
+                          ? 'bg-indigo-950/60 hover:bg-indigo-900/60 text-indigo-300 border-indigo-700/40'
+                          : 'bg-gray-900/40 hover:bg-gray-800/40 text-gray-500 border-gray-800'
                         : hasOverride
                         ? 'bg-amber-500/25 hover:bg-amber-500/35 text-amber-300'
                         : 'bg-amber-500/15 hover:bg-amber-500/30 text-amber-300 hover:text-amber-200'
                     }`}
                     title={
-                      ayah.ayah === 0
+                      ayah.isInterstitial
+                        ? `${ayah.interstitialTitle || 'Pause Card'} (${(ayah.durationInFrames / fps).toFixed(1)}s) - ${
+                            config.showSalatInterstitialCards !== false && !(ayah.segmentId !== undefined && config.hiddenSalatSegmentCards?.includes(ayah.segmentId))
+                              ? 'Card Visible'
+                              : 'Card Hidden'
+                          }`
+                        : ayah.ayah === 0
                         ? `Bismillah (${(ayah.durationInFrames / fps).toFixed(1)}s) - Click to inspect styling`
                         : `Verse ${ayah.ayah} (${(ayah.durationInFrames / fps).toFixed(1)}s) - Click to inspect styling`
                     }
                   >
                     <span className="truncate font-semibold flex items-center gap-1 min-w-0">
-                      <span>{ayah.ayah === 0 ? 'Bism.' : `v.${ayah.ayah}`}</span>
+                      <span>
+                        {ayah.isInterstitial
+                          ? ayah.interstitialTitle?.replace("Rak'ah ", 'R') || 'Card'
+                          : ayah.ayah === 0
+                          ? 'Bism.'
+                          : `v.${ayah.ayah}`}
+                      </span>
                       {hasOverride && (
                         <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse flex-shrink-0" title="Custom styling set" />
                       )}

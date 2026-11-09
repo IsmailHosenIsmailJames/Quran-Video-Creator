@@ -125,6 +125,8 @@ export const DEFAULT_TEMPLATE_CONFIG: VideoTemplateConfig = {
   contentWidthPercent: 75,
   showSurahHeader: true,
   headerLanguage: 'auto',
+  showSalatInterstitialCards: true,
+  hiddenSalatSegmentCards: [],
 
   // Scripture & Subtitle In/Out Motion Animations
   animationIn: 'float-up',

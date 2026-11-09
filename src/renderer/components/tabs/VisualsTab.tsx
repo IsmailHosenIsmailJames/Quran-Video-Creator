@@ -329,6 +329,35 @@ export const VisualsTab: React.FC = () => {
               </div>
             )}
 
+            {/* Salat Jama'ah Pause Card Toggle */}
+            {customTimestamp && isSalatJammatManifest(customTimestamp) && (
+              <div className="flex items-center justify-between p-2.5 rounded-lg bg-gray-950/80 border border-indigo-900/40 text-xs">
+                <div className="space-y-0.5">
+                  <span className="text-white font-medium block">Prayer Segment Title Cards</span>
+                  <span className="text-[10px] text-gray-400">
+                    {config.showSalatInterstitialCards !== false
+                      ? 'Showing "Rak\'ah: Second Surah" cards during pauses'
+                      : 'Hidden (unobstructed prayer video)'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateConfig({
+                      showSalatInterstitialCards: config.showSalatInterstitialCards === false ? true : false,
+                    })
+                  }
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-semibold border transition cursor-pointer ${
+                    config.showSalatInterstitialCards !== false
+                      ? 'bg-indigo-600/30 text-indigo-300 border-indigo-500/50 hover:bg-indigo-600/40'
+                      : 'bg-gray-800 text-gray-400 border-gray-700 hover:bg-gray-700'
+                  }`}
+                >
+                  {config.showSalatInterstitialCards !== false ? 'Cards: ON' : 'Cards: OFF'}
+                </button>
+              </div>
+            )}
+
             {/* Controls: Background switch and Audio track switch */}
             <div className="grid grid-cols-2 gap-2 pt-1 text-xs">
               <label

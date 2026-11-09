@@ -40,6 +40,8 @@ export const PERSISTABLE_CONFIG_KEYS: Array<keyof VideoTemplateConfig> = [
   'contentWidthPercent',
   'showSurahHeader',
   'headerLanguage',
+  'showSalatInterstitialCards',
+  'hiddenSalatSegmentCards',
 
   // Scripture & Subtitle In/Out Motion Animations
   'animationIn',

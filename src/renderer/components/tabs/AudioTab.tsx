@@ -22,6 +22,8 @@ import {
   Volume2,
   Radio,
   Film,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { WaveformType, isSalatJammatManifest } from '../../../shared/types';
 import { formatDurationMs } from '../../../shared/custom-timestamp-utils';
@@ -309,6 +311,57 @@ export const AudioTab: React.FC = () => {
                 </button>
               </div>
 
+              {/* Transition Cards (Interstitial Pause Cards) Toggle */}
+              <div className="p-3 rounded-xl bg-gray-950/90 border border-indigo-900/50 flex items-center justify-between gap-3 shadow-sm">
+                <div className="space-y-0.5 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-white">Prayer Segment Title Cards</span>
+                    <span
+                      className={`text-[10px] px-2 py-0.5 rounded font-mono font-medium ${
+                        config.showSalatInterstitialCards !== false
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                          : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                      }`}
+                    >
+                      {config.showSalatInterstitialCards !== false ? 'Enabled' : 'Hidden'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-snug">
+                    Shows the animated "Rak'ah 1: Second Surah" calligraphy card during pauses. Turn off to keep the recitation video clean.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateConfig({
+                      showSalatInterstitialCards: config.showSalatInterstitialCards === false ? true : false,
+                    })
+                  }
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex-shrink-0 border flex items-center gap-1.5 cursor-pointer ${
+                    config.showSalatInterstitialCards !== false
+                      ? 'bg-indigo-600 hover:bg-indigo-500 text-white border-indigo-400/40 shadow-md shadow-indigo-600/20'
+                      : 'bg-gray-800 hover:bg-gray-700 text-gray-300 border-gray-700'
+                  }`}
+                  title={
+                    config.showSalatInterstitialCards !== false
+                      ? 'Click to remove/hide transition cards'
+                      : 'Click to add/enable transition cards'
+                  }
+                >
+                  {config.showSalatInterstitialCards !== false ? (
+                    <>
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Cards ON</span>
+                    </>
+                  ) : (
+                    <>
+                      <EyeOff className="w-3.5 h-3.5 text-rose-400" />
+                      <span>Cards OFF</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
               {/* Segments Breakdown */}
               <div className="space-y-1.5">
                 <div className="text-[10px] font-medium text-gray-400 uppercase tracking-wider px-0.5">
@@ -333,8 +386,41 @@ export const AudioTab: React.FC = () => {
                           </span>
                         </div>
                       </div>
-                      <div className="text-[10px] font-mono text-gray-400 flex-shrink-0 ml-2">
-                        {formatDurationMs(seg.end_ms - seg.start_ms)}
+                      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                        <span className="text-[10px] font-mono text-gray-400">
+                          {formatDurationMs(seg.end_ms - seg.start_ms)}
+                        </span>
+                        {config.showSalatInterstitialCards !== false && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const segId = seg.segment_id ?? idx;
+                              const currentHidden: Array<number | string> = config.hiddenSalatSegmentCards || [];
+                              const isHidden = currentHidden.includes(segId);
+                              const updated = isHidden
+                                ? currentHidden.filter((id) => id !== segId)
+                                : [...currentHidden, segId];
+                              updateConfig({ hiddenSalatSegmentCards: updated });
+                            }}
+                            className={`p-1 rounded transition hover:bg-gray-800 cursor-pointer ${
+                              (config.hiddenSalatSegmentCards || []).includes(seg.segment_id ?? idx)
+                                ? 'text-gray-600 hover:text-gray-400'
+                                : 'text-indigo-400 hover:text-indigo-300'
+                            }`}
+                            title={
+                              (config.hiddenSalatSegmentCards || []).includes(seg.segment_id ?? idx)
+                                ? 'Card hidden for this segment. Click to show.'
+                                : 'Card visible for this segment. Click to hide.'
+                            }
+                          >
+                            {(config.hiddenSalatSegmentCards || []).includes(seg.segment_id ?? idx) ? (
+                              <EyeOff className="w-3.5 h-3.5 text-rose-400/80" />
+                            ) : (
+                              <Eye className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}

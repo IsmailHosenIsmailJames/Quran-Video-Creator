@@ -206,7 +206,7 @@ export interface AyahSequenceData {
   isInterstitial?: boolean;
   interstitialTitle?: string;
   interstitialSubtitle?: string;
-  segmentId?: number;
+  segmentId?: number | string;
   segmentLabel?: string;
 }
 
@@ -336,6 +336,8 @@ export interface VideoTemplateConfig {
   contentWidthPercent?: number; // Content container width percentage (50% to 98%, default 75)
   showSurahHeader?: boolean;
   headerLanguage?: string;
+  showSalatInterstitialCards?: boolean; // When true (default: true), shows transition cards during prayer segment pauses
+  hiddenSalatSegmentCards?: Array<number | string>; // Specific segment IDs whose transition cards should be hidden
 
   // Scripture & Subtitle In/Out Motion Animations
   animationIn: TextAnimationIn;

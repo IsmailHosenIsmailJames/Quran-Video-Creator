@@ -20,6 +20,13 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
 
   // If this item is a Prayer Segment Interstitial / Transition Card
   if (ayahData.isInterstitial) {
+    if (
+      config.showSalatInterstitialCards === false ||
+      (ayahData.segmentId !== undefined && config.hiddenSalatSegmentCards?.includes(ayahData.segmentId))
+    ) {
+      return null;
+    }
+
     const totalFrames = Math.max(1, ayahData.durationInFrames);
     const fadeFrames = Math.min(15, Math.floor(totalFrames / 3));
     let opacity = 1;

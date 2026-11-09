@@ -861,6 +861,8 @@ export const useStudioStore = create<StudioState>((set, get) => ({
             isInterstitial: true,
             interstitialTitle: firstAyah.segment_label || `Surah ${firstAyah.surah_name_en}`,
             interstitialSubtitle: firstAyah.surah_name_ar,
+            segmentId: firstAyah.segment_id,
+            segmentLabel: firstAyah.segment_label,
           });
         }
 
@@ -921,6 +923,8 @@ export const useStudioStore = create<StudioState>((set, get) => ({
               isInterstitial: true,
               interstitialTitle: nextAyah.segment_label || `Surah ${nextAyah.surah_name_en}`,
               interstitialSubtitle: nextAyah.surah_name_ar,
+              segmentId: nextAyah.segment_id,
+              segmentLabel: nextAyah.segment_label,
             });
           } else {
             // Smooth wall-clock extension until next verse starts
@@ -976,6 +980,8 @@ export const useStudioStore = create<StudioState>((set, get) => ({
               isInterstitial: true,
               interstitialTitle: "Salat Jama'ah",
               interstitialSubtitle: 'رُكُوعٌ وَسُجُودٌ',
+              segmentId: 'tail_ruku_sujood',
+              segmentLabel: "Salat Jama'ah (Ruku & Sujood)",
             });
           }
         }
