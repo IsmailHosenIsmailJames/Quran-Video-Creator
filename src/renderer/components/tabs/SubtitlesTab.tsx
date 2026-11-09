@@ -263,6 +263,84 @@ export const SubtitlesTab: React.FC = () => {
               })}
             </div>
           </div>
+
+          {/* Subtitle & Content Width (Horizontal Boundary) */}
+          <div className="space-y-1.5 pt-2 border-t border-gray-800/60">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-400 block">Content & Subtitle Width</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-amber-400 font-mono">
+                  {config.contentWidthPercent ?? 75}%
+                  {config.contentWidthPercent === 95
+                    ? ' (Ultra Wide · 1820px)'
+                    : config.contentWidthPercent === 85
+                    ? ' (Wide · 1630px)'
+                    : config.contentWidthPercent === 75 || !config.contentWidthPercent
+                    ? ' (Standard · 1440px)'
+                    : config.contentWidthPercent === 65
+                    ? ' (Compact · 1250px)'
+                    : ` (${Math.round(1920 * ((config.contentWidthPercent ?? 75) / 100))}px)`}
+                </span>
+                {(config.contentWidthPercent !== 75 && config.contentWidthPercent !== undefined) && (
+                  <button
+                    onClick={() => updateConfig({ contentWidthPercent: 75 })}
+                    className="p-0.5 hover:text-amber-400 text-gray-500 transition"
+                    title="Reset width to default (75%)"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Quick Presets */}
+            <div className="grid grid-cols-4 gap-1.5">
+              {[
+                { val: 65, label: 'Compact', desc: '65% · 1250px' },
+                { val: 75, label: 'Standard', desc: '75% · 1440px' },
+                { val: 85, label: 'Wide', desc: '85% · 1630px' },
+                { val: 95, label: 'Ultra Wide', desc: '95% · 1820px' },
+              ].map(({ val, label, desc }) => {
+                const isSelected = (config.contentWidthPercent ?? 75) === val;
+                return (
+                  <button
+                    key={val}
+                    onClick={() => updateConfig({ contentWidthPercent: val })}
+                    className={`py-1.5 px-1 rounded-lg border text-xs font-medium transition cursor-pointer flex flex-col items-center justify-center ${
+                      isSelected
+                        ? 'bg-amber-500/20 border-amber-500 text-amber-300 shadow-sm'
+                        : 'bg-gray-900 border-gray-800 text-gray-400 hover:text-white'
+                    }`}
+                    title={`${label}: ${desc}`}
+                  >
+                    <span>{label}</span>
+                    <span className="text-[8px] text-gray-500">{desc.split(' · ')[0]}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Slider */}
+            <div className="pt-0.5 space-y-1">
+              <input
+                type="range"
+                min="50"
+                max="98"
+                step="1"
+                value={config.contentWidthPercent ?? 75}
+                onChange={(e) => updateConfig({ contentWidthPercent: Number(e.target.value) })}
+                className="w-full accent-amber-500 cursor-pointer h-1.5 bg-gray-800 rounded-lg"
+              />
+              <div className="flex justify-between text-[10px] text-gray-500 font-mono">
+                <span>50% (Narrow)</span>
+                <span>75% (Standard)</span>
+                <span>98% (Max Width)</span>
+              </div>
+            </div>
+            <p className="text-[10px] text-gray-500 leading-tight">
+              Expands subtitle container boundaries so more words fit horizontally per line.
+            </p>
+          </div>
         </div>
 
         {/* 3. Secondary Subtitle (English/Vernacular) */}

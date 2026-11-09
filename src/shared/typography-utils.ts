@@ -245,7 +245,7 @@ export function computeAyahChunks(
   const totalDurationMs = ((ayahData.durationInFrames || 180) / (config?.fps || 30)) * 1000;
 
   const enableChunking = config?.enableAyahChunking !== false;
-  const maxWords = Math.max(6, Math.min(18, config?.maxWordsPerChunk || 10));
+  const maxWords = Math.max(6, Math.min(24, config?.maxWordsPerChunk || 10));
 
   // If chunking is disabled or the Ayah is already short enough, return single chunk
   if (!enableChunking || words.length <= maxWords) {

@@ -37,6 +37,7 @@ export const PERSISTABLE_CONFIG_KEYS: Array<keyof VideoTemplateConfig> = [
   'textAlignment',
   'verticalAlignment',
   'verticalCustomOffset',
+  'contentWidthPercent',
   'showSurahHeader',
   'headerLanguage',
 

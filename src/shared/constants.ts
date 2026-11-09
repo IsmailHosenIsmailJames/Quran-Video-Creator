@@ -122,6 +122,7 @@ export const DEFAULT_TEMPLATE_CONFIG: VideoTemplateConfig = {
   textAlignment: 'center',
   verticalAlignment: 'middle',
   verticalCustomOffset: 0,
+  contentWidthPercent: 75,
   showSurahHeader: true,
   headerLanguage: 'auto',
 

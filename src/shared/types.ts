@@ -248,6 +248,7 @@ export interface AyahFontOverride {
   secondaryFontSize?: number;
   verticalAlignment?: VerticalAlignmentType;
   verticalOffset?: number; // In pixels (-150 to +150)
+  contentWidthPercent?: number; // In percent (50 to 98)
   animationIn?: TextAnimationIn | 'inherit';
   animationOut?: TextAnimationOut | 'inherit';
 }
@@ -332,6 +333,7 @@ export interface VideoTemplateConfig {
   textAlignment?: 'center' | 'left' | 'right';
   verticalAlignment?: VerticalAlignmentType;
   verticalCustomOffset?: number; // In pixels (-150 to +150, default 0)
+  contentWidthPercent?: number; // Content container width percentage (50% to 98%, default 75)
   showSurahHeader?: boolean;
   headerLanguage?: string;
 

@@ -327,6 +327,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
   const currentEnglishSize = computedSizes.secondaryFontSize;
   const currentSubtitleSize = computedSizes.primaryFontSize;
   const currentVerticalOffset = ayahOverride?.verticalOffset ?? config.verticalCustomOffset ?? 0;
+  const currentContentWidth = ayahOverride?.contentWidthPercent ?? config.contentWidthPercent ?? 75;
   const currentAnimationIn = ayahOverride?.animationIn ?? 'inherit';
   const currentAnimationOut = ayahOverride?.animationOut ?? 'inherit';
   const hasAyahOverride =
@@ -336,6 +337,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
       ayahOverride.primaryFontSize !== undefined ||
       ayahOverride.verticalOffset !== undefined ||
       ayahOverride.verticalAlignment !== undefined ||
+      ayahOverride.contentWidthPercent !== undefined ||
       ayahOverride.animationIn !== undefined ||
       ayahOverride.animationOut !== undefined);
 
@@ -1731,6 +1733,27 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
               />
               <span className="font-mono text-[11px] text-amber-300 min-w-[38px] text-right">
                 {currentVerticalOffset > 0 ? `+${currentVerticalOffset}` : currentVerticalOffset}px
+              </span>
+            </div>
+
+            {/* Content Width (50%-98%) */}
+            <div className="flex items-center gap-2 bg-gray-950 px-2.5 py-1.5 rounded-lg border border-gray-800">
+              <span className="text-gray-400 text-[11px] font-medium">Width:</span>
+              <input
+                type="range"
+                min="50"
+                max="98"
+                step="1"
+                value={currentContentWidth}
+                onChange={(e) =>
+                  updateAyahFontOverride(selectedAyah.surah, selectedAyah.ayah, {
+                    contentWidthPercent: Number(e.target.value),
+                  })
+                }
+                className="w-16 accent-amber-500 cursor-pointer h-1.5 bg-gray-800 rounded-lg"
+              />
+              <span className="font-mono text-[11px] text-amber-300 min-w-[28px] text-right">
+                {currentContentWidth}%
               </span>
             </div>
 

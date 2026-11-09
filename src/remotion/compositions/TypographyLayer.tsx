@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { AbsoluteFill, useCurrentFrame, interpolate, Easing } from 'remotion';
+import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, Easing } from 'remotion';
 import { VideoTemplateConfig, AyahSequenceData, QuranWord, ScriptBlockType, TextAnimationIn, TextAnimationOut } from '../../shared/types';
 import { computeAdaptiveFontSizes, computeAyahChunks } from '../../shared/typography-utils';
 import { getLocalizedHeader, getLanguageFontFamily } from '../../shared/surah-localization';
@@ -16,6 +16,7 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
   fps,
 }) => {
   const frame = useCurrentFrame();
+  const { width: compWidth } = useVideoConfig();
 
   // If this item is a Prayer Segment Interstitial / Transition Card
   if (ayahData.isInterstitial) {
@@ -312,6 +313,13 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
   const verticalOffset = override?.verticalOffset ?? config.verticalCustomOffset ?? 0;
   const isSplit = verticalAlignment === 'split';
 
+  // Content Width (Horizontal Span % and Max Width in Pixels)
+  const widthPercent = Math.min(
+    100,
+    Math.max(40, override?.contentWidthPercent ?? config.contentWidthPercent ?? 75)
+  );
+  const maxContentPx = Math.round(compWidth * (widthPercent / 100));
+
   // Subtitle Container Box
   const showContainer = config.showTranslationContainer !== false;
 
@@ -329,10 +337,10 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
       key="arabic"
       style={{
         width: '100%',
-        maxWidth: '1280px',
+        maxWidth: `${maxContentPx}px`,
         margin: isSplit ? 'auto 0' : '0',
         textAlign: textAlignment,
-        padding: '0 32px',
+        padding: widthPercent > 88 ? '0 12px' : '0 24px',
         boxSizing: 'border-box',
         display: 'flex',
         flexDirection: 'column',
@@ -441,10 +449,10 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
         flexDirection: 'column',
         alignItems: flexAlignItems,
         gap: '10px',
-        maxWidth: '1100px',
-        width: '90%',
+        maxWidth: `${maxContentPx}px`,
+        width: '100%',
         textAlign: textAlignment,
-        padding: showContainer ? '18px 40px' : '4px 20px',
+        padding: showContainer ? '18px 36px' : '4px 16px',
         borderRadius: showContainer ? '20px' : '0px',
         backgroundColor: showContainer ? 'rgba(0, 0, 0, 0.45)' : 'transparent',
         backdropFilter: showContainer ? 'blur(16px)' : 'none',
@@ -590,8 +598,8 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
           gap: isSplit ? '0px' : '28px',
           paddingTop: contentPaddingTop,
           paddingBottom: contentPaddingBottom,
-          paddingLeft: '48px',
-          paddingRight: '48px',
+          paddingLeft: widthPercent > 88 ? '16px' : '48px',
+          paddingRight: widthPercent > 88 ? '16px' : '48px',
           boxSizing: 'border-box',
           transform: `translateY(${verticalOffset}px)`,
           transition: 'transform 0.15s ease-out',

@@ -196,7 +196,7 @@ export const ScriptureTab: React.FC = () => {
                 <input
                   type="range"
                   min={6}
-                  max={16}
+                  max={24}
                   step={1}
                   value={config.maxWordsPerChunk ?? 10}
                   onChange={(e) => updateConfig({ maxWordsPerChunk: Number(e.target.value) })}
@@ -205,7 +205,7 @@ export const ScriptureTab: React.FC = () => {
                 <div className="flex justify-between text-[10px] text-gray-500 font-mono">
                   <span>6 (Shorter phrases)</span>
                   <span>10 (Balanced)</span>
-                  <span>16 (Longer phrases)</span>
+                  <span>24 (Full Width)</span>
                 </div>
               </div>
 
@@ -400,6 +400,86 @@ export const ScriptureTab: React.FC = () => {
               <span>0 (Center)</span>
               <span>+150px (Lower)</span>
             </div>
+          </div>
+
+          {/* Content & Subtitle Width (Horizontal Boundary) */}
+          <div className="pt-2 border-t border-gray-800/60 space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs text-gray-300 font-medium block">
+                Content & Subtitle Width
+              </label>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-amber-400 font-mono">
+                  {config.contentWidthPercent ?? 75}%
+                  {config.contentWidthPercent === 95
+                    ? ' (Ultra Wide · 1820px)'
+                    : config.contentWidthPercent === 85
+                    ? ' (Wide · 1630px)'
+                    : config.contentWidthPercent === 75 || !config.contentWidthPercent
+                    ? ' (Standard · 1440px)'
+                    : config.contentWidthPercent === 65
+                    ? ' (Compact · 1250px)'
+                    : ` (${Math.round(1920 * ((config.contentWidthPercent ?? 75) / 100))}px)`}
+                </span>
+                {(config.contentWidthPercent !== 75 && config.contentWidthPercent !== undefined) && (
+                  <button
+                    onClick={() => updateConfig({ contentWidthPercent: 75 })}
+                    className="p-0.5 hover:text-amber-400 text-gray-500 transition"
+                    title="Reset content width to default (75%)"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Quick Width Presets */}
+            <div className="grid grid-cols-4 gap-1.5">
+              {[
+                { val: 65, label: 'Compact', desc: '65% · 1250px' },
+                { val: 75, label: 'Standard', desc: '75% · 1440px' },
+                { val: 85, label: 'Wide', desc: '85% · 1630px' },
+                { val: 95, label: 'Ultra Wide', desc: '95% · 1820px' },
+              ].map(({ val, label, desc }) => {
+                const isSelected = (config.contentWidthPercent ?? 75) === val;
+                return (
+                  <button
+                    key={val}
+                    onClick={() => updateConfig({ contentWidthPercent: val })}
+                    className={`py-1.5 px-1 rounded-lg border text-xs font-medium transition cursor-pointer flex flex-col items-center justify-center ${
+                      isSelected
+                        ? 'bg-amber-500/20 border-amber-500 text-amber-300 shadow-sm'
+                        : 'bg-gray-950 border-gray-800 text-gray-400 hover:text-gray-200 hover:bg-gray-900'
+                    }`}
+                    title={`${label}: ${desc}`}
+                  >
+                    <span className="font-semibold text-xs">{label}</span>
+                    <span className="text-[9px] text-gray-500 mt-0.5">{desc.split(' · ')[0]}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Slider */}
+            <div className="pt-0.5 space-y-1">
+              <input
+                type="range"
+                min="50"
+                max="98"
+                step="1"
+                value={config.contentWidthPercent ?? 75}
+                onChange={(e) => updateConfig({ contentWidthPercent: Number(e.target.value) })}
+                className="w-full accent-amber-500 cursor-pointer h-1.5 bg-gray-800 rounded-lg"
+              />
+              <div className="flex justify-between text-[10px] text-gray-500 font-mono">
+                <span>50% (Narrow)</span>
+                <span>75% (Standard)</span>
+                <span>98% (Max Width)</span>
+              </div>
+            </div>
+            <p className="text-[10px] text-gray-500 leading-tight">
+              Allows verses and subtitles to spread wider across the screen so more words fit on each line.
+            </p>
           </div>
 
           {/* Top Surah Header Badge Toggle & Localization */}
