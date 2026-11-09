@@ -48,7 +48,13 @@
     }
   ],
   "linux": {
-    "target": ["tar.gz"],
+    "target": [
+      "pacman",
+      "deb",
+      "rpm",
+      "AppImage"
+    ],
+    "maintainer": "Quran Video Studio <contact@quranvideostudio.com>",
     "category": "Video",
     "icon": "build/icons"
   },

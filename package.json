@@ -18,6 +18,10 @@
     "loc": "node scripts/count-loc.js",
     "pack": "npm run build:vite && npm run bundle:remotion && electron-builder --dir",
     "dist": "npm run build:vite && npm run bundle:remotion && electron-builder",
+    "dist:linux": "npm run build:vite && npm run bundle:remotion && electron-builder --linux",
+    "dist:arch": "npm run build:vite && npm run bundle:remotion && electron-builder --linux pacman",
+    "dist:deb": "npm run build:vite && npm run bundle:remotion && electron-builder --linux deb",
+    "dist:rpm": "npm run build:vite && npm run bundle:remotion && electron-builder --linux rpm",
     "postinstall": "electron-builder install-app-deps"
   },
   "keywords": [
@@ -28,7 +32,7 @@
     "cinematic",
     "recitation"
   ],
-  "author": "Quran Video Studio",
+  "author": "Quran Video Studio <contact@quranvideostudio.com>",
   "license": "MIT",
   "dependencies": {
     "@remotion/bundler": "^4.0.260",
