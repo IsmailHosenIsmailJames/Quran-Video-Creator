@@ -18,6 +18,7 @@ import {
 } from '../../shared/types';
 import {
   DEFAULT_TEMPLATE_CONFIG,
+  BACKGROUND_PRESETS,
   SCRIPT_FONT_MAP,
   SCRIPT_LINE_HEIGHT_MAP,
 } from '../../shared/constants';
@@ -87,6 +88,8 @@ interface StudioState {
   updateBackgroundClip: (id: string, partial: Partial<BackgroundClip>) => void;
   updateClipPercentage: (id: string, percentage: number) => void;
   reorderBackgroundClips: (fromIndex: number, toIndex: number) => void;
+  resetBackgroundClips: () => void;
+  restoreBackgroundClips: (clips: BackgroundClip[]) => void;
   changeSurah: (surahNumber: number) => Promise<void>;
   changeAyahRange: (fromAyah: number, toAyah: number) => Promise<void>;
   changeScript: (script: ScriptType) => Promise<void>;
@@ -667,6 +670,50 @@ export const useStudioStore = create<StudioState>((set, get) => ({
         },
       };
     });
+  },
+
+  resetBackgroundClips: () => {
+    const defaultClips: BackgroundClip[] = DEFAULT_TEMPLATE_CONFIG.backgroundClips
+      ? JSON.parse(JSON.stringify(DEFAULT_TEMPLATE_CONFIG.backgroundClips))
+      : [
+          {
+            id: 'clip-preset-1',
+            type: 'preset',
+            source: BACKGROUND_PRESETS[0].url,
+            name: BACKGROUND_PRESETS[0].name,
+            percentage: 100,
+            durationRatio: 1.0,
+            speed: 1.0,
+            autoFitSpeed: true,
+            trimStartSeconds: 0,
+            kenBurns: true,
+            transition: 'zoom-fade',
+            transitionDurationFrames: 24,
+          },
+        ];
+
+    set((state) => ({
+      config: {
+        ...state.config,
+        backgroundClips: defaultClips,
+        backgroundPath: defaultClips[0]?.source || BACKGROUND_PRESETS[0].url,
+        backgroundType: defaultClips[0]?.type || 'preset',
+      },
+      statusMessage: 'Reset timeline media to default',
+    }));
+  },
+
+  restoreBackgroundClips: (clips: BackgroundClip[]) => {
+    if (!clips || clips.length === 0) return;
+    set((state) => ({
+      config: {
+        ...state.config,
+        backgroundClips: clips,
+        backgroundPath: clips[0]?.source || state.config.backgroundPath,
+        backgroundType: clips[0]?.type || state.config.backgroundType,
+      },
+      statusMessage: 'Restored timeline media clips',
+    }));
   },
 
   changeSurah: async (surahNumber: number) => {

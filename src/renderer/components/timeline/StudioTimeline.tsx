@@ -2,7 +2,11 @@ import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react'
 import { PlayerRef } from '@remotion/player';
 import { useStudioStore } from '../../store/studio-store';
 import { BackgroundClip, TransitionType, TextAnimationIn, TextAnimationOut } from '../../../shared/types';
-import { TEXT_ANIMATION_IN_OPTIONS, TEXT_ANIMATION_OUT_OPTIONS } from '../../../shared/constants';
+import {
+  BACKGROUND_PRESETS,
+  TEXT_ANIMATION_IN_OPTIONS,
+  TEXT_ANIMATION_OUT_OPTIONS,
+} from '../../../shared/constants';
 import { getMediaUrl } from '../../../shared/media-url';
 import { computeAdaptiveFontSizes } from '../../../shared/typography-utils';
 import {
@@ -87,6 +91,8 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
     updateClipPercentage,
     reorderBackgroundClips,
     setRecitationSpeed,
+    resetBackgroundClips,
+    restoreBackgroundClips,
   } = useStudioStore();
 
   const currentFrame = storeCurrentFrame ?? propCurrentFrame ?? 0;
@@ -96,6 +102,16 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [showSwapMenu, setShowSwapMenu] = useState(false);
   const [showTransitionMenu, setShowTransitionMenu] = useState<string | null>(null); // clipId for transition
+
+  // Undo state when user resets timeline clips
+  const [undoResetClips, setUndoResetClips] = useState<BackgroundClip[] | null>(null);
+  const undoTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    };
+  }, []);
 
   const timelineTrackRef = useRef<HTMLDivElement>(null);
   const timelineScrollRef = useRef<HTMLDivElement>(null);
@@ -492,6 +508,8 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
 
   // Add new media (supports single or multiple file selections at once)
   const handleAddMedia = async (type: 'video' | 'image') => {
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    setUndoResetClips(null);
     const api = window.electronAPI;
     if (!api) return;
     const filePaths = await api.selectMediaFiles(type);
@@ -538,6 +556,8 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
 
   // Replace / Swap media on an existing clip
   const handleReplaceMedia = async (clipId: string, type: 'video' | 'image') => {
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    setUndoResetClips(null);
     const api = window.electronAPI;
     if (!api) return;
     const filePath = await api.selectMediaFile(type);
@@ -621,6 +641,41 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
 
     updateConfig({ backgroundClips: updatedClips });
   }, [clips, ayahs, recitationFrames, updateConfig]);
+
+  // Check if timeline is already in clean default preset state
+  const isDefaultTimeline = useMemo(() => {
+    if (!clips || clips.length !== 1) return false;
+    const first = clips[0];
+    return (
+      first.id === 'clip-preset-1' &&
+      first.type === 'preset' &&
+      first.source === BACKGROUND_PRESETS[0].url &&
+      (first.speed === 1.0 || first.speed === undefined) &&
+      (first.trimStartSeconds === 0 || first.trimStartSeconds === undefined)
+    );
+  }, [clips]);
+
+  // One-click reset: clear all added videos and images back to default
+  const handleResetTimeline = useCallback(() => {
+    if (undoResetClips) {
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+      restoreBackgroundClips(undoResetClips);
+      setUndoResetClips(null);
+      return;
+    }
+
+    if (isDefaultTimeline) return;
+
+    // Snapshot existing clips before resetting so user can undo if needed
+    setUndoResetClips([...clips]);
+    setSelectedClipId(null);
+    resetBackgroundClips();
+
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    undoTimerRef.current = setTimeout(() => {
+      setUndoResetClips(null);
+    }, 8000);
+  }, [undoResetClips, isDefaultTimeline, clips, resetBackgroundClips, restoreBackgroundClips]);
 
   // Snap a single selected clip to nearest Ayah verse boundaries
   const handleSnapClipToNearestAyahs = useCallback(
@@ -806,6 +861,36 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
             <ImageIcon className="w-3 h-3 text-amber-400" />
             <span>+ Image</span>
           </button>
+
+          {/* Reset Timeline Media / Undo Reset Button */}
+          {undoResetClips ? (
+            <button
+              onClick={handleResetTimeline}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 hover:text-amber-200 transition text-[11px] font-medium shadow-sm animate-pulse"
+              title="Click to undo reset and restore all your clips"
+            >
+              <RotateCcw className="w-3 h-3 text-amber-400" />
+              <span>Undo Reset</span>
+            </button>
+          ) : (
+            <button
+              onClick={handleResetTimeline}
+              disabled={isDefaultTimeline}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] transition ${
+                !isDefaultTimeline
+                  ? 'bg-rose-500/10 hover:bg-rose-500/20 border-rose-500/30 text-rose-300 hover:text-rose-200 cursor-pointer shadow-sm'
+                  : 'bg-gray-900/40 border-gray-800/50 text-gray-600 cursor-not-allowed opacity-50'
+              }`}
+              title={
+                !isDefaultTimeline
+                  ? 'Reset timeline: remove all added videos and images back to default preset'
+                  : 'Timeline is already in default state'
+              }
+            >
+              <RotateCcw className="w-3 h-3 text-rose-400" />
+              <span>Reset Timeline</span>
+            </button>
+          )}
         </div>
       </div>
 

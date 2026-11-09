@@ -20,6 +20,7 @@ import {
   CheckCircle2,
   Volume2,
   Layers,
+  RotateCcw,
 } from 'lucide-react';
 
 const TRANSITION_CYCLE: TransitionType[] = [
@@ -36,6 +37,7 @@ export const VisualsTab: React.FC = () => {
     updateConfig,
     addBackgroundClip,
     addBackgroundClips,
+    resetBackgroundClips,
     setActiveTab,
     customTimestamp,
     selectRecitationVideo,
@@ -429,6 +431,16 @@ export const VisualsTab: React.FC = () => {
             Cinematic Background
           </label>
           <div className="flex gap-2">
+            {config.backgroundClips && config.backgroundClips.length > 1 && (
+              <button
+                onClick={() => resetBackgroundClips()}
+                className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 transition shadow-sm"
+                title="Reset all clips on the timeline back to default"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-rose-400" />
+                Reset Timeline
+              </button>
+            )}
             <button
               onClick={() => handleSelectMedia('video')}
               className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white transition"
@@ -564,20 +576,30 @@ export const VisualsTab: React.FC = () => {
                 <Sparkles className="w-3.5 h-3.5 text-amber-400" />
                 Individual Clip Transitions:
               </span>
-              <button
-                onClick={() => {
-                  const currentDefault = config.defaultTransition || 'zoom-fade';
-                  const updated = config.backgroundClips?.map((c) => ({
-                    ...c,
-                    transition: currentDefault,
-                  }));
-                  if (updated) updateConfig({ backgroundClips: updated });
-                }}
-                className="text-[10px] text-amber-400 hover:underline cursor-pointer"
-                title="Apply current default animation to all clips"
-              >
-                Apply "{config.defaultTransition || 'zoom-fade'}" to all
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => resetBackgroundClips()}
+                  className="flex items-center gap-1 text-[10px] text-rose-400 hover:text-rose-300 hover:underline cursor-pointer"
+                  title="Remove all clips and reset timeline to default"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  Reset Timeline
+                </button>
+                <button
+                  onClick={() => {
+                    const currentDefault = config.defaultTransition || 'zoom-fade';
+                    const updated = config.backgroundClips?.map((c) => ({
+                      ...c,
+                      transition: currentDefault,
+                    }));
+                    if (updated) updateConfig({ backgroundClips: updated });
+                  }}
+                  className="text-[10px] text-amber-400 hover:underline cursor-pointer"
+                  title="Apply current default animation to all clips"
+                >
+                  Apply "{config.defaultTransition || 'zoom-fade'}" to all
+                </button>
+              </div>
             </div>
             <div className="space-y-1.5 pt-1">
               {config.backgroundClips.slice(1).map((clip, idx) => (
