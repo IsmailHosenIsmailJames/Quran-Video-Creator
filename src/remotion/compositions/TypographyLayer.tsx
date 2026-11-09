@@ -354,6 +354,10 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
         alignItems: flexAlignItems,
         opacity: finalArabicOpacity,
         transform: finalArabicTransform,
+        transformOrigin: 'center center',
+        willChange: 'transform, opacity',
+        backfaceVisibility: 'hidden',
+        WebkitBackfaceVisibility: 'hidden',
         filter: arabicFilter,
         WebkitFilter: arabicFilter,
       }}
@@ -368,10 +372,14 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
           fontSize: `${arabicFontSize}px`,
           lineHeight: config.arabicLineHeight,
           fontFeatureSettings: '"kern" 1, "liga" 1, "mkmk" 1, "mark" 1, "calt" 1',
-          textRendering: 'optimizeLegibility',
+          textRendering: 'geometricPrecision',
           WebkitFontSmoothing: 'antialiased',
+          MozOsxFontSmoothing: 'grayscale',
           display: 'inline-block',
           width: '100%',
+          transform: 'translateZ(0)',
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden',
         }}
       >
         {displayWords.map((w: QuranWord) => {
@@ -387,7 +395,12 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
                 display: 'inline-block',
                 margin: '0 8px',
                 color: isActive ? config.arabicActiveColor : config.arabicTextColor,
-                transform: isActive ? 'scale(1.06)' : 'scale(1)',
+                transform: isActive ? 'scale(1.06) translateZ(0)' : 'scale(1) translateZ(0)',
+                transformOrigin: 'center baseline',
+                willChange: 'transform, color, text-shadow',
+                backfaceVisibility: 'hidden',
+                WebkitBackfaceVisibility: 'hidden',
+                textRendering: 'geometricPrecision',
                 transition: 'all 0.15s ease',
                 textShadow:
                   isActive && config.arabicActiveGlow
@@ -419,6 +432,12 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
           textAlign: textAlignment,
           margin: 0,
           width: '100%',
+          textRendering: 'geometricPrecision',
+          WebkitFontSmoothing: 'antialiased',
+          MozOsxFontSmoothing: 'grayscale',
+          transform: 'translateZ(0)',
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden',
         }}
       >
         {primaryTranslationText}
@@ -440,6 +459,12 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
           textAlign: textAlignment,
           margin: 0,
           width: '100%',
+          textRendering: 'geometricPrecision',
+          WebkitFontSmoothing: 'antialiased',
+          MozOsxFontSmoothing: 'grayscale',
+          transform: 'translateZ(0)',
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden',
         }}
       >
         {secondaryTranslationText}
@@ -470,6 +495,10 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
         boxSizing: 'border-box',
         opacity: finalSubOpacity,
         transform: finalSubTransform,
+        transformOrigin: 'center center',
+        willChange: 'transform, opacity',
+        backfaceVisibility: 'hidden',
+        WebkitBackfaceVisibility: 'hidden',
         filter: subFilter,
         WebkitFilter: subFilter,
       }}
@@ -542,7 +571,11 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
             position: 'absolute',
             top: '44px',
             left: '50%',
-            transform: 'translateX(-50%)',
+            transform: 'translateX(-50%) translateZ(0)',
+            transformOrigin: 'center center',
+            willChange: 'opacity',
+            backfaceVisibility: 'hidden',
+            WebkitBackfaceVisibility: 'hidden',
             zIndex: 30,
             display: 'flex',
             alignItems: 'center',
@@ -567,6 +600,10 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
               color: '#FCD34D',
               letterSpacing: '0px',
               display: 'inline-block',
+              textRendering: 'geometricPrecision',
+              WebkitFontSmoothing: 'antialiased',
+              MozOsxFontSmoothing: 'grayscale',
+              transform: 'translateZ(0)',
             }}
           >
             {surahLigatureCode}
@@ -586,6 +623,10 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
               fontWeight: 500,
               letterSpacing: '0.02em',
               lineHeight: 1.2,
+              textRendering: 'geometricPrecision',
+              WebkitFontSmoothing: 'antialiased',
+              MozOsxFontSmoothing: 'grayscale',
+              transform: 'translateZ(0)',
             }}
           >
             {localizedHeader.fullTitle}

@@ -205,6 +205,13 @@ export const SurahTitleCard: React.FC<SurahTitleCardProps> = ({
       <div
         style={{
           transform: `scale(${cameraZoom})`,
+          transformOrigin: 'center center',
+          willChange: 'transform',
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden',
+          textRendering: 'geometricPrecision',
+          WebkitFontSmoothing: 'antialiased',
+          MozOsxFontSmoothing: 'grayscale',
           width: '100%',
           display: 'flex',
           alignItems: 'center',

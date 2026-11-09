@@ -31,9 +31,9 @@ export function computeAdaptiveFontSizes(
   // Global text scale multiplier (default 1.0, recommended 1.45x - 1.5x for mobile)
   const scaleMultiplier = Math.max(0.6, Math.min(2.5, config.textScaleMultiplier ?? 1.0));
 
-  const baseArabic = Math.round((config.arabicFontSize || 56) * scaleMultiplier);
-  const basePrimary = Math.round((config.primaryFontSize || 26) * scaleMultiplier);
-  const baseSecondary = Math.round((config.secondaryFontSize || 21) * scaleMultiplier);
+  const baseArabic = Math.round((config.arabicFontSize || 56) * scaleMultiplier * 100) / 100;
+  const basePrimary = Math.round((config.primaryFontSize || 26) * scaleMultiplier * 100) / 100;
+  const baseSecondary = Math.round((config.secondaryFontSize || 21) * scaleMultiplier * 100) / 100;
 
   // If auto-adjust is disabled by user config, use explicit base or override values
   if (config.autoAdjustFontSizeByLength === false) {
@@ -145,9 +145,9 @@ export function computeAdaptiveFontSizes(
   const floorPrimary = isMobile ? Math.round(16 * Math.min(1.4, scaleMultiplier)) : 12;
   const floorSecondary = isMobile ? Math.round(14 * Math.min(1.4, scaleMultiplier)) : 11;
 
-  const autoArabic = Math.max(floorArabic, Math.round(baseArabic * arabicScale));
-  const autoPrimary = Math.max(floorPrimary, Math.round(basePrimary * primaryScale));
-  const autoSecondary = Math.max(floorSecondary, Math.round(baseSecondary * secondaryScale));
+  const autoArabic = Math.max(floorArabic, Math.round(baseArabic * arabicScale * 100) / 100);
+  const autoPrimary = Math.max(floorPrimary, Math.round(basePrimary * primaryScale * 100) / 100);
+  const autoSecondary = Math.max(floorSecondary, Math.round(baseSecondary * secondaryScale * 100) / 100);
 
   return {
     arabicFontSize: override?.arabicFontSize ?? autoArabic,

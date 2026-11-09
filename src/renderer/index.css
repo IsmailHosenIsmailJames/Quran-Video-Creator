@@ -83,8 +83,9 @@ body {
 .surah-calligraphy-title {
   font-family: 'surah-name-v1', sans-serif;
   font-feature-settings: "liga" 1, "dlig" 1;
-  text-rendering: optimizeLegibility;
+  text-rendering: geometricPrecision;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Complex Quranic Arabic typography */
@@ -96,8 +97,9 @@ body {
   font-size: var(--arabic-font-size, 54px);
   line-height: var(--arabic-line-height, 2.3);
   font-feature-settings: "kern" 1, "liga" 1, "mkmk" 1, "mark" 1, "calt" 1;
-  text-rendering: optimizeLegibility;
+  text-rendering: geometricPrecision;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Custom scrollbars for studio controls */

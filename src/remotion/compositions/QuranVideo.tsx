@@ -272,8 +272,11 @@ export const QuranVideo: React.FC<QuranVideoCompositionProps> = ({
         .surah-calligraphy-title {
           font-family: 'surah-name-v1', sans-serif !important;
           font-feature-settings: "liga" 1, "dlig" 1;
-          text-rendering: optimizeLegibility;
+          text-rendering: geometricPrecision;
           -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+          transform: translateZ(0);
+          backface-visibility: hidden;
         }
 
         .quran-arabic-text {
@@ -281,8 +284,11 @@ export const QuranVideo: React.FC<QuranVideoCompositionProps> = ({
           unicode-bidi: isolate;
           text-align: center;
           font-feature-settings: "kern" 1, "liga" 1, "mkmk" 1, "mark" 1, "calt" 1;
-          text-rendering: optimizeLegibility;
+          text-rendering: geometricPrecision;
           -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+          transform: translateZ(0);
+          backface-visibility: hidden;
         }
       `}</style>
 

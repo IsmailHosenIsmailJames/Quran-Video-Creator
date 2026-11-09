@@ -140,6 +140,13 @@ export const ProgrammaticOutro: React.FC<ProgrammaticOutroProps> = ({
         <AbsoluteFill
           style={{
             transform: `scale(${cameraZoom})`,
+            transformOrigin: 'center center',
+            willChange: 'transform',
+            backfaceVisibility: 'hidden',
+            WebkitBackfaceVisibility: 'hidden',
+            textRendering: 'geometricPrecision',
+            WebkitFontSmoothing: 'antialiased',
+            MozOsxFontSmoothing: 'grayscale',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -384,6 +391,13 @@ export const ProgrammaticOutro: React.FC<ProgrammaticOutroProps> = ({
         <AbsoluteFill
           style={{
             transform: `scale(${cameraZoom})`,
+            transformOrigin: 'center center',
+            willChange: 'transform',
+            backfaceVisibility: 'hidden',
+            WebkitBackfaceVisibility: 'hidden',
+            textRendering: 'geometricPrecision',
+            WebkitFontSmoothing: 'antialiased',
+            MozOsxFontSmoothing: 'grayscale',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -493,6 +507,13 @@ export const ProgrammaticOutro: React.FC<ProgrammaticOutroProps> = ({
         <AbsoluteFill
           style={{
             transform: `scale(${cameraZoom})`,
+            transformOrigin: 'center center',
+            willChange: 'transform',
+            backfaceVisibility: 'hidden',
+            WebkitBackfaceVisibility: 'hidden',
+            textRendering: 'geometricPrecision',
+            WebkitFontSmoothing: 'antialiased',
+            MozOsxFontSmoothing: 'grayscale',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -610,6 +631,13 @@ export const ProgrammaticOutro: React.FC<ProgrammaticOutroProps> = ({
         <AbsoluteFill
           style={{
             transform: `scale(${cameraZoom})`,
+            transformOrigin: 'center center',
+            willChange: 'transform',
+            backfaceVisibility: 'hidden',
+            WebkitBackfaceVisibility: 'hidden',
+            textRendering: 'geometricPrecision',
+            WebkitFontSmoothing: 'antialiased',
+            MozOsxFontSmoothing: 'grayscale',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -750,6 +778,13 @@ export const ProgrammaticOutro: React.FC<ProgrammaticOutroProps> = ({
         <AbsoluteFill
           style={{
             transform: `scale(${cameraZoom})`,
+            transformOrigin: 'center center',
+            willChange: 'transform',
+            backfaceVisibility: 'hidden',
+            WebkitBackfaceVisibility: 'hidden',
+            textRendering: 'geometricPrecision',
+            WebkitFontSmoothing: 'antialiased',
+            MozOsxFontSmoothing: 'grayscale',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
