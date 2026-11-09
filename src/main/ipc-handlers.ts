@@ -7,6 +7,7 @@ import { recitationService } from './services/recitation-service';
 import { remotionRunner } from './services/remotion-runner';
 import { settingsService } from './services/settings-service';
 import { ScriptType, VideoTemplateConfig, AyahSequenceData } from '../shared/types';
+import { ThumbnailConfig } from '../shared/thumbnail-types';
 
 export function registerIpcHandlers(mainWindow: BrowserWindow): void {
   // 1. Scripture lookups
@@ -256,6 +257,25 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
     }
   });
 
+  ipcMain.handle('file:exists', async (_, filePath: string) => {
+    try {
+      if (!filePath) return false;
+      return fs.existsSync(filePath);
+    } catch {
+      return false;
+    }
+  });
+
+  ipcMain.handle('file:read-text', async (_, filePath: string) => {
+    try {
+      if (!filePath || !fs.existsSync(filePath)) return null;
+      return await fs.promises.readFile(filePath, 'utf-8');
+    } catch (err) {
+      console.warn(`Failed to read file text for ${filePath}:`, err);
+      return null;
+    }
+  });
+
   ipcMain.handle('media:probe-duration', async (_, filePath: string) => {
     try {
       const { Input, FilePathSource, ALL_FORMATS } = require('mediabunny');
@@ -309,6 +329,24 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
 
   ipcMain.handle('settings:reset', async () => {
     settingsService.resetSettings();
+    return { success: true };
+  });
+
+  ipcMain.handle('settings:get-custom-timestamp', async () => {
+    return settingsService.getCustomTimestampContent();
+  });
+
+  ipcMain.handle('settings:save-custom-timestamp', async (_, content: string | null) => {
+    settingsService.setCustomTimestampContent(content);
+    return { success: true };
+  });
+
+  ipcMain.handle('settings:load-thumbnail', async () => {
+    return settingsService.loadThumbnailSettings();
+  });
+
+  ipcMain.handle('settings:save-thumbnail', async (_, settings: Partial<ThumbnailConfig>) => {
+    settingsService.saveThumbnailSettings(settings);
     return { success: true };
   });
 }

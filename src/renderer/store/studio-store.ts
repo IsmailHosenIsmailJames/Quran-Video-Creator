@@ -233,6 +233,14 @@ export const useStudioStore = create<StudioState>((set, get) => ({
 
     const manifest = result.data;
     const fileName = filePath ? filePath.split(/[/\\]/).pop() || 'custom_timestamps.json' : 'custom_timestamps.json';
+    const contentString = typeof content === 'string' ? content : JSON.stringify(content);
+
+    // Save to persistent SQLite storage so restart never loses it
+    if (window.electronAPI?.saveCustomTimestamp) {
+      window.electronAPI.saveCustomTimestamp(contentString).catch((err: any) =>
+        console.warn('Failed to cache custom timestamp in SQLite:', err)
+      );
+    }
 
     if (isSalatJammatManifest(manifest)) {
       const firstSeg = manifest.segments[0];
@@ -292,6 +300,11 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   },
 
   clearCustomTimestamp: async () => {
+    if (window.electronAPI?.saveCustomTimestamp) {
+      window.electronAPI.saveCustomTimestamp(null).catch((err: any) =>
+        console.warn('Failed to clear cached custom timestamp in SQLite:', err)
+      );
+    }
     set((state) => ({
       customTimestamp: null,
       customTimestampPath: null,
@@ -1284,6 +1297,15 @@ export const useStudioStore = create<StudioState>((set, get) => ({
         }
       }
 
+      let savedThumbnailSettings: Partial<ThumbnailConfig> = {};
+      if (api.loadThumbnailSettings) {
+        try {
+          savedThumbnailSettings = await api.loadThumbnailSettings();
+        } catch (err) {
+          console.error('Failed to load saved thumbnail settings:', err);
+        }
+      }
+
       if (savedSettings.channelHandle === '@AnNafee_Official') {
         savedSettings.channelHandle = '';
       }
@@ -1291,21 +1313,140 @@ export const useStudioStore = create<StudioState>((set, get) => ({
         savedSettings.showBranding = false;
       }
 
+      // Verify files still exist on disk if specified
+      if (savedSettings.customAudioPath && api.fileExists) {
+        const exists = await api.fileExists(savedSettings.customAudioPath);
+        if (!exists) {
+          console.warn(`Saved custom audio file not found: ${savedSettings.customAudioPath}`);
+          savedSettings.customAudioPath = undefined;
+          savedSettings.recitationAudioMode = 'cdn-per-ayah';
+          savedSettings.customAudioDurationSeconds = undefined;
+          savedSettings.customAudioFileName = undefined;
+        }
+      }
+
+      if (savedSettings.recitationVideoPath && api.fileExists) {
+        const exists = await api.fileExists(savedSettings.recitationVideoPath);
+        if (!exists) {
+          console.warn(`Saved recitation video file not found: ${savedSettings.recitationVideoPath}`);
+          savedSettings.recitationVideoPath = undefined;
+          savedSettings.useRecitationVideoAsBackground = false;
+          savedSettings.useRecitationVideoAudio = false;
+          savedSettings.recitationVideoDurationSeconds = undefined;
+          savedSettings.recitationVideoFileName = undefined;
+        }
+      }
+
+      if (savedSettings.logoPath && api.fileExists) {
+        const exists = await api.fileExists(savedSettings.logoPath);
+        if (!exists) {
+          savedSettings.logoPath = undefined;
+        }
+      }
+
+      if (savedSettings.introVideoPath && api.fileExists) {
+        const exists = await api.fileExists(savedSettings.introVideoPath);
+        if (!exists) {
+          savedSettings.introVideoPath = undefined;
+        }
+      }
+
+      if (savedSettings.outroVideoPath && api.fileExists) {
+        const exists = await api.fileExists(savedSettings.outroVideoPath);
+        if (!exists) {
+          savedSettings.outroVideoPath = undefined;
+        }
+      }
+
       const initialConfig: VideoTemplateConfig = {
         ...DEFAULT_TEMPLATE_CONFIG,
         ...savedSettings,
-        // Start fresh with Surah 1 Al-Fatiha for new video creation sessions
-        surahNumber: DEFAULT_TEMPLATE_CONFIG.surahNumber,
-        fromAyah: DEFAULT_TEMPLATE_CONFIG.fromAyah,
-        toAyah: DEFAULT_TEMPLATE_CONFIG.toAyah,
-        customAudioPath: undefined,
       };
 
-      // 2. Load available languages and reciters
+      // Validate surah and ayah bounds
+      if (!initialConfig.surahNumber || initialConfig.surahNumber < 1 || initialConfig.surahNumber > 114) {
+        initialConfig.surahNumber = 1;
+      }
+      const surahMeta = getSurahByNumber(initialConfig.surahNumber);
+      if (surahMeta) {
+        initialConfig.fromAyah = Math.max(1, Math.min(initialConfig.fromAyah || 1, surahMeta.totalAyahs));
+        initialConfig.toAyah = Math.max(
+          initialConfig.fromAyah,
+          Math.min(initialConfig.toAyah || surahMeta.totalAyahs, surahMeta.totalAyahs)
+        );
+      }
+
+      // 2. Restore custom timestamp manifest if present
+      let restoredManifest: UnifiedTimestampManifest | null = null;
+      let restoredTimestampPath: string | null = null;
+
+      // Check if file exists on disk and read fresh content
+      if (initialConfig.customTimestampPath && api.fileExists && api.readFileText) {
+        try {
+          const exists = await api.fileExists(initialConfig.customTimestampPath);
+          if (exists) {
+            const fileContent = await api.readFileText(initialConfig.customTimestampPath);
+            if (fileContent) {
+              const parsed = validateAndParseTimestampJson(fileContent);
+              if (parsed.success && parsed.data) {
+                restoredManifest = parsed.data;
+                restoredTimestampPath = initialConfig.customTimestampPath;
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to read saved custom timestamp file:', e);
+        }
+      }
+
+      // Fallback to SQLite cached timestamp content if file was moved or path was not on disk
+      if (!restoredManifest && api.getSavedCustomTimestamp) {
+        try {
+          const cachedJson = await api.getSavedCustomTimestamp();
+          if (cachedJson) {
+            const parsed = validateAndParseTimestampJson(cachedJson);
+            if (parsed.success && parsed.data) {
+              restoredManifest = parsed.data;
+              restoredTimestampPath = initialConfig.customTimestampPath || 'custom_timestamps.json';
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to restore cached custom timestamp JSON:', e);
+        }
+      }
+
+      if (restoredManifest) {
+        if (isSalatJammatManifest(restoredManifest)) {
+          initialConfig.recitationMode = 'salat-jammat';
+          initialConfig.salatSegments = restoredManifest.segments;
+          initialConfig.hasCustomTimestamp = true;
+          initialConfig.customTimestampPath = restoredTimestampPath || initialConfig.customTimestampPath;
+          if (restoredManifest.filename) {
+            initialConfig.customAudioFileName = initialConfig.customAudioFileName || restoredManifest.filename;
+            initialConfig.recitationVideoFileName = initialConfig.recitationVideoFileName || restoredManifest.filename;
+          }
+        } else {
+          initialConfig.recitationMode = 'single-surah';
+          initialConfig.salatSegments = undefined;
+          initialConfig.hasCustomTimestamp = true;
+          initialConfig.customTimestampPath = restoredTimestampPath || initialConfig.customTimestampPath;
+        }
+      }
+
+      // 3. Load available languages and reciters
       const languages = await api.getAvailableLanguages();
       const reciters = await api.getReciters();
 
-      // 3. Load translators for configured primary & secondary languages
+      // Ensure valid reciterIndex
+      if (
+        typeof initialConfig.reciterIndex !== 'number' ||
+        initialConfig.reciterIndex < 0 ||
+        initialConfig.reciterIndex >= reciters.length
+      ) {
+        initialConfig.reciterIndex = 0;
+      }
+
+      // 4. Load translators for configured primary & secondary languages
       const primaryTranslators = await api.getTranslatorsForLanguage(initialConfig.primaryTranslationLang);
       const secondaryTranslators = await api.getTranslatorsForLanguage(initialConfig.secondaryTranslationLang);
 
@@ -1317,15 +1458,24 @@ export const useStudioStore = create<StudioState>((set, get) => ({
         initialConfig.secondaryTranslationFile = secondaryTranslators[0];
       }
 
+      const initialThumbnailConfig: ThumbnailConfig = {
+        ...DEFAULT_THUMBNAIL_CONFIG,
+        ...savedThumbnailSettings,
+      };
+
       set({
         config: initialConfig,
+        thumbnailConfig: initialThumbnailConfig,
+        customTimestamp: restoredManifest,
+        customTimestampPath: restoredTimestampPath,
+        customTimestampError: null,
         availableLanguages: languages,
         reciters,
         translatorsPrimary: primaryTranslators,
         translatorsSecondary: secondaryTranslators,
       });
 
-      // 4. Load initial sequence
+      // 5. Load initial sequence
       await get().refreshAyahSequence();
     } catch (err) {
       console.error('Failed to initialize studio:', err);
@@ -1344,6 +1494,10 @@ export const useStudioStore = create<StudioState>((set, get) => ({
       clearTimeout(autoSaveTimer);
       autoSaveTimer = null;
     }
+    if (autoSaveThumbnailTimer) {
+      clearTimeout(autoSaveThumbnailTimer);
+      autoSaveThumbnailTimer = null;
+    }
 
     try {
       if (api?.resetSettings) {
@@ -1360,8 +1514,13 @@ export const useStudioStore = create<StudioState>((set, get) => ({
 
       set({
         config: { ...DEFAULT_TEMPLATE_CONFIG },
+        thumbnailConfig: { ...DEFAULT_THUMBNAIL_CONFIG },
+        customTimestamp: null,
+        customTimestampPath: null,
+        customTimestampError: null,
         translatorsPrimary: primaryTranslators,
         translatorsSecondary: secondaryTranslators,
+        isLoading: false,
         statusMessage: 'Reset all settings to default',
       });
 
@@ -1377,6 +1536,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
 }));
 
 let autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
+let autoSaveThumbnailTimer: ReturnType<typeof setTimeout> | null = null;
 let isHydratingOrResetting = false;
 
 export const triggerAutoSave = (config: VideoTemplateConfig) => {
@@ -1393,8 +1553,25 @@ export const triggerAutoSave = (config: VideoTemplateConfig) => {
   }, 400);
 };
 
+export const triggerAutoSaveThumbnail = (thumbnailConfig: ThumbnailConfig) => {
+  if (isHydratingOrResetting) return;
+  if (autoSaveThumbnailTimer) clearTimeout(autoSaveThumbnailTimer);
+  autoSaveThumbnailTimer = setTimeout(async () => {
+    try {
+      if (window.electronAPI?.saveThumbnailSettings) {
+        await window.electronAPI.saveThumbnailSettings(thumbnailConfig);
+      }
+    } catch (err) {
+      console.error('Failed to auto-save thumbnail settings:', err);
+    }
+  }, 500);
+};
+
 useStudioStore.subscribe((state, prevState) => {
   if (state.config !== prevState.config) {
     triggerAutoSave(state.config);
+  }
+  if (state.thumbnailConfig !== prevState.thumbnailConfig) {
+    triggerAutoSaveThumbnail(state.thumbnailConfig);
   }
 });

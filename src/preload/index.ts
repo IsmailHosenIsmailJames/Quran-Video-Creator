@@ -8,6 +8,7 @@ import {
   RenderProgressPayload,
   ScriptType,
 } from '../shared/types';
+import { ThumbnailConfig } from '../shared/thumbnail-types';
 
 const api = {
   // Scripture
@@ -70,6 +71,10 @@ const api = {
     ipcRenderer.invoke('dialog:select-save-path', defaultFileName),
   showInFolder: (filePath: string): Promise<void> =>
     ipcRenderer.invoke('file:show-in-folder', filePath),
+  fileExists: (filePath: string): Promise<boolean> =>
+    ipcRenderer.invoke('file:exists', filePath),
+  readFileText: (filePath: string): Promise<string | null> =>
+    ipcRenderer.invoke('file:read-text', filePath),
   probeMediaDuration: (filePath: string): Promise<number> =>
     ipcRenderer.invoke('media:probe-duration', filePath),
   saveThumbnailImage: (dataUrl: string, defaultFileName: string): Promise<string | null> =>
@@ -109,6 +114,14 @@ const api = {
     ipcRenderer.invoke('settings:save', settings),
   resetSettings: (): Promise<{ success: boolean }> =>
     ipcRenderer.invoke('settings:reset'),
+  getSavedCustomTimestamp: (): Promise<string | null> =>
+    ipcRenderer.invoke('settings:get-custom-timestamp'),
+  saveCustomTimestamp: (content: string | null): Promise<{ success: boolean }> =>
+    ipcRenderer.invoke('settings:save-custom-timestamp', content),
+  loadThumbnailSettings: (): Promise<Partial<ThumbnailConfig>> =>
+    ipcRenderer.invoke('settings:load-thumbnail'),
+  saveThumbnailSettings: (settings: Partial<ThumbnailConfig>): Promise<{ success: boolean }> =>
+    ipcRenderer.invoke('settings:save-thumbnail', settings),
 };
 
 contextBridge.exposeInMainWorld('electronAPI', api);

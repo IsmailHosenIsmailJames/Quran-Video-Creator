@@ -224,7 +224,8 @@ export const AudioTab: React.FC = () => {
     setIsProcessingJson(true);
     try {
       const text = await file.text();
-      await loadCustomTimestamp(text, file.name);
+      const filePath = (file as any).path || file.name;
+      await loadCustomTimestamp(text, filePath);
     } catch (err: any) {
       console.error('Failed to read uploaded JSON file:', err);
     } finally {
@@ -241,7 +242,8 @@ export const AudioTab: React.FC = () => {
     setIsProcessingJson(true);
     try {
       const text = await file.text();
-      await loadCustomTimestamp(text, file.name);
+      const filePath = (file as any).path || file.name;
+      await loadCustomTimestamp(text, filePath);
     } catch (err: any) {
       console.error('Failed to process dropped JSON file:', err);
     } finally {

@@ -3,10 +3,16 @@ import path from 'path';
 import fs from 'fs';
 import { app } from 'electron';
 import { VideoTemplateConfig } from '../../shared/types';
+import { ThumbnailConfig } from '../../shared/thumbnail-types';
 
 export const PERSISTABLE_CONFIG_KEYS: Array<keyof VideoTemplateConfig> = [
   // Scripture Selection & Preferences
+  'surahNumber',
+  'fromAyah',
+  'toAyah',
   'includeBismillah',
+  'recitationMode',
+  'salatSegments',
 
   // Scripture Typography & Styling
   'script',
@@ -18,6 +24,11 @@ export const PERSISTABLE_CONFIG_KEYS: Array<keyof VideoTemplateConfig> = [
   'arabicActiveGlow',
   'ayahFontOverrides',
   'autoAdjustFontSizeByLength',
+  'textScaleMultiplier',
+  'enableAyahChunking',
+  'maxWordsPerChunk',
+  'chunkTransition',
+  'splitTranslationsWithChunks',
 
   // Subtitles
   'showPrimaryTranslation',
@@ -58,10 +69,21 @@ export const PERSISTABLE_CONFIG_KEYS: Array<keyof VideoTemplateConfig> = [
   'overlayOpacity',
   'vignetteIntensity',
   'kenBurnsEffect',
+  'recitationVideoPath',
+  'useRecitationVideoAsBackground',
+  'useRecitationVideoAudio',
+  'recitationVideoDurationSeconds',
+  'recitationVideoFileName',
 
   // Audio & Waveform
   'reciterIndex',
   'recitationSpeed',
+  'recitationAudioMode',
+  'customAudioPath',
+  'customAudioDurationSeconds',
+  'customAudioFileName',
+  'customTimestampPath',
+  'hasCustomTimestamp',
   'showWaveform',
   'waveformType',
   'waveformColor',
@@ -98,6 +120,32 @@ export const PERSISTABLE_CONFIG_KEYS: Array<keyof VideoTemplateConfig> = [
   'skipIntroForShorts',
   'introMuted',
   'introTransition',
+
+  // Surah Title & Reciter Info Transition Screen
+  'enableSurahTitleCard',
+  'titleCardDurationSeconds',
+  'titleCardPreset',
+  'titleCardThemeColor',
+  'showReciterInTitleCard',
+  'showStyleInTitleCard',
+  'showVerseRangeInTitleCard',
+  'showTranslationInTitleCard',
+  'titleCardTransition',
+  'skipTitleCardForShorts',
+
+  // Channel Ending / Outro Video Bumper
+  'enableOutroVideo',
+  'outroMode',
+  'outroPreset',
+  'outroTitle',
+  'outroSubtitle',
+  'outroCustomLogo',
+  'outroThemeColor',
+  'outroVideoPath',
+  'outroVideoDurationSeconds',
+  'skipOutroForShorts',
+  'outroMuted',
+  'outroTransition',
 
   // Video Output
   'fps',
@@ -210,8 +258,66 @@ export class SettingsService {
       const db = this.getDb();
       const placeholders = PERSISTABLE_CONFIG_KEYS.map(() => '?').join(',');
       db.prepare(`DELETE FROM settings WHERE key IN (${placeholders})`).run(...PERSISTABLE_CONFIG_KEYS);
+      db.prepare(`DELETE FROM settings WHERE key IN ('__active_custom_timestamp_content', '__thumbnail_config')`).run();
     } catch (err) {
       console.error('Failed to reset settings in database:', err);
+    }
+  }
+
+  public getCustomTimestampContent(): string | null {
+    try {
+      const db = this.getDb();
+      const row = db.prepare("SELECT value FROM settings WHERE key = '__active_custom_timestamp_content'").get() as
+        | { value: string }
+        | undefined;
+      return row ? JSON.parse(row.value) : null;
+    } catch (err) {
+      console.warn('Failed to load active custom timestamp content:', err);
+      return null;
+    }
+  }
+
+  public setCustomTimestampContent(content: string | null): void {
+    try {
+      const db = this.getDb();
+      const now = Date.now();
+      if (!content) {
+        db.prepare("DELETE FROM settings WHERE key = '__active_custom_timestamp_content'").run();
+      } else {
+        db.prepare(`
+          INSERT OR REPLACE INTO settings (key, value, updated_at)
+          VALUES ('__active_custom_timestamp_content', ?, ?)
+        `).run(JSON.stringify(content), now);
+      }
+    } catch (err) {
+      console.error('Failed to save active custom timestamp content:', err);
+    }
+  }
+
+  public loadThumbnailSettings(): Partial<ThumbnailConfig> {
+    try {
+      const db = this.getDb();
+      const row = db.prepare("SELECT value FROM settings WHERE key = '__thumbnail_config'").get() as
+        | { value: string }
+        | undefined;
+      return row ? JSON.parse(row.value) : {};
+    } catch (err) {
+      console.warn('Failed to load thumbnail settings:', err);
+      return {};
+    }
+  }
+
+  public saveThumbnailSettings(settings: Partial<ThumbnailConfig>): void {
+    if (!settings || typeof settings !== 'object') return;
+    try {
+      const db = this.getDb();
+      const now = Date.now();
+      db.prepare(`
+        INSERT OR REPLACE INTO settings (key, value, updated_at)
+        VALUES ('__thumbnail_config', ?, ?)
+      `).run(JSON.stringify(settings), now);
+    } catch (err) {
+      console.error('Failed to save thumbnail settings:', err);
     }
   }
 
