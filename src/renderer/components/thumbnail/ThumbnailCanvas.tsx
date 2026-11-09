@@ -12,11 +12,12 @@ interface ThumbnailCanvasProps {
   config: ThumbnailConfig;
   videoConfig: VideoTemplateConfig;
   reciterInfo?: ReciterInfo;
+  customTimestamp?: any;
   className?: string;
 }
 
 export const ThumbnailCanvas = forwardRef<ThumbnailCanvasRef, ThumbnailCanvasProps>(
-  ({ config, videoConfig, reciterInfo, className = '' }, ref) => {
+  ({ config, videoConfig, reciterInfo, customTimestamp, className = '' }, ref) => {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const [isRendering, setIsRendering] = useState<boolean>(false);
     const [renderError, setRenderError] = useState<string | null>(null);
@@ -36,7 +37,7 @@ export const ThumbnailCanvas = forwardRef<ThumbnailCanvasRef, ThumbnailCanvasPro
         if (!canvas) throw new Error('Thumbnail Canvas is not mounted');
 
         // Re-render once to guarantee latest state is fully drawn
-        await renderThumbnailToCanvas(canvas, { config, videoConfig, reciterInfo });
+        await renderThumbnailToCanvas(canvas, { config, videoConfig, reciterInfo, customTimestamp });
 
         const mimeType = format === 'jpeg' ? 'image/jpeg' : 'image/png';
         return canvas.toDataURL(mimeType, quality);
@@ -54,7 +55,7 @@ export const ThumbnailCanvas = forwardRef<ThumbnailCanvasRef, ThumbnailCanvasPro
         try {
           setIsRendering(true);
           setRenderError(null);
-          await renderThumbnailToCanvas(canvas, { config, videoConfig, reciterInfo });
+          await renderThumbnailToCanvas(canvas, { config, videoConfig, reciterInfo, customTimestamp });
         } catch (err: any) {
           if (!isCancelled) {
             console.error('Failed to render thumbnail to canvas:', err);
@@ -72,7 +73,7 @@ export const ThumbnailCanvas = forwardRef<ThumbnailCanvasRef, ThumbnailCanvasPro
       return () => {
         isCancelled = true;
       };
-    }, [config, videoConfig, reciterInfo, canvasWidth, canvasHeight]);
+    }, [config, videoConfig, reciterInfo, customTimestamp, canvasWidth, canvasHeight]);
 
     return (
       <div

@@ -7,11 +7,16 @@ import {
   generateYouTubeDescription,
   generateYouTubeTags,
   formatFullYouTubeKitText,
+  extractSalatMetadata,
   YouTubeDescriptionOptions,
   DEFAULT_DESCRIPTION_OPTIONS,
+  SalatPrayerType,
+  SalatChapterMode,
+  SalatImamTitle,
 } from '../../../shared/youtube-seo-generator';
 import { getSurahByNumber } from '../../../shared/surahs';
 import { getSurahNameLocalized, getReciterNameLocalized } from '../../../shared/surah-localization';
+import { isSalatJammatManifest } from '../../../shared/types';
 import {
   Youtube,
   Copy,
@@ -36,7 +41,10 @@ export const YouTubeSeoTab: React.FC = () => {
     ayahs,
     reciters,
     setCurrentFrame,
+    customTimestamp,
   } = useStudioStore();
+
+  const isSalat = isSalatJammatManifest(customTimestamp);
 
   const [activeSubTab, setActiveSubTab] = useState<'titles' | 'timestamps' | 'description' | 'tags'>('description');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -47,14 +55,26 @@ export const YouTubeSeoTab: React.FC = () => {
   // Description Builder Options (Defaulting to Bengali Clean Mode)
   const [descOptions, setDescOptions] = useState<YouTubeDescriptionOptions>(DEFAULT_DESCRIPTION_OPTIONS);
 
+  const salatMeta = useMemo(
+    () => (isSalat ? extractSalatMetadata(customTimestamp, descOptions) : null),
+    [isSalat, customTimestamp, descOptions.salatPrayerType, descOptions.salatImamTitle]
+  );
+
   // Generated Data
   const titleOptions = useMemo(
     () =>
-      generateYouTubeTitles(config, reciterInfo, {
-        language: descOptions.language,
-        digitFormat: descOptions.digitFormat,
-      }),
-    [config, reciterInfo, descOptions.language, descOptions.digitFormat]
+      generateYouTubeTitles(
+        config,
+        reciterInfo,
+        {
+          language: descOptions.language,
+          digitFormat: descOptions.digitFormat,
+          salatPrayerType: descOptions.salatPrayerType,
+          salatImamTitle: descOptions.salatImamTitle,
+        },
+        customTimestamp
+      ),
+    [config, reciterInfo, descOptions.language, descOptions.digitFormat, descOptions.salatPrayerType, descOptions.salatImamTitle, customTimestamp]
   );
 
   const [selectedTitle, setSelectedTitle] = useState<string>(() => titleOptions[0]?.text || '');
@@ -68,11 +88,18 @@ export const YouTubeSeoTab: React.FC = () => {
 
   const timestamps = useMemo(
     () =>
-      calculateYouTubeTimestamps(config, ayahs, {
-        language: descOptions.language,
-        digitFormat: descOptions.digitFormat,
-      }),
-    [config, ayahs, descOptions.language, descOptions.digitFormat]
+      calculateYouTubeTimestamps(
+        config,
+        ayahs,
+        {
+          language: descOptions.language,
+          digitFormat: descOptions.digitFormat,
+          salatPrayerType: descOptions.salatPrayerType,
+          salatChapterMode: descOptions.salatChapterMode,
+        },
+        customTimestamp
+      ),
+    [config, ayahs, descOptions.language, descOptions.digitFormat, descOptions.salatPrayerType, descOptions.salatChapterMode, customTimestamp]
   );
 
   const timestampsFormatted = useMemo(
@@ -81,8 +108,8 @@ export const YouTubeSeoTab: React.FC = () => {
   );
 
   const fullDescription = useMemo(
-    () => generateYouTubeDescription(config, ayahs, reciterInfo, descOptions),
-    [config, ayahs, reciterInfo, descOptions]
+    () => generateYouTubeDescription(config, ayahs, reciterInfo, descOptions, customTimestamp),
+    [config, ayahs, reciterInfo, descOptions, customTimestamp]
   );
 
   const [editableDescription, setEditableDescription] = useState<string>(fullDescription);
@@ -93,8 +120,18 @@ export const YouTubeSeoTab: React.FC = () => {
   }, [fullDescription]);
 
   const tagsList = useMemo(
-    () => generateYouTubeTags(config, reciterInfo, { language: descOptions.language }),
-    [config, reciterInfo, descOptions.language]
+    () =>
+      generateYouTubeTags(
+        config,
+        reciterInfo,
+        {
+          language: descOptions.language,
+          salatPrayerType: descOptions.salatPrayerType,
+          salatImamTitle: descOptions.salatImamTitle,
+        },
+        customTimestamp
+      ),
+    [config, reciterInfo, descOptions.language, descOptions.salatPrayerType, descOptions.salatImamTitle, customTimestamp]
   );
   const tagsFormatted = useMemo(() => tagsList.join(', '), [tagsList]);
 
@@ -116,11 +153,16 @@ export const YouTubeSeoTab: React.FC = () => {
       ayahs,
       reciterInfo,
       selectedTitle,
-      descOptions
+      descOptions,
+      customTimestamp
     );
     const blob = new Blob([fullText], { type: 'text/plain;charset=utf-8' });
     const isBn = descOptions.language === 'bn';
-    const surahSuffix = isBn
+    const surahSuffix = isSalat && salatMeta
+      ? isBn
+        ? `${salatMeta.prayerNameBn.replace(/\s+/g, '_')}_${salatMeta.combinedSurahsBn.replace(/\s+/g, '_')}`
+        : `${salatMeta.prayerNameEn.replace(/\s+/g, '_')}_${salatMeta.combinedSurahsEn.replace(/\s+/g, '_')}`
+      : isBn
       ? `Surah_${config.surahNumber}_${getSurahNameLocalized(config.surahNumber, 'bn').replace(/\s+/g, '_')}`
       : `Surah_${config.surahNumber}_${surahMeta?.nameTransliterated || 'Quran'}`;
     const fileName = `YouTube_Kit_${surahSuffix}.txt`;
@@ -134,10 +176,19 @@ export const YouTubeSeoTab: React.FC = () => {
   };
 
   const isBn = descOptions.language === 'bn';
-  const surahDisplayName = isBn
+  const surahDisplayName = isSalat && salatMeta
+    ? isBn
+      ? `${salatMeta.prayerNameBn} (${salatMeta.combinedSurahsBn})`
+      : `${salatMeta.prayerNameEn} (${salatMeta.combinedSurahsEn})`
+    : isBn
     ? `সূরা ${getSurahNameLocalized(config.surahNumber, 'bn')}`
     : `Surah ${surahMeta?.nameTransliterated || config.surahNumber}`;
-  const reciterDisplayName = isBn
+
+  const reciterDisplayName = isSalat && salatMeta
+    ? isBn
+      ? `${salatMeta.imamTitleBn}: ${getReciterNameLocalized(reciterInfo?.name, 'bn')}`
+      : `${salatMeta.imamTitleEn}: ${reciterInfo?.name || 'Imam'}`
+    : isBn
     ? getReciterNameLocalized(reciterInfo?.name, 'bn')
     : (reciterInfo?.name || 'Noble Quran');
 
@@ -184,6 +235,93 @@ export const YouTubeSeoTab: React.FC = () => {
           <span>{tagsList.length} {isBn ? 'টি ট্যাগ' : 'Tags'} ({tagsFormatted.length}/500)</span>
         </div>
       </div>
+
+      {/* Salat Jama'ah Prayer Configuration Card */}
+      {isSalat && salatMeta && (
+        <div className="p-3.5 rounded-2xl bg-gradient-to-r from-indigo-950/80 via-indigo-900/40 to-transparent border border-indigo-500/40 space-y-2.5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🕌</span>
+              <div>
+                <span className="text-xs font-bold text-white uppercase tracking-wider">
+                  {isBn ? 'জামাত সালাত এসইও মোড সক্রিয়' : 'Salat Jama\'ah Prayer SEO Active'}
+                </span>
+                <p className="text-[11px] text-indigo-300/80">
+                  {isBn
+                    ? 'বহু-সূরা সালাতের জন্য উচ্চ-সিলেক্টেড টাইটেল, অধ্যায়ভিত্তিক চ্যাপ্টার ও হাদিস সংযুক্ত।'
+                    : 'Titles, multi-surah chapters, and prayer Hadiths are calibrated for congregational recitation.'}
+                </p>
+              </div>
+            </div>
+            <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-semibold">
+              {customTimestamp.segments_count || customTimestamp.segments?.length || 2} Segments • {salatMeta.rakahsTextBn}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-indigo-900/50">
+            <div>
+              <label className="text-[10px] font-semibold text-gray-300 block mb-1">
+                {isBn ? 'সালাতের ধরন (Prayer Type)' : 'Prayer Category'}
+              </label>
+              <select
+                value={descOptions.salatPrayerType || 'taraweeh'}
+                onChange={(e) =>
+                  setDescOptions({
+                    ...descOptions,
+                    salatPrayerType: e.target.value as SalatPrayerType,
+                  })
+                }
+                className="w-full bg-gray-900 border border-indigo-700/60 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-400 cursor-pointer"
+              >
+                <option value="taraweeh">🌙 তারাবীহ সালাত (Taraweeh)</option>
+                <option value="tahajjud">⭐ তাহাজ্জুদ (Tahajjud & Qiyam)</option>
+                <option value="salat-jamaah">🕌 জামাত সালাত (Salat Jama'ah)</option>
+                <option value="jumuah">🤲 জুমুআ সালাত (Jumu'ah)</option>
+                <option value="general-salat">🕋 সাধারণ সালাত (General Prayer)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-[10px] font-semibold text-gray-300 block mb-1">
+                {isBn ? 'চ্যাপ্টার স্টাইল (Chapter Mode)' : 'Chapter Granularity'}
+              </label>
+              <select
+                value={descOptions.salatChapterMode || 'segments'}
+                onChange={(e) =>
+                  setDescOptions({
+                    ...descOptions,
+                    salatChapterMode: e.target.value as SalatChapterMode,
+                  })
+                }
+                className="w-full bg-gray-900 border border-indigo-700/60 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-400 cursor-pointer"
+              >
+                <option value="segments">✨ সূরা ও রুকুভিত্তিক (Clean Chapters)</option>
+                <option value="verses">📖 প্রতিটি আয়াতসহ (Detailed Verses)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-[10px] font-semibold text-gray-300 block mb-1">
+                {isBn ? 'ক্বারীর উপাধি (Imam / Qari Title)' : 'Reciter Designation'}
+              </label>
+              <select
+                value={descOptions.salatImamTitle || 'imam-qari'}
+                onChange={(e) =>
+                  setDescOptions({
+                    ...descOptions,
+                    salatImamTitle: e.target.value as SalatImamTitle,
+                  })
+                }
+                className="w-full bg-gray-900 border border-indigo-700/60 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-400 cursor-pointer"
+              >
+                <option value="imam-qari">ইমাম ও ক্বারী (Imam & Reciter)</option>
+                <option value="imam">ইমাম (Imam)</option>
+                <option value="qari">ক্বারী (Qari)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Language & Style Mode Control Toolbar */}
       <div className="p-3 rounded-2xl bg-gray-950 border border-gray-800 space-y-2.5">

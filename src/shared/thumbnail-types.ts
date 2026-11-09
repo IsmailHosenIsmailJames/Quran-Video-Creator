@@ -20,6 +20,9 @@ export type ThumbnailPresetId =
   | 'minimalist-luxury'
   | 'celestial-dawn'
   | 'high-ctr-viral'
+  // Prayer & Salat Jama'ah Presets
+  | 'taraweeh-emerald'
+  | 'night-prayer-gold'
   // Backwards compatibility aliases
   | 'grand-gold-calligraphy'
   | 'emerald-medina'
@@ -40,7 +43,14 @@ export type ThumbnailBadgeId =
   | 'protection'
   | 'use-headphones'
   | '4k-uhd'
-  | 'surah-virtue';
+  | 'surah-virtue'
+  // Prayer & Salat Jama'ah Badges
+  | 'salat-jamaah'
+  | 'taraweeh'
+  | 'tahajjud-qiyam'
+  | 'jumuah-salat'
+  | 'rakah-1-2'
+  | 'imam-recitation';
 
 export interface ThumbnailPresetOption {
   id: ThumbnailPresetId;
@@ -182,6 +192,11 @@ export interface ThumbnailConfig {
   // Safe Zone Guide & Helpers (Rendered as UI overlay, never baked into export)
   showYouTubeSafeZone: boolean;
   showRuleOfThirds: boolean;
+
+  // Prayer & Salat Jama'ah Specific
+  isSalatMode?: boolean;
+  salatPrayerType?: 'taraweeh' | 'tahajjud' | 'salat-jamaah' | 'jumuah' | 'general-salat';
+  salatImamLabel?: 'imam' | 'qari' | 'imam-qari';
 }
 
 export const THUMBNAIL_PRESET_OPTIONS: ThumbnailPresetOption[] = [
@@ -501,6 +516,56 @@ export const THUMBNAIL_PRESET_OPTIONS: ThumbnailPresetOption[] = [
     activeBadge: 'none',
     showHookTitle: true,
   },
+  {
+    id: 'taraweeh-emerald',
+    name: 'Taraweeh Emerald Sanctuary',
+    subtitle: 'Congregational Prayer',
+    description: 'Deep sacred emerald mosque atmosphere, radiant golden calligraphy arch, and emotional congregational prayer styling.',
+    layoutMode: 'reciter-focus',
+    accentColor: '#10B981',
+    secondaryColor: '#F59E0B',
+    badgeText: '🌙 তারাবীহ সালাত • TARAWEEH',
+    badgeDotColor: '#10B981',
+    hookTitle: 'মন জুড়ানো তারাবীহ সালাত',
+    hookSubtitle: 'রাকআত ১ ও ২ • মন দিয়ে শুনুন',
+    bgPresetUrl: 'https://images.unsplash.com/photo-1542816417-0983c9c9ad53?q=80&w=1920&auto=format&fit=crop',
+    bgOverlayOpacity: 0.65,
+    bgOverlayColor: '#021a11',
+    bgBlur: 6,
+    showArchFrame: true,
+    showArabesqueCorners: true,
+    showSunRays: true,
+    showGoldenSparks: true,
+    goldGradientText: true,
+    activeBadge: 'taraweeh',
+    showHookTitle: true,
+    titleLanguageMode: 'bengali',
+  },
+  {
+    id: 'night-prayer-gold',
+    name: 'Tahajjud & Qiyam Sapphire',
+    subtitle: 'Night Prayer',
+    description: 'Nocturnal deep midnight sapphire bokeh, moonlight volumetric halo, and glowing gold prayer calligraphy.',
+    layoutMode: 'reciter-focus',
+    accentColor: '#38BDF8',
+    secondaryColor: '#F59E0B',
+    badgeText: '⭐ তাহাজ্জুদ ও কিয়াম • TAHAJJUD',
+    badgeDotColor: '#38BDF8',
+    hookTitle: 'রাতের নীরবতায় অশ্রুসিক্ত তিলাওয়াত',
+    hookSubtitle: 'Tahajjud & Qiyam ul-Layl',
+    bgPresetUrl: 'https://images.unsplash.com/photo-1518837695005-2083093ee35b?q=80&w=1920&auto=format&fit=crop',
+    bgOverlayOpacity: 0.68,
+    bgOverlayColor: '#040b18',
+    bgBlur: 8,
+    showArchFrame: false,
+    showArabesqueCorners: true,
+    showSunRays: false,
+    showGoldenSparks: true,
+    goldGradientText: true,
+    activeBadge: 'tahajjud-qiyam',
+    showHookTitle: true,
+    titleLanguageMode: 'bengali',
+  },
   // Backwards-compatible entries so existing projects load seamlessly
   {
     id: 'grand-gold-calligraphy',
@@ -673,6 +738,12 @@ export const THUMBNAIL_PRESET_OPTIONS: ThumbnailPresetOption[] = [
 ];
 
 export const THUMBNAIL_HOOK_SUGGESTIONS = [
+  'তারাবীহ সালাত তিলাওয়াত',
+  'মন জুড়ানো জামাত সালাত',
+  'ক্রন্দনময় তারাবীহ তিলাওয়াত',
+  'EMOTIONAL TARAWEEH PRAYER',
+  'HEART SOOTHING SALAT JAMAAH',
+  'TAHAJJUD & QIYAM UL-LAYL',
   'HEART SOOTHING RECITATION',
   'PROTECTION FROM ALL EVIL',
   'LISTEN BEFORE SLEEPING',
@@ -690,6 +761,12 @@ export const THUMBNAIL_HOOK_SUGGESTIONS = [
 
 export const THUMBNAIL_BADGE_PRESETS: { id: ThumbnailBadgeId; label: string; dot: string }[] = [
   { id: 'none', label: 'None (Hidden)', dot: 'transparent' },
+  { id: 'taraweeh', label: '🌙 তারাবীহ সালাত • TARAWEEH', dot: '#F59E0B' },
+  { id: 'salat-jamaah', label: '🕌 জামাত সালাত • SALAT JAMAAH', dot: '#10B981' },
+  { id: 'tahajjud-qiyam', label: '⭐ তাহাজ্জুদ • TAHAJJUD & QIYAM', dot: '#38BDF8' },
+  { id: 'jumuah-salat', label: '🤲 জুমুআ সালাত • JUMU\'AH', dot: '#10B981' },
+  { id: 'rakah-1-2', label: '📿 রাকআত ১ ও ২ • RAK\'AH 1 & 2', dot: '#C084FC' },
+  { id: 'imam-recitation', label: '🎙️ ইমামতি তিলাওয়াত • IMAM RECITATION', dot: '#F59E0B' },
   { id: '4k-uhd', label: '● FULL SURAH • 4K UHD', dot: '#F59E0B' },
   { id: 'heart-soothing', label: '● HEART SOOTHING', dot: '#10B981' },
   { id: 'peaceful-sleep', label: '● PEACEFUL SLEEP', dot: '#38BDF8' },

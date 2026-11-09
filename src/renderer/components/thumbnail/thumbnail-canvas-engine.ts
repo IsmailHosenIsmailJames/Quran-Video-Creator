@@ -1,5 +1,5 @@
-import { ThumbnailConfig, ThumbnailLayoutMode } from '../../../shared/thumbnail-types';
-import { VideoTemplateConfig, ReciterInfo } from '../../../shared/types';
+import { ThumbnailConfig, ThumbnailLayoutMode, THUMBNAIL_BADGE_PRESETS } from '../../../shared/thumbnail-types';
+import { VideoTemplateConfig, ReciterInfo, isSalatJammatManifest } from '../../../shared/types';
 import { getSurahByNumber } from '../../../shared/surahs';
 import {
   getLocalizedHeader,
@@ -8,11 +8,13 @@ import {
   getBengaliReciterName,
   getSurahNameLocalized,
 } from '../../../shared/surah-localization';
+import { extractSalatMetadata } from '../../../shared/youtube-seo-generator';
 
 export interface RenderThumbnailOptions {
   config: ThumbnailConfig;
   videoConfig: VideoTemplateConfig;
   reciterInfo?: ReciterInfo;
+  customTimestamp?: any;
 }
 
 // In-memory cache for decoded HTMLImageElements to allow instant reactive rendering
@@ -699,6 +701,14 @@ export async function renderThumbnailToCanvas(
   // Ensure all fonts are ready before drawing
   await ensureFontsLoaded();
 
+  const isSalat = isSalatJammatManifest(options.customTimestamp);
+  const salatMeta = isSalat
+    ? extractSalatMetadata(options.customTimestamp, {
+        salatPrayerType: config.salatPrayerType,
+        salatImamTitle: config.salatImamLabel,
+      })
+    : null;
+
   const surahMeta = getSurahByNumber(videoConfig.surahNumber);
   const surahLigatureCode = `surah${String(videoConfig.surahNumber).padStart(3, '0')}`;
   const localized = getLocalizedHeader(videoConfig, videoConfig.surahNumber, 0);
@@ -712,7 +722,9 @@ export async function renderThumbnailToCanvas(
   const isFullSurah = fromAyah === 1 && toAyah === (surahMeta?.totalAyahs || 7);
   const ayahRangeText =
     config.ayahRangeBadgeText ||
-    (isFullSurah
+    (isSalat && salatMeta
+      ? `${salatMeta.prayerNameEn} • ${salatMeta.rakahsTextEn}`
+      : isFullSurah
       ? `Surah ${videoConfig.surahNumber} • Full Surah (${surahMeta?.totalAyahs || 7} Verses)`
       : fromAyah === toAyah
       ? `Ayah ${fromAyah}`
@@ -720,9 +732,12 @@ export async function renderThumbnailToCanvas(
 
   const surahEnglishName =
     config.englishSurahNameText ||
-    `Surah ${surahMeta?.nameTransliterated || localized.surahName || 'Al-Quran'}`;
+    (isSalat && salatMeta
+      ? salatMeta.combinedSurahsEn
+      : `Surah ${surahMeta?.nameTransliterated || localized.surahName || 'Al-Quran'}`);
   const surahEnglishMeaning =
-    config.englishMeaningText || (surahMeta?.nameEnglish ? `"${surahMeta.nameEnglish}"` : '');
+    config.englishMeaningText ||
+    (isSalat && salatMeta ? salatMeta.prayerNameEn : surahMeta?.nameEnglish ? `"${surahMeta.nameEnglish}"` : '');
 
   const themeColor = config.accentThemeColor || '#F59E0B';
   const isPortrait = config.aspectRatio === '9:16';
@@ -956,35 +971,45 @@ export async function renderThumbnailToCanvas(
       ctx.save();
       const titleText =
         config.bengaliSurahTitleText ||
-        getBengaliSurahTitle(videoConfig.surahNumber, config.bengaliSurahPrefix ?? 'সূরা: ');
+        (isSalat && salatMeta
+          ? salatMeta.combinedSurahsBn
+          : getBengaliSurahTitle(videoConfig.surahNumber, config.bengaliSurahPrefix ?? 'সূরা: '));
 
       const titleFontSize = Math.round(62 * fontMultiplier);
       const reciterFontSize = Math.round(28 * fontMultiplier);
 
       const contentCenterY = isPortrait ? h * 0.76 : h * 0.50;
 
-      // Top Hook Badge (if enabled)
+      // Top Hook Badge (if enabled or active badge set)
       let titleY = contentCenterY;
-      if (config.showHookTitle && config.hookTitleText) {
+      const hasActiveBadge = config.activeBadge && config.activeBadge !== 'none';
+      if (hasActiveBadge || (config.showHookTitle && config.hookTitleText)) {
         titleY = contentCenterY + 12;
         const hookFontSize = Math.round(15 * fontMultiplier);
         ctx.font = `700 ${hookFontSize}px 'Hind Siliguri', 'Inter', sans-serif`;
-        const hookMetrics = ctx.measureText(config.hookTitleText);
+
+        let badgePillText = config.hookTitleText;
+        if (hasActiveBadge) {
+          const badgePreset = THUMBNAIL_BADGE_PRESETS.find((b) => b.id === config.activeBadge);
+          badgePillText = config.badgeCustomText || badgePreset?.label || config.hookTitleText;
+        }
+
+        const hookMetrics = ctx.measureText(badgePillText);
         const hookPillW = hookMetrics.width + 30;
         const hookPillH = 28 * (isPortrait ? 1.2 : 1.0);
         const hookY = titleY - titleFontSize - (isPortrait ? 34 : 26);
 
         roundRect(ctx, textStartX, hookY - hookPillH / 2, hookPillW, hookPillH, 6);
-        ctx.fillStyle = 'rgba(245, 158, 11, 0.2)';
+        ctx.fillStyle = hasActiveBadge ? 'rgba(16, 185, 129, 0.22)' : 'rgba(245, 158, 11, 0.2)';
         ctx.fill();
-        ctx.strokeStyle = 'rgba(245, 158, 11, 0.5)';
+        ctx.strokeStyle = hasActiveBadge ? 'rgba(16, 185, 129, 0.55)' : 'rgba(245, 158, 11, 0.5)';
         ctx.lineWidth = 1;
         ctx.stroke();
 
-        ctx.fillStyle = '#FDE68A';
+        ctx.fillStyle = hasActiveBadge ? '#A7F3D0' : '#FDE68A';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'middle';
-        ctx.fillText(config.hookTitleText, textStartX + 15, hookY);
+        ctx.fillText(badgePillText, textStartX + 15, hookY);
       }
 
       // Main Surah Title: "সূরা: [নাম]"
@@ -1027,7 +1052,8 @@ export async function renderThumbnailToCanvas(
       const reciterBn =
         config.bengaliReciterNameText || getBengaliReciterName(reciterName);
       const mic = config.showMicIcon !== false ? '🎤 ' : '';
-      const reciterFullText = `${mic}${reciterBn}`;
+      const imamPrefix = isSalat && salatMeta ? `${salatMeta.imamTitleBn}: ` : '';
+      const reciterFullText = `${mic}${imamPrefix}${reciterBn}`;
 
       const reciterY = titleY + titleFontSize * 0.65;
       ctx.font = `700 ${reciterFontSize}px 'Hind Siliguri', 'Noto Sans Bengali', sans-serif`;
@@ -1224,7 +1250,11 @@ export async function renderThumbnailToCanvas(
     // 1. Frosted Glass Status Badge (Top Chip)
     if (config.activeBadge !== 'none') {
       ctx.save();
-      const badgeText = config.badgeCustomText || '● FULL SURAH • 4K UHD';
+      const foundBadge = THUMBNAIL_BADGE_PRESETS.find((b) => b.id === config.activeBadge);
+      const defaultBadgeText = isSalat
+        ? (foundBadge?.label || '🌙 তারাবীহ সালাত • TARAWEEH')
+        : (foundBadge?.label || '● FULL SURAH • 4K UHD');
+      const badgeText = config.badgeCustomText || defaultBadgeText;
       ctx.font = '800 13px Inter, sans-serif';
       const textMetrics = ctx.measureText(badgeText);
       const pillW = textMetrics.width + 36;
@@ -1380,7 +1410,11 @@ export async function renderThumbnailToCanvas(
     // 1. Top Badge Capsule (Center)
     if (config.activeBadge !== 'none') {
       ctx.save();
-      const badgeText = config.badgeCustomText || '● FULL SURAH • 4K UHD';
+      const foundBadge = THUMBNAIL_BADGE_PRESETS.find((b) => b.id === config.activeBadge);
+      const defaultBadgeText = isSalat
+        ? (foundBadge?.label || '🌙 তারাবীহ সালাত • TARAWEEH')
+        : (foundBadge?.label || '● FULL SURAH • 4K UHD');
+      const badgeText = config.badgeCustomText || defaultBadgeText;
       ctx.font = `800 ${13 * scaleMod}px Inter, sans-serif`;
       const textMetrics = ctx.measureText(badgeText);
       const pillW = textMetrics.width + 40 * scaleMod;

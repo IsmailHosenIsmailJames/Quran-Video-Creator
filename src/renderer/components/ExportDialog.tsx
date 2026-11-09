@@ -42,6 +42,7 @@ export const ExportDialog: React.FC = () => {
     setExportModalOpen,
     reciters,
     setActiveTab,
+    customTimestamp,
   } = useStudioStore();
 
   const [outputPath, setOutputPath] = useState<string>('');
@@ -55,7 +56,7 @@ export const ExportDialog: React.FC = () => {
 
   const handleCopyDescription = async () => {
     try {
-      const desc = generateYouTubeDescription(config, ayahs, reciter);
+      const desc = generateYouTubeDescription(config, ayahs, reciter, undefined, customTimestamp);
       await navigator.clipboard.writeText(desc);
       setHasCopiedDesc(true);
       setTimeout(() => setHasCopiedDesc(false), 3000);

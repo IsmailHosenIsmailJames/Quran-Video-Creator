@@ -182,6 +182,154 @@ const kitValid = fullKitBn.includes('কুরআন ভিডিও স্ট�
 console.log('  - Full Kit Export String Valid: ' + (kitValid ? '✅ PASS' : '❌ FAIL'));
 if (!kitValid) allPassed = false;
 
+// 7. Test Salat Jama'ah Multi-Surah Prayer SEO Kit
+console.log('\nTesting 7: Salat Jama\'ah Multi-Surah Prayer SEO Kit...');
+const mockSalatManifest = {
+  mode: 'salat_jammat',
+  total_duration_ms: 180000,
+  segments_count: 2,
+  segments: [
+    {
+      segment_id: 1,
+      label: "Rak'ah 1: Surah Al-Fatihah",
+      surah_number: 1,
+      surah_name_ar: 'الفاتحة',
+      surah_name_en: 'Al-Faatiha',
+      start_ayah: 1,
+      end_ayah: 7,
+      start_ms: 1200,
+      end_ms: 45000,
+      duration_ms: 43800,
+    },
+    {
+      segment_id: 2,
+      label: "Rak'ah 1: Second Surah",
+      surah_number: 19,
+      surah_name_ar: 'مريم',
+      surah_name_en: 'Maryam',
+      start_ayah: 75,
+      end_ayah: 98,
+      start_ms: 50000,
+      end_ms: 175000,
+      duration_ms: 125000,
+    },
+  ],
+};
+
+const mockSalatAyahs = [
+  {
+    surah: 1,
+    ayah: 0,
+    isInterstitial: true,
+    interstitialTitle: "Rak'ah 1: Surah Al-Fatihah",
+    durationInFrames: 36,
+    segmentId: 1,
+    segmentLabel: "Rak'ah 1: Surah Al-Fatihah",
+  },
+  {
+    surah: 1,
+    ayah: 1,
+    durationInFrames: 150,
+    segmentId: 1,
+    segmentLabel: "Rak'ah 1: Surah Al-Fatihah",
+    words: [{ id: 1, text: 'بِسْمِ' }],
+  },
+  {
+    surah: 19,
+    ayah: 0,
+    isInterstitial: true,
+    interstitialTitle: "Rak'ah 1: Second Surah",
+    durationInFrames: 150,
+    segmentId: 2,
+    segmentLabel: "Rak'ah 1: Second Surah",
+  },
+  {
+    surah: 19,
+    ayah: 75,
+    durationInFrames: 210,
+    segmentId: 2,
+    segmentLabel: "Rak'ah 1: Second Surah",
+    words: [{ id: 1, text: 'قُلْ' }],
+  },
+  {
+    surah: 19,
+    ayah: 0,
+    isInterstitial: true,
+    interstitialTitle: "Salat Jama'ah",
+    interstitialSubtitle: 'رُكُوعٌ وَسُجُودٌ',
+    durationInFrames: 150,
+    segmentId: 'tail_ruku_sujood',
+  },
+];
+
+const salatTitlesBn = generateYouTubeTitles(
+  mockConfig,
+  mockReciter,
+  { language: 'bn', salatPrayerType: 'taraweeh' },
+  mockSalatManifest
+);
+const salatTitlesEn = generateYouTubeTitles(
+  mockConfig,
+  mockReciter,
+  { language: 'en', salatPrayerType: 'taraweeh' },
+  mockSalatManifest
+);
+console.log('  - Salat Titles Generated (Bengali): ' + salatTitlesBn[0].text);
+console.log('  - Salat Titles Generated (English): ' + salatTitlesEn[0].text);
+const salatTitlesValid =
+  salatTitlesBn.some((t) => t.text.includes('তারাবীহ') && t.text.includes('মারইয়াম')) &&
+  salatTitlesEn.some((t) => t.text.includes('Taraweeh') && t.text.includes('Maryam'));
+console.log('  - Multi-Surah Prayer Titles Valid: ' + (salatTitlesValid ? '✅ PASS' : '❌ FAIL'));
+if (!salatTitlesValid) allPassed = false;
+
+const salatTimestamps = calculateYouTubeTimestamps(
+  mockConfig,
+  mockSalatAyahs,
+  { language: 'bn', salatPrayerType: 'taraweeh', salatChapterMode: 'segments' },
+  mockSalatManifest
+);
+const salatChaptersValid =
+  salatTimestamps.length >= 3 &&
+  salatTimestamps[0].timeFormatted === '00:00' &&
+  salatTimestamps.some((t) => t.label.includes('রুকু') || t.label.includes('Second Surah') || t.label.includes('মারইয়াম'));
+console.log('  - Salat Segment Chapters Generated: ' + salatTimestamps.length);
+salatTimestamps.forEach((ch) => console.log(`    • ${ch.timeFormatted} - ${ch.label}`));
+console.log('  - Salat Segment Chapters Valid: ' + (salatChaptersValid ? '✅ PASS' : '❌ FAIL'));
+if (!salatChaptersValid) allPassed = false;
+
+const salatDescBn = generateYouTubeDescription(
+  mockConfig,
+  mockSalatAyahs,
+  mockReciter,
+  {
+    ...DEFAULT_DESCRIPTION_OPTIONS,
+    language: 'bn',
+    mode: 'detailed',
+    salatPrayerType: 'taraweeh',
+    includeVirtues: true,
+  },
+  mockSalatManifest
+);
+const salatDescValid =
+  salatDescBn.includes('তারাবীহ') &&
+  salatDescBn.includes('সহীহ বুখারী') &&
+  salatDescBn.includes('মারইয়াম');
+console.log('  - Salat Detailed Description with Hadith Valid: ' + (salatDescValid ? '✅ PASS' : '❌ FAIL'));
+if (!salatDescValid) allPassed = false;
+
+const salatTags = generateYouTubeTags(
+  mockConfig,
+  mockReciter,
+  { language: 'bn', salatPrayerType: 'taraweeh' },
+  mockSalatManifest
+);
+const salatTagsValid =
+  salatTags.includes('তারাবীহ সালাত') &&
+  salatTags.some((t) => t.includes('মারইয়াম')) &&
+  salatTags.join(', ').length <= 485;
+console.log('  - Salat Tags Under 485 chars: ' + (salatTagsValid ? '✅ PASS' : '❌ FAIL') + ` (${salatTags.join(', ').length} chars)`);
+if (!salatTagsValid) allPassed = false;
+
 console.log('\n==================================================');
 if (allPassed) {
   console.log('🎉 ALL YOUTUBE SEO & TIMESTAMP TESTS PASSED!');

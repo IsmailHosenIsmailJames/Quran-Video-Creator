@@ -21,6 +21,7 @@ export const ThumbnailPreviewView: React.FC = () => {
     updateThumbnailConfig,
     config,
     reciters,
+    customTimestamp,
   } = useStudioStore();
 
   const canvasRef = useRef<ThumbnailCanvasRef | null>(null);
@@ -248,6 +249,7 @@ export const ThumbnailPreviewView: React.FC = () => {
             config={thumbnailConfig}
             videoConfig={config}
             reciterInfo={reciters[config.reciterIndex]}
+            customTimestamp={customTimestamp}
             className="max-h-full max-w-full rounded-2xl shadow-2xl border border-gray-800/80 ring-1 ring-white/10"
           />
         </div>
