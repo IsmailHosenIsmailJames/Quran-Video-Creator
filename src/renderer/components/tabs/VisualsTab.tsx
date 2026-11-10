@@ -446,7 +446,7 @@ export const VisualsTab: React.FC = () => {
       </div>
 
       {/* 3. Cinematic Background Media */}
-      <div className="space-y-2">
+      <div id="visuals-background-clips" className="space-y-2 transition-all p-2 -m-2 rounded-2xl">
         {config.useRecitationVideoAsBackground && config.recitationVideoPath && (
           <div className="p-3 rounded-xl bg-emerald-950/30 border border-emerald-500/30 flex items-center gap-2.5 text-xs text-emerald-300">
             <Film className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -599,7 +599,7 @@ export const VisualsTab: React.FC = () => {
 
         {/* Per-Clip Transitions Manager (Shown when multiple clips exist) */}
         {config.backgroundClips && config.backgroundClips.length > 1 && (
-          <div className="p-3 rounded-xl bg-gray-900/80 border border-gray-800 space-y-2">
+          <div id="visuals-transitions" className="p-3 rounded-xl bg-gray-900/80 border border-gray-800 space-y-2 transition-all">
             <div className="flex items-center justify-between text-xs font-semibold text-gray-300">
               <span className="flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-amber-400" />

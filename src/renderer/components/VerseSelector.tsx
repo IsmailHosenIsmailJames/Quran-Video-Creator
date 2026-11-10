@@ -66,7 +66,7 @@ export const VerseSelector: React.FC = () => {
         </div>
 
         {isSalat && customTimestamp && (
-          <div className="p-3.5 rounded-xl bg-gradient-to-br from-emerald-950/40 via-gray-900 to-gray-950 border border-emerald-500/40 space-y-2.5 text-xs shadow-lg shadow-emerald-950/20">
+          <div id="scripture-salat-jamaah" className="p-3.5 rounded-xl bg-gradient-to-br from-emerald-950/40 via-gray-900 to-gray-950 border border-emerald-500/40 space-y-2.5 text-xs shadow-lg shadow-emerald-950/20 transition-all">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-emerald-300 font-semibold">
                 <Sparkles className="w-4 h-4 text-emerald-400" />

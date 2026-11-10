@@ -93,6 +93,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
     setRecitationSpeed,
     resetBackgroundClips,
     restoreBackgroundClips,
+    navigateToTabSection,
   } = useStudioStore();
 
   const currentFrame = storeCurrentFrame ?? propCurrentFrame ?? 0;
@@ -982,6 +983,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
                     playerRef.current?.seekTo(0);
                     setSelectedAyahNumber(null);
                     setSelectedClipId(null);
+                    navigateToTabSection('branding', 'branding-intro');
                   }}
                   className="h-full border-r border-black/50 px-1.5 flex items-center justify-between text-[10px] font-mono truncate cursor-pointer transition select-none bg-purple-500/25 hover:bg-purple-500/35 border-purple-500/40 text-purple-200 flex-shrink-0"
                   title={`Intro Bumper (${(introDurationInFrames / fps).toFixed(1)}s) - Click to seek to start`}
@@ -1004,6 +1006,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
                     playerRef.current?.seekTo(introDurationInFrames);
                     setSelectedAyahNumber(null);
                     setSelectedClipId(null);
+                    navigateToTabSection('branding', 'branding-title-card');
                   }}
                   className="h-full border-r border-black/50 px-1.5 flex items-center justify-between text-[10px] font-mono truncate cursor-pointer transition select-none bg-amber-500/25 hover:bg-amber-500/35 border-amber-500/40 text-amber-200 flex-shrink-0"
                   title={`Surah Title Screen (${(titleCardDurationInFrames / fps).toFixed(1)}s) - Click to seek`}
@@ -1037,6 +1040,11 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
                       playerRef.current?.seekTo(startFrame);
                       setSelectedAyahNumber(ayah.ayah);
                       setSelectedClipId(null);
+                      if (ayah.isInterstitial) {
+                        navigateToTabSection('scripture', 'scripture-salat-jamaah');
+                      } else {
+                        navigateToTabSection('scripture', 'scripture-ayah-list');
+                      }
                     }}
                     className={`h-full border-r border-black/40 last:border-r-0 px-1 flex items-center justify-between text-[10px] font-mono truncate cursor-pointer transition select-none ${
                       isAyahSelected
@@ -1088,6 +1096,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
                     playerRef.current?.seekTo(outroStartFrame);
                     setSelectedAyahNumber(null);
                     setSelectedClipId(null);
+                    navigateToTabSection('branding', 'branding-outro');
                   }}
                   className="h-full border-l border-black/50 px-1.5 flex items-center justify-between text-[10px] font-mono truncate cursor-pointer transition select-none bg-emerald-500/25 hover:bg-emerald-500/35 border-emerald-500/40 text-emerald-200 flex-shrink-0"
                   title={`Outro Video Bumper (${(outroDurationInFrames / fps).toFixed(1)}s) - Click to seek to outro`}
@@ -1114,6 +1123,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
                     playerRef.current?.seekTo(0);
                     setSelectedClipId(null);
                     setSelectedAyahNumber(null);
+                    navigateToTabSection('branding', 'branding-intro');
                   }}
                   className="h-full relative border-r border-purple-500/40 bg-purple-950/50 hover:bg-purple-900/60 cursor-pointer transition-all flex items-center justify-between px-2 text-[10px] select-none flex-shrink-0"
                   title={`Channel Intro Video Bumper (${(introDurationInFrames / fps).toFixed(1)}s) - Click to seek to start`}
@@ -1138,6 +1148,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
                     playerRef.current?.seekTo(introDurationInFrames);
                     setSelectedClipId(null);
                     setSelectedAyahNumber(null);
+                    navigateToTabSection('branding', 'branding-title-card');
                   }}
                   className="h-full relative border-r border-amber-500/40 bg-amber-950/50 hover:bg-amber-900/60 cursor-pointer transition-all flex items-center justify-between px-2 text-[10px] select-none flex-shrink-0"
                   title={`Surah Title Screen (${(titleCardDurationInFrames / fps).toFixed(1)}s) - Click to seek`}
@@ -1168,11 +1179,19 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
                         e.stopPropagation();
                         setSelectedClipId(clip.id);
                         setSelectedAyahNumber(null);
+                        let clipStart = preScriptureFrames;
+                        for (let k = 0; k < index; k++) {
+                          clipStart += Math.round(recitationFrames * clipLayouts[k].percent);
+                        }
+                        setCurrentFrame(clipStart);
+                        playerRef.current?.seekTo(clipStart);
+                        navigateToTabSection('visuals', 'visuals-background-clips');
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelectedClipId(clip.id);
                         setSelectedAyahNumber(null);
+                        navigateToTabSection('visuals', 'visuals-background-clips');
                       }}
                       className={`h-full relative border-r border-black/50 last:border-r-0 cursor-pointer transition-all flex items-center justify-between px-2 text-[10px] ${
                         isSelected
@@ -1224,6 +1243,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
                             onClick={(e) => {
                               e.stopPropagation();
                               setShowTransitionMenu(showTransitionMenu === clip.id ? null : clip.id);
+                              navigateToTabSection('visuals', 'visuals-transitions');
                             }}
                             className={`px-2 py-0.5 rounded-full border shadow-lg flex items-center gap-1 text-[9px] font-medium transition cursor-pointer backdrop-blur-md hover:scale-105 active:scale-95 whitespace-nowrap ${
                               TRANSITION_COLORS[clip.transition || 'crossfade']?.bg || 'bg-amber-500/20'
@@ -1330,6 +1350,7 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
                     playerRef.current?.seekTo(outroStartFrame);
                     setSelectedClipId(null);
                     setSelectedAyahNumber(null);
+                    navigateToTabSection('branding', 'branding-outro');
                   }}
                   className="h-full relative border-l border-emerald-500/40 bg-emerald-950/50 hover:bg-emerald-900/60 cursor-pointer transition-all flex items-center justify-between px-2 text-[10px] select-none flex-shrink-0"
                   title={`Channel Outro Video Bumper (${(outroDurationInFrames / fps).toFixed(1)}s) - Click to seek to outro`}

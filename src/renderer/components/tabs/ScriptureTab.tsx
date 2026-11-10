@@ -60,7 +60,7 @@ export const ScriptureTab: React.FC = () => {
       <VerseSelector />
 
       {/* 2. Arabic Scripture Typography */}
-      <div className="p-4 rounded-2xl bg-gray-900/60 border border-gray-800 space-y-4">
+      <div id="scripture-typography" className="p-4 rounded-2xl bg-gray-900/60 border border-gray-800 space-y-4 transition-all">
         <div className="flex items-center gap-2 pb-1 border-b border-gray-800 text-xs font-semibold text-amber-300 uppercase tracking-wider">
           <Type className="w-4 h-4 text-amber-400" />
           Arabic Scripture Typography
@@ -716,7 +716,7 @@ export const ScriptureTab: React.FC = () => {
 
       {/* 5. Per-Ayah Custom Font Sizing & Motion */}
       {ayahs && ayahs.length > 0 && (
-        <div className="p-4 rounded-2xl bg-gray-900/60 border border-gray-800 space-y-3">
+        <div id="scripture-ayah-list" className="p-4 rounded-2xl bg-gray-900/60 border border-gray-800 space-y-3 transition-all">
           <div
             onClick={() => setShowAyahList(!showAyahList)}
             className="flex items-center justify-between pb-1 border-b border-gray-800 cursor-pointer select-none"

@@ -120,3 +120,23 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(156, 163, 175, 0.8);
 }
+
+/* Animated focus ring for timeline click-to-settings jump */
+@keyframes studioSectionPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.8), 0 0 20px rgba(245, 158, 11, 0.4);
+    border-color: rgba(245, 158, 11, 0.95);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.4), 0 0 30px rgba(245, 158, 11, 0.5);
+    border-color: rgba(245, 158, 11, 1);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+  }
+}
+
+.studio-section-highlight {
+  animation: studioSectionPulse 1.6s ease-out !important;
+  border-color: rgba(245, 158, 11, 0.8) !important;
+}

@@ -64,6 +64,10 @@ interface StudioState {
 
   // Actions
   setActiveTab: (tab: 'scripture' | 'subtitles' | 'visuals' | 'audio' | 'branding' | 'thumbnail' | 'youtube') => void;
+  navigateToTabSection: (
+    tab: 'scripture' | 'subtitles' | 'visuals' | 'audio' | 'branding' | 'thumbnail' | 'youtube',
+    sectionId?: string
+  ) => void;
   setExportModalOpen: (open: boolean) => void;
   setThumbnailModalOpen: (open: boolean) => void;
   updateThumbnailConfig: (partial: Partial<ThumbnailConfig>) => void;
@@ -124,6 +128,26 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   customTimestampError: null,
 
   setActiveTab: (activeTab) => set({ activeTab }),
+  navigateToTabSection: (tab, sectionId) => {
+    set({ activeTab: tab });
+    if (sectionId && typeof window !== 'undefined') {
+      let attempts = 0;
+      const interval = setInterval(() => {
+        attempts++;
+        const el = document.getElementById(sectionId);
+        if (el) {
+          clearInterval(interval);
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          el.classList.add('studio-section-highlight');
+          setTimeout(() => {
+            el.classList.remove('studio-section-highlight');
+          }, 1600);
+        } else if (attempts >= 20) {
+          clearInterval(interval);
+        }
+      }, 35);
+    }
+  },
   setExportModalOpen: (isExportModalOpen) => set({ isExportModalOpen }),
   setThumbnailModalOpen: (isThumbnailModalOpen) => set({ isThumbnailModalOpen }),
   updateThumbnailConfig: (partial) => {

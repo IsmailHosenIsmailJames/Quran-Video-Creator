@@ -132,7 +132,7 @@ export const BrandingTab: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in pb-8">
       {/* ─── 1. Video Starting / Intro Clip ─── */}
-      <div className="p-4 rounded-2xl bg-gray-900/60 border border-gray-800 space-y-4">
+      <div id="branding-intro" className="p-4 rounded-2xl bg-gray-900/60 border border-gray-800 space-y-4 transition-all">
         <div className="flex items-center justify-between pb-1 border-b border-gray-800">
           <div className="flex items-center gap-2 text-xs font-semibold text-amber-300 uppercase tracking-wider">
             <Film className="w-4 h-4 text-amber-400" />
@@ -486,7 +486,7 @@ export const BrandingTab: React.FC = () => {
       </div>
 
       {/* ─── 2. Surah Title & Reciter Info Screen (Plays Just After Intro) ─── */}
-      <div className="p-4 rounded-2xl bg-gray-900/60 border border-gray-800 space-y-4">
+      <div id="branding-title-card" className="p-4 rounded-2xl bg-gray-900/60 border border-gray-800 space-y-4 transition-all">
         <div className="flex items-center justify-between pb-1 border-b border-gray-800">
           <div className="flex items-center gap-2 text-xs font-semibold text-amber-300 uppercase tracking-wider">
             <Sparkles className="w-4 h-4 text-amber-400" />
@@ -941,7 +941,7 @@ export const BrandingTab: React.FC = () => {
       </div>
 
       {/* ─── 4. Video Ending & Outro Clip ─── */}
-      <div className="p-4 rounded-2xl bg-gray-900/60 border border-gray-800 space-y-4">
+      <div id="branding-outro" className="p-4 rounded-2xl bg-gray-900/60 border border-gray-800 space-y-4 transition-all">
         <div className="flex items-center justify-between pb-1 border-b border-gray-800">
           <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400 uppercase tracking-wider">
             <Film className="w-4 h-4 text-emerald-400" />
