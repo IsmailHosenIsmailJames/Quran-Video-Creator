@@ -2,7 +2,14 @@ import React, { useMemo } from 'react';
 import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, Easing } from 'remotion';
 import { VideoTemplateConfig, AyahSequenceData, QuranWord, ScriptBlockType, TextAnimationIn, TextAnimationOut } from '../../shared/types';
 import { computeAdaptiveFontSizes, computeAyahChunks } from '../../shared/typography-utils';
-import { getLocalizedHeader, getLanguageFontFamily } from '../../shared/surah-localization';
+import {
+  getLocalizedHeader,
+  getLanguageFontFamily,
+  getSurahNameLocalized,
+  translateSalatSegmentLabelToBengali,
+  toBengaliDigits,
+} from '../../shared/surah-localization';
+import { getSurahByNumber } from '../../shared/surahs';
 
 interface TypographyLayerProps {
   config: VideoTemplateConfig;
@@ -16,7 +23,8 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
   fps,
 }) => {
   const frame = useCurrentFrame();
-  const { width: compWidth } = useVideoConfig();
+  const { width: compWidth, height: compHeight } = useVideoConfig();
+  const isPortrait = compHeight > compWidth;
 
   // If this item is a Prayer Segment Interstitial / Transition Card
   if (ayahData.isInterstitial) {
@@ -42,7 +50,38 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
       });
     }
 
-    const surahLigatureCode = `surah${String(ayahData.surah).padStart(3, '0')}`;
+    const surahLigatureCode = ayahData.surah > 0 ? `surah${String(ayahData.surah).padStart(3, '0')}` : '';
+    const surahMeta = ayahData.surah > 0 ? getSurahByNumber(ayahData.surah) : null;
+
+    const surahNameEn = surahMeta?.nameTransliterated ? `Surah ${surahMeta.nameTransliterated}` : '';
+    const surahMeaningEn = surahMeta?.nameEnglish ? `"${surahMeta.nameEnglish}"` : '';
+    const surahNameBn = ayahData.surah > 0 ? getSurahNameLocalized(ayahData.surah, 'bn') : '';
+
+    const titleEn = ayahData.interstitialTitle || '';
+    const titleBn = translateSalatSegmentLabelToBengali(titleEn);
+
+    // Segment verse range
+    const startA = ayahData.segmentStartAyah;
+    const endA = ayahData.segmentEndAyah;
+    const hasVerseRange = startA !== undefined && endA !== undefined && startA > 0 && endA > 0;
+    const isSingleAyah = hasVerseRange && startA === endA;
+    const verseRangeEn = hasVerseRange
+      ? isSingleAyah
+        ? `Ayah ${startA}`
+        : `Ayah ${startA}–${endA}`
+      : null;
+    const verseRangeBn = hasVerseRange
+      ? isSingleAyah
+        ? `আয়াত ${toBengaliDigits(startA)}`
+        : `আয়াত ${toBengaliDigits(startA)}–${toBengaliDigits(endA)}`
+      : null;
+
+    // Revelation type
+    const isMeccan = surahMeta?.revelationType?.toLowerCase() !== 'medinan';
+    const revelationEn = surahMeta ? `${surahMeta.revelationType} • ${surahMeta.totalAyahs} Verses` : null;
+    const revelationBn = surahMeta
+      ? `${isMeccan ? 'মাক্কী' : 'মাদানী'} • ${toBengaliDigits(surahMeta.totalAyahs)} আয়াত`
+      : null;
 
     return (
       <AbsoluteFill
@@ -54,7 +93,7 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
           pointerEvents: 'none',
           userSelect: 'none',
           opacity,
-          padding: '32px',
+          padding: '24px',
           boxSizing: 'border-box',
         }}
       >
@@ -64,59 +103,254 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '24px 44px',
-            borderRadius: '24px',
-            backgroundColor: 'rgba(0, 0, 0, 0.65)',
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
-            border: '1px solid rgba(245, 158, 11, 0.35)',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
-            maxWidth: '85%',
+            padding: isPortrait ? '22px 28px' : '26px 44px',
+            borderRadius: '26px',
+            backgroundColor: 'rgba(8, 10, 14, 0.78)',
+            backdropFilter: 'blur(24px)',
+            WebkitBackdropFilter: 'blur(24px)',
+            border: '1px solid rgba(245, 158, 11, 0.38)',
+            boxShadow: '0 25px 60px -12px rgba(0, 0, 0, 0.85), 0 0 30px rgba(245, 158, 11, 0.12)',
+            maxWidth: isPortrait ? '94%' : '760px',
+            width: 'auto',
             textAlign: 'center',
-            gap: '12px',
+            gap: '10px',
+            transform: 'translateZ(0)',
+            backfaceVisibility: 'hidden',
           }}
         >
+          {/* Top Badge: Prayer Segment / Rakah Header (Bilingual) */}
+          {titleEn && (
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '5px 16px',
+                borderRadius: '9999px',
+                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(245, 158, 11, 0.3)',
+                marginBottom: '2px',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: isPortrait ? '12px' : '13px',
+                  fontWeight: 700,
+                  color: '#FCD34D',
+                  letterSpacing: '0.04em',
+                  fontFamily: "'Inter', sans-serif",
+                }}
+              >
+                {titleEn}
+              </span>
+              {titleBn && titleBn !== titleEn && (
+                <>
+                  <span style={{ color: 'rgba(255, 255, 255, 0.35)', fontSize: '11px' }}>•</span>
+                  <span
+                    style={{
+                      fontSize: isPortrait ? '12px' : '13px',
+                      fontWeight: 600,
+                      color: '#FEF08A',
+                      fontFamily: "'Hind Siliguri', 'Noto Sans Bengali', sans-serif",
+                    }}
+                  >
+                    {titleBn}
+                  </span>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Calligraphy Emblem */}
           {ayahData.surah > 0 && (
-            <span
-              className="surah-calligraphy-title"
-              style={{
-                fontFamily: "'surah-name-v1', sans-serif",
-                fontSize: '48px',
-                lineHeight: 1,
-                color: '#FCD34D',
-                filter: 'drop-shadow(0 2px 10px rgba(245, 158, 11, 0.4))',
-              }}
-            >
-              {surahLigatureCode}
-            </span>
+            <div style={{ position: 'relative', margin: '2px 0' }}>
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: '-12px',
+                  background: 'radial-gradient(circle, rgba(245, 158, 11, 0.35) 0%, transparent 70%)',
+                  filter: 'blur(16px)',
+                  zIndex: -1,
+                }}
+              />
+              <span
+                className="surah-calligraphy-title"
+                style={{
+                  fontFamily: "'surah-name-v1', sans-serif",
+                  fontSize: isPortrait ? '52px' : '64px',
+                  lineHeight: 1,
+                  color: '#FCD34D',
+                  filter: 'drop-shadow(0 2px 14px rgba(245, 158, 11, 0.5))',
+                  display: 'inline-block',
+                }}
+              >
+                {surahLigatureCode}
+              </span>
+            </div>
           )}
 
-          {ayahData.interstitialTitle && (
-            <span
+          {/* Vocalized Arabic Surah Name */}
+          {ayahData.surah > 0 ? (
+            <p
+              className="quran-arabic-text"
               style={{
-                fontSize: '22px',
-                fontWeight: 600,
+                fontFamily: "'Amiri', 'KFGQPC Uthmanic Script HAFS', serif",
+                fontSize: isPortrait ? '24px' : '28px',
                 color: '#FFFFFF',
-                letterSpacing: '0.5px',
-                fontFamily: "'Inter', sans-serif",
+                margin: 0,
+                lineHeight: 1.2,
+                direction: 'rtl',
+                textShadow: '0 2px 12px rgba(0, 0, 0, 0.8)',
               }}
             >
-              {ayahData.interstitialTitle}
-            </span>
+              سُورَةُ {surahMeta?.nameArabic || ayahData.interstitialSubtitle || ''}
+            </p>
+          ) : (
+            ayahData.interstitialSubtitle && (
+              <span
+                style={{
+                  fontSize: '22px',
+                  fontWeight: 500,
+                  color: '#FFFFFF',
+                  fontFamily: "'Amiri', serif",
+                  direction: 'rtl',
+                }}
+              >
+                {ayahData.interstitialSubtitle}
+              </span>
+            )
           )}
 
-          {ayahData.interstitialSubtitle && (
-            <span
+          {/* Surah Information in English & Bangla */}
+          {ayahData.surah > 0 && (
+            <div
               style={{
-                fontSize: '18px',
-                fontWeight: 400,
-                color: '#D1D5DB',
-                fontFamily: "'Amiri', serif",
-                direction: 'rtl',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '3px',
+                margin: '2px 0',
               }}
             >
-              {ayahData.interstitialSubtitle}
-            </span>
+              {/* English Transliteration & Meaning */}
+              <div
+                style={{
+                  fontSize: isPortrait ? '19px' : '22px',
+                  fontWeight: 700,
+                  color: '#FFFFFF',
+                  letterSpacing: '0.02em',
+                  fontFamily: "'Inter', sans-serif",
+                  textShadow: '0 2px 8px rgba(0, 0, 0, 0.6)',
+                }}
+              >
+                {surahNameEn} {surahMeaningEn && <span style={{ color: 'rgba(255, 255, 255, 0.75)', fontWeight: 400 }}>{surahMeaningEn}</span>}
+              </div>
+
+              {/* Bangla Localized Surah Name */}
+              {surahNameBn && (
+                <div
+                  style={{
+                    fontSize: isPortrait ? '17px' : '19px',
+                    fontWeight: 600,
+                    color: '#FDE68A',
+                    letterSpacing: '0.01em',
+                    fontFamily: "'Hind Siliguri', 'Noto Sans Bengali', sans-serif",
+                    textShadow: '0 2px 8px rgba(0, 0, 0, 0.6)',
+                  }}
+                >
+                  {surahNameBn}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Metadata Badges: Verse Range & Revelation Type */}
+          {ayahData.surah > 0 && (verseRangeEn || revelationEn) && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                flexWrap: 'wrap',
+                marginTop: '4px',
+              }}
+            >
+              {/* Verse Range Badge */}
+              {verseRangeEn && (
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '5px 14px',
+                    borderRadius: '9999px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    fontSize: isPortrait ? '11px' : '12px',
+                    fontWeight: 600,
+                    color: '#FFFFFF',
+                    fontFamily: "'Inter', sans-serif",
+                  }}
+                >
+                  <span>📖</span>
+                  <span>{verseRangeEn}</span>
+                  {verseRangeBn && (
+                    <>
+                      <span style={{ color: 'rgba(255, 255, 255, 0.35)' }}>•</span>
+                      <span style={{ color: '#FEF08A', fontFamily: "'Hind Siliguri', sans-serif" }}>
+                        {verseRangeBn}
+                      </span>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Revelation Badge */}
+              {revelationEn && (
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '5px 14px',
+                    borderRadius: '9999px',
+                    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+                    border: '1px solid rgba(245, 158, 11, 0.35)',
+                    fontSize: isPortrait ? '11px' : '12px',
+                    fontWeight: 600,
+                    color: '#FCD34D',
+                    fontFamily: "'Inter', sans-serif",
+                  }}
+                >
+                  <span>🕌</span>
+                  <span>{revelationEn}</span>
+                  {revelationBn && (
+                    <>
+                      <span style={{ color: 'rgba(245, 158, 11, 0.4)' }}>•</span>
+                      <span style={{ color: '#FEF08A', fontFamily: "'Hind Siliguri', sans-serif" }}>
+                        {revelationBn}
+                      </span>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Special Post-recitation Ruku & Sujood label */}
+          {ayahData.surah === 0 && (
+            <div
+              style={{
+                fontSize: isPortrait ? '16px' : '18px',
+                fontWeight: 600,
+                color: '#FEF08A',
+                fontFamily: "'Hind Siliguri', 'Inter', sans-serif",
+                marginTop: '4px',
+              }}
+            >
+              রুকু ও সিজদা (Ruku & Sujood)
+            </div>
           )}
         </div>
       </AbsoluteFill>

@@ -881,6 +881,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
         // 3. Pre-recitation silence / initial spacer (e.g. 0 to 1230ms)
         const firstAyah = salatAyahs[0];
         if (firstAyah && firstAyah.start_ms > 350) {
+          const firstSegment = customTimestamp.segments?.find((s) => s.segment_id === firstAyah.segment_id);
           const initialSpacerFrames = Math.max(
             15,
             Math.round(((firstAyah.start_ms / 1000) / speed) * config.fps)
@@ -902,6 +903,8 @@ export const useStudioStore = create<StudioState>((set, get) => ({
             interstitialSubtitle: firstAyah.surah_name_ar,
             segmentId: firstAyah.segment_id,
             segmentLabel: firstAyah.segment_label,
+            segmentStartAyah: firstSegment?.start_ayah ?? firstAyah.ayah_number,
+            segmentEndAyah: firstSegment?.end_ayah ?? firstAyah.ayah_number,
           });
         }
 
@@ -943,6 +946,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
             });
 
             // B. Segment transition card during the pause
+            const nextSegment = customTimestamp.segments?.find((s) => s.segment_id === nextAyah.segment_id);
             const interstitialFrames = Math.max(
               30,
               Math.round(((gapToNextMs / 1000) / speed) * config.fps)
@@ -964,6 +968,8 @@ export const useStudioStore = create<StudioState>((set, get) => ({
               interstitialSubtitle: nextAyah.surah_name_ar,
               segmentId: nextAyah.segment_id,
               segmentLabel: nextAyah.segment_label,
+              segmentStartAyah: nextSegment?.start_ayah ?? nextAyah.ayah_number,
+              segmentEndAyah: nextSegment?.end_ayah ?? nextAyah.ayah_number,
             });
           } else {
             // Smooth wall-clock extension until next verse starts

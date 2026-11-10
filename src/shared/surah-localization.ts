@@ -779,5 +779,25 @@ export function getBengaliSurahTitle(surahNumber: number, prefix: string = 'স�
   return `${prefix}${name}`;
 }
 
+export function translateSalatSegmentLabelToBengali(label?: string | null): string {
+  if (!label) return '';
+  let res = label.trim();
+  res = res.replace(/Rak'ah\s*1/gi, '১ম রাকাত');
+  res = res.replace(/Rak'ah\s*2/gi, '২য় রাকাত');
+  res = res.replace(/Rak'ah\s*3/gi, '৩য় রাকাত');
+  res = res.replace(/Rak'ah\s*4/gi, '৪র্থ রাকাত');
+  res = res.replace(/Rakah\s*1/gi, '১ম রাকাত');
+  res = res.replace(/Rakah\s*2/gi, '২য় রাকাত');
+  res = res.replace(/Rakah\s*3/gi, '৩য় রাকাত');
+  res = res.replace(/Rakah\s*4/gi, '৪র্থ রাকাত');
+  res = res.replace(/First\s*Surah/gi, 'প্রথম সূরা');
+  res = res.replace(/Second\s*Surah/gi, 'দ্বিতীয় সূরা');
+  res = res.replace(/Third\s*Surah/gi, 'তৃতীয় সূরা');
+  res = res.replace(/Surah\s*Al-Fatihah/gi, 'সূরা আল-ফাতিহা');
+  res = res.replace(/Ruku\s*(&|and)\s*Sujood/gi, 'রুকু ও সিজদা');
+  res = res.replace(/Salat\s*Jama'?ah/gi, 'জামাত সালাত');
+  return res;
+}
+
 
 

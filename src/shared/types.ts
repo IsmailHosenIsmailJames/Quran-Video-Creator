@@ -208,6 +208,8 @@ export interface AyahSequenceData {
   interstitialSubtitle?: string;
   segmentId?: number | string;
   segmentLabel?: string;
+  segmentStartAyah?: number;
+  segmentEndAyah?: number;
 }
 
 export type TransitionType =
