@@ -218,7 +218,6 @@ export const WaveformLayer: React.FC<WaveformLayerProps> = ({
                       ? `0 0 ${8 * glowIntensity}px ${color}AA, 0 0 ${16 * glowIntensity}px ${secondaryColor}55`
                       : 'none',
                     opacity: 0.92,
-                    transition: 'height 0.08s ease-out',
                   }}
                 />
               );
@@ -461,7 +460,6 @@ export const WaveformLayer: React.FC<WaveformLayerProps> = ({
                             ? `0 0 ${6 * glowIntensity}px ${color}`
                             : 'none',
                           opacity: isLit ? 0.95 : 0.15,
-                          transition: 'opacity 0.06s ease',
                         }}
                       />
                     );

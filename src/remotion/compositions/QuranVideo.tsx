@@ -275,8 +275,6 @@ export const QuranVideo: React.FC<QuranVideoCompositionProps> = ({
           text-rendering: geometricPrecision;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
-          transform: translateZ(0);
-          backface-visibility: hidden;
         }
 
         .quran-arabic-text {
@@ -287,8 +285,6 @@ export const QuranVideo: React.FC<QuranVideoCompositionProps> = ({
           text-rendering: geometricPrecision;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
-          transform: translateZ(0);
-          backface-visibility: hidden;
         }
       `}</style>
 
