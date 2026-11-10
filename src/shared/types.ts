@@ -411,6 +411,8 @@ export interface VideoTemplateConfig {
   titleCardDurationSeconds?: number;
   titleCardPreset?: TitleCardPresetId;
   titleCardThemeColor?: string;
+  titleCardScale?: number;            // Scale multiplier for title card elements (0.8 to 1.35, default: 1.0)
+  titleCardWidthPercent?: number;     // Width percentage of title card relative to canvas (60% to 98%, default: 86%)
   showReciterInTitleCard?: boolean;
   showStyleInTitleCard?: boolean;
   showVerseRangeInTitleCard?: boolean;

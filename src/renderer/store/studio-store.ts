@@ -195,6 +195,8 @@ export const useStudioStore = create<StudioState>((set, get) => ({
       partial.titleCardDurationSeconds !== undefined ||
       partial.titleCardPreset !== undefined ||
       partial.titleCardThemeColor !== undefined ||
+      partial.titleCardScale !== undefined ||
+      partial.titleCardWidthPercent !== undefined ||
       partial.showReciterInTitleCard !== undefined ||
       partial.showStyleInTitleCard !== undefined ||
       partial.showVerseRangeInTitleCard !== undefined ||

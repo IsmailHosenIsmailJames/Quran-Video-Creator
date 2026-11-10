@@ -53,7 +53,7 @@ app.whenReady().then(async () => {
     // Intro Bumper
     'enableIntroVideo', 'introMode', 'introPreset', 'introTitle', 'introSubtitle', 'introCustomLogo', 'introThemeColor', 'introVideoPath', 'introVideoDurationSeconds', 'skipIntroForShorts', 'introMuted', 'introTransition',
     // Title Card
-    'enableSurahTitleCard', 'titleCardDurationSeconds', 'titleCardPreset', 'titleCardThemeColor', 'showReciterInTitleCard', 'showStyleInTitleCard', 'showVerseRangeInTitleCard', 'showTranslationInTitleCard', 'titleCardTransition', 'skipTitleCardForShorts',
+    'enableSurahTitleCard', 'titleCardDurationSeconds', 'titleCardPreset', 'titleCardThemeColor', 'titleCardScale', 'titleCardWidthPercent', 'showReciterInTitleCard', 'showStyleInTitleCard', 'showVerseRangeInTitleCard', 'showTranslationInTitleCard', 'titleCardTransition', 'skipTitleCardForShorts',
     // Outro Bumper
     'enableOutroVideo', 'outroMode', 'outroPreset', 'outroTitle', 'outroSubtitle', 'outroCustomLogo', 'outroThemeColor', 'outroVideoPath', 'outroVideoDurationSeconds', 'skipOutroForShorts', 'outroMuted', 'outroTransition',
     // Output

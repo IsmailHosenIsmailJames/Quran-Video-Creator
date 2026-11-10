@@ -126,6 +126,8 @@ export const PERSISTABLE_CONFIG_KEYS: Array<keyof VideoTemplateConfig> = [
   'titleCardDurationSeconds',
   'titleCardPreset',
   'titleCardThemeColor',
+  'titleCardScale',
+  'titleCardWidthPercent',
   'showReciterInTitleCard',
   'showStyleInTitleCard',
   'showVerseRangeInTitleCard',

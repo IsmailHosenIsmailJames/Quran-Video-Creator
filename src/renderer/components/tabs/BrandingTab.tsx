@@ -13,6 +13,7 @@ import {
   BookOpen,
   HeartHandshake,
   Layers,
+  Maximize2,
 } from 'lucide-react';
 import {
   TransitionType,
@@ -638,6 +639,102 @@ export const BrandingTab: React.FC = () => {
                       }`}
                       title={c.label}
                     />
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Title Card Size & Screen Coverage */}
+            <div className="space-y-3 bg-gray-950/60 p-3.5 rounded-xl border border-gray-800">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-xs text-gray-300 font-semibold">
+                  <Maximize2 className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Card Size & Screen Coverage</span>
+                </div>
+                <span className="text-[11px] font-mono text-amber-400 font-medium">
+                  {config.titleCardWidthPercent || 86}% width • {((config.titleCardScale || 1.0) * 100).toFixed(0)}% scale
+                </span>
+              </div>
+
+              <p className="text-[11px] text-gray-400 leading-relaxed">
+                Adjust title card width and typography scale to eliminate wasted black padding and fill the title clip canvas.
+              </p>
+
+              {/* Width Slider */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-xs text-gray-300">
+                  <span>Screen Width Coverage</span>
+                  <span className="text-amber-400 font-mono font-semibold">
+                    {config.titleCardWidthPercent || 86}%
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={65}
+                  max={98}
+                  step={1}
+                  value={config.titleCardWidthPercent || 86}
+                  onChange={(e) => updateConfig({ titleCardWidthPercent: Number(e.target.value) })}
+                  className="w-full accent-amber-500 cursor-pointer"
+                />
+                <div className="flex gap-2 pt-0.5">
+                  {[
+                    { label: 'Compact', val: 75 },
+                    { label: 'Wide (Default)', val: 86 },
+                    { label: 'Cinematic Max', val: 94 },
+                  ].map((btn) => (
+                    <button
+                      key={btn.val}
+                      type="button"
+                      onClick={() => updateConfig({ titleCardWidthPercent: btn.val })}
+                      className={`px-2.5 py-1 text-[10px] rounded-lg border transition ${
+                        (config.titleCardWidthPercent || 86) === btn.val
+                          ? 'bg-amber-500/20 border-amber-500/60 text-amber-300'
+                          : 'bg-gray-900 border-gray-800 text-gray-400 hover:text-gray-200'
+                      }`}
+                    >
+                      {btn.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Typography & Badge Scale Slider */}
+              <div className="space-y-1.5 pt-2 border-t border-gray-800/60">
+                <div className="flex justify-between text-xs text-gray-300">
+                  <span>Typography & Content Scale</span>
+                  <span className="text-amber-400 font-mono font-semibold">
+                    {((config.titleCardScale || 1.0) * 100).toFixed(0)}%
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={0.8}
+                  max={1.3}
+                  step={0.05}
+                  value={config.titleCardScale || 1.0}
+                  onChange={(e) => updateConfig({ titleCardScale: Number(e.target.value) })}
+                  className="w-full accent-amber-500 cursor-pointer"
+                />
+                <div className="flex gap-2 pt-0.5">
+                  {[
+                    { label: '90%', val: 0.9 },
+                    { label: '100% (Default)', val: 1.0 },
+                    { label: '115% (Grand)', val: 1.15 },
+                    { label: '125% (Ultra)', val: 1.25 },
+                  ].map((btn) => (
+                    <button
+                      key={btn.val}
+                      type="button"
+                      onClick={() => updateConfig({ titleCardScale: btn.val })}
+                      className={`px-2.5 py-1 text-[10px] rounded-lg border transition ${
+                        Math.abs((config.titleCardScale || 1.0) - btn.val) < 0.02
+                          ? 'bg-amber-500/20 border-amber-500/60 text-amber-300'
+                          : 'bg-gray-900 border-gray-800 text-gray-400 hover:text-gray-200'
+                      }`}
+                    >
+                      {btn.label}
+                    </button>
                   ))}
                 </div>
               </div>

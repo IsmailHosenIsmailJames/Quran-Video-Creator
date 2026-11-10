@@ -215,6 +215,8 @@ export const DEFAULT_TEMPLATE_CONFIG: VideoTemplateConfig = {
   titleCardDurationSeconds: 3.5,
   titleCardPreset: 'royal-gold',
   titleCardThemeColor: '#F59E0B',
+  titleCardScale: 1.0,
+  titleCardWidthPercent: 86,
   showReciterInTitleCard: true,
   showStyleInTitleCard: true,
   showVerseRangeInTitleCard: true,

@@ -165,13 +165,26 @@ export const SurahTitleCard: React.FC<SurahTitleCardProps> = ({
     accentGradient = `linear-gradient(135deg, #FFFFFF 0%, #F59E0B 45%, #818CF8 100%)`;
   }
 
-  // Adaptive font and spacing scales
-  const calligraphySize = isPortrait ? 68 : isSquare ? 76 : 94;
-  const transliterationSize = isPortrait ? 30 : isSquare ? 34 : 44;
-  const englishSize = isPortrait ? 15 : 18;
-  const pillFontSize = isPortrait ? 13 : 15;
-  const paddingX = isPortrait ? '24px' : '48px';
-  const paddingY = isPortrait ? '36px' : '52px';
+  // Adaptive font and spacing scales (Substantially grander with streamlined padding)
+  const userScale = Math.max(0.7, Math.min(1.4, config.titleCardScale ?? 1.0));
+  const widthPercent = config.titleCardWidthPercent ?? (isPortrait ? 94 : isSquare ? 92 : 86);
+
+  const calligraphySize = Math.round((isPortrait ? 84 : isSquare ? 104 : 132) * userScale);
+  const transliterationSize = Math.round((isPortrait ? 36 : isSquare ? 44 : 56) * userScale);
+  const vocalizedArabicSize = Math.round((isPortrait ? 24 : isSquare ? 28 : 34) * userScale);
+  const englishSize = Math.round((isPortrait ? 17 : isSquare ? 20 : 23) * userScale);
+  const pillFontSize = Math.round((isPortrait ? 14 : isSquare ? 15 : 17) * userScale);
+  const badgeTextSize = Math.round((isPortrait ? 12 : 14) * userScale);
+  const badgeSubTextSize = Math.round((isPortrait ? 11 : 13) * userScale);
+
+  // Streamlined padding so card doesn't waste space with huge empty borders
+  const paddingX = isPortrait ? '24px' : `${Math.round(54 * userScale)}px`;
+  const paddingY = isPortrait ? '28px' : `${Math.round(40 * userScale)}px`;
+  const cardMaxWidth = isPortrait
+    ? `${widthPercent}%`
+    : isSquare
+      ? `${widthPercent}%`
+      : `min(1580px, ${widthPercent}%)`;
 
   return (
     <AbsoluteFill
@@ -216,19 +229,19 @@ export const SurahTitleCard: React.FC<SurahTitleCardProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '0 20px',
+          padding: isPortrait ? '0 12px' : '0 24px',
           zIndex: 10,
         }}
       >
         <div
           style={{
-            maxWidth: isPortrait ? '94%' : isSquare ? '90%' : '1100px',
+            maxWidth: cardMaxWidth,
             width: '100%',
             backgroundColor: cardBgColor,
             backdropFilter: 'blur(28px)',
             WebkitBackdropFilter: 'blur(28px)',
             border: `1px solid ${cardBorderColor}`,
-            borderRadius: isPortrait ? '28px' : '36px',
+            borderRadius: isPortrait ? '24px' : '32px',
             padding: `${paddingY} ${paddingX}`,
             boxShadow: `0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 50px ${themeColor}18`,
             display: 'flex',
@@ -246,16 +259,16 @@ export const SurahTitleCard: React.FC<SurahTitleCardProps> = ({
               display: 'inline-flex',
               alignItems: 'center',
               gap: '10px',
-              padding: '6px 18px',
+              padding: isPortrait ? '6px 18px' : `${Math.round(8 * userScale)}px ${Math.round(22 * userScale)}px`,
               borderRadius: '9999px',
               backgroundColor: 'rgba(255, 255, 255, 0.06)',
               border: `1px solid ${cardBorderColor}`,
-              marginBottom: isPortrait ? '20px' : '26px',
+              marginBottom: isPortrait ? '14px' : `${Math.round(18 * userScale)}px`,
             }}
           >
             <span
               style={{
-                fontSize: isPortrait ? '12px' : '13px',
+                fontSize: `${badgeTextSize}px`,
                 fontWeight: 700,
                 color: themeColor,
                 letterSpacing: '0.08em',
@@ -275,7 +288,7 @@ export const SurahTitleCard: React.FC<SurahTitleCardProps> = ({
             />
             <span
               style={{
-                fontSize: isPortrait ? '11px' : '12px',
+                fontSize: `${badgeSubTextSize}px`,
                 fontWeight: 500,
                 color: 'rgba(255, 255, 255, 0.75)',
                 letterSpacing: '0.04em',
@@ -292,7 +305,7 @@ export const SurahTitleCard: React.FC<SurahTitleCardProps> = ({
               opacity: arabicProgress,
               transform: `translateY(${arabicTranslateY}px)`,
               filter: arabicBlur > 0.5 ? `blur(${arabicBlur}px)` : undefined,
-              marginBottom: isPortrait ? '12px' : '18px',
+              marginBottom: isPortrait ? '10px' : `${Math.round(14 * userScale)}px`,
               position: 'relative',
             }}
           >
@@ -300,9 +313,9 @@ export const SurahTitleCard: React.FC<SurahTitleCardProps> = ({
             <div
               style={{
                 position: 'absolute',
-                inset: '-12px',
-                background: `radial-gradient(circle, ${themeColor}40 0%, transparent 70%)`,
-                filter: 'blur(20px)',
+                inset: '-18px',
+                background: `radial-gradient(circle, ${themeColor}45 0%, transparent 70%)`,
+                filter: 'blur(24px)',
                 zIndex: -1,
               }}
             />
@@ -325,7 +338,7 @@ export const SurahTitleCard: React.FC<SurahTitleCardProps> = ({
               className="quran-arabic-text"
               style={{
                 fontFamily: "'Amiri', 'KFGQPC Uthmanic Script HAFS', serif",
-                fontSize: isPortrait ? '22px' : '28px',
+                fontSize: `${vocalizedArabicSize}px`,
                 color: 'rgba(255, 255, 255, 0.92)',
                 margin: '4px 0 0 0',
                 lineHeight: 1.3,
@@ -342,7 +355,7 @@ export const SurahTitleCard: React.FC<SurahTitleCardProps> = ({
             style={{
               opacity: titleProgress,
               transform: `translateY(${titleTranslateY}px)`,
-              marginBottom: isPortrait ? '20px' : '26px',
+              marginBottom: isPortrait ? '14px' : `${Math.round(20 * userScale)}px`,
             }}
           >
             <h1
@@ -354,7 +367,7 @@ export const SurahTitleCard: React.FC<SurahTitleCardProps> = ({
                 background: accentGradient,
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
-                margin: '0 0 6px 0',
+                margin: '0 0 4px 0',
                 lineHeight: 1.2,
                 textShadow: `0 4px 20px ${themeColor}33`,
               }}
@@ -387,8 +400,8 @@ export const SurahTitleCard: React.FC<SurahTitleCardProps> = ({
               justifyContent: 'center',
               gap: '12px',
               width: '100%',
-              maxWidth: isPortrait ? '260px' : '460px',
-              marginBottom: isPortrait ? '20px' : '28px',
+              maxWidth: isPortrait ? '320px' : `${Math.round(620 * userScale)}px`,
+              marginBottom: isPortrait ? '16px' : `${Math.round(22 * userScale)}px`,
               opacity: dividerProgress,
             }}
           >
@@ -404,8 +417,8 @@ export const SurahTitleCard: React.FC<SurahTitleCardProps> = ({
             {/* Center Golden Diamond Motif */}
             <div
               style={{
-                width: '9px',
-                height: '9px',
+                width: `${Math.round(9 * userScale)}px`,
+                height: `${Math.round(9 * userScale)}px`,
                 transform: 'rotate(45deg)',
                 backgroundColor: themeColor,
                 boxShadow: `0 0 10px ${themeColor}`,
@@ -432,8 +445,8 @@ export const SurahTitleCard: React.FC<SurahTitleCardProps> = ({
               flexWrap: 'wrap',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: isPortrait ? '10px' : '14px',
-              maxWidth: '95%',
+              gap: isPortrait ? '8px' : `${Math.round(12 * userScale)}px`,
+              maxWidth: '96%',
             }}
           >
             {/* Verse Range Badge */}
@@ -443,7 +456,7 @@ export const SurahTitleCard: React.FC<SurahTitleCardProps> = ({
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '8px',
-                  padding: isPortrait ? '8px 16px' : '10px 22px',
+                  padding: isPortrait ? '7px 15px' : `${Math.round(9 * userScale)}px ${Math.round(22 * userScale)}px`,
                   borderRadius: '9999px',
                   backgroundColor: 'rgba(255, 255, 255, 0.08)',
                   border: `1px solid ${cardBorderColor}`,
@@ -451,8 +464,8 @@ export const SurahTitleCard: React.FC<SurahTitleCardProps> = ({
                 }}
               >
                 <svg
-                  width="14"
-                  height="14"
+                  width={isPortrait ? '14' : String(Math.round(16 * userScale))}
+                  height={isPortrait ? '14' : String(Math.round(16 * userScale))}
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke={themeColor}
@@ -483,7 +496,7 @@ export const SurahTitleCard: React.FC<SurahTitleCardProps> = ({
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '8px',
-                  padding: isPortrait ? '8px 16px' : '10px 22px',
+                  padding: isPortrait ? '7px 15px' : `${Math.round(9 * userScale)}px ${Math.round(22 * userScale)}px`,
                   borderRadius: '9999px',
                   backgroundColor: 'rgba(255, 255, 255, 0.08)',
                   border: `1px solid ${cardBorderColor}`,
@@ -491,8 +504,8 @@ export const SurahTitleCard: React.FC<SurahTitleCardProps> = ({
                 }}
               >
                 <svg
-                  width="14"
-                  height="14"
+                  width={isPortrait ? '14' : String(Math.round(16 * userScale))}
+                  height={isPortrait ? '14' : String(Math.round(16 * userScale))}
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke={themeColor}
@@ -524,7 +537,7 @@ export const SurahTitleCard: React.FC<SurahTitleCardProps> = ({
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
-                  padding: isPortrait ? '8px 14px' : '10px 18px',
+                  padding: isPortrait ? '7px 14px' : `${Math.round(9 * userScale)}px ${Math.round(18 * userScale)}px`,
                   borderRadius: '9999px',
                   backgroundColor: `${themeColor}18`,
                   border: `1px solid ${themeColor}55`,
@@ -532,8 +545,8 @@ export const SurahTitleCard: React.FC<SurahTitleCardProps> = ({
               >
                 <span
                   style={{
-                    width: '6px',
-                    height: '6px',
+                    width: `${Math.round(6 * userScale)}px`,
+                    height: `${Math.round(6 * userScale)}px`,
                     borderRadius: '9999px',
                     backgroundColor: themeColor,
                   }}
@@ -559,7 +572,7 @@ export const SurahTitleCard: React.FC<SurahTitleCardProps> = ({
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '8px',
-                  padding: isPortrait ? '8px 16px' : '10px 22px',
+                  padding: isPortrait ? '7px 15px' : `${Math.round(9 * userScale)}px ${Math.round(22 * userScale)}px`,
                   borderRadius: '9999px',
                   backgroundColor: 'rgba(255, 255, 255, 0.08)',
                   border: `1px solid ${cardBorderColor}`,
@@ -567,8 +580,8 @@ export const SurahTitleCard: React.FC<SurahTitleCardProps> = ({
                 }}
               >
                 <svg
-                  width="14"
-                  height="14"
+                  width={isPortrait ? '14' : String(Math.round(16 * userScale))}
+                  height={isPortrait ? '14' : String(Math.round(16 * userScale))}
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke={themeColor}
