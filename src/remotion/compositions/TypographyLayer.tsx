@@ -54,8 +54,10 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
     const surahMeta = ayahData.surah > 0 ? getSurahByNumber(ayahData.surah) : null;
 
     const surahNameEn = surahMeta?.nameTransliterated ? `Surah ${surahMeta.nameTransliterated}` : '';
-    const surahMeaningEn = surahMeta?.nameEnglish ? `"${surahMeta.nameEnglish}"` : '';
-    const surahNameBn = ayahData.surah > 0 ? getSurahNameLocalized(ayahData.surah, 'bn') : '';
+    const rawSurahNameBn = ayahData.surah > 0 ? getSurahNameLocalized(ayahData.surah, 'bn') : '';
+    const surahNameBn = rawSurahNameBn
+      ? (rawSurahNameBn.startsWith('সূরা') ? rawSurahNameBn : `সূরা ${rawSurahNameBn}`)
+      : '';
 
     const titleEn = ayahData.interstitialTitle || '';
     const titleBn = translateSalatSegmentLabelToBengali(titleEn);
@@ -232,7 +234,7 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
                 margin: '2px 0',
               }}
             >
-              {/* English Transliteration & Meaning */}
+              {/* English Surah Name */}
               <div
                 style={{
                   fontSize: isPortrait ? '19px' : '22px',
@@ -243,7 +245,7 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
                   textShadow: '0 2px 8px rgba(0, 0, 0, 0.6)',
                 }}
               >
-                {surahNameEn} {surahMeaningEn && <span style={{ color: 'rgba(255, 255, 255, 0.75)', fontWeight: 400 }}>{surahMeaningEn}</span>}
+                {surahNameEn}
               </div>
 
               {/* Bangla Localized Surah Name */}
