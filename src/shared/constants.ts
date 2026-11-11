@@ -206,7 +206,7 @@ export const DEFAULT_TEMPLATE_CONFIG: VideoTemplateConfig = {
   introThemeColor: '#F59E0B',
   introVideoPath: undefined,
   introVideoDurationSeconds: 4.0,
-  skipIntroForShorts: true,
+  skipIntroForShorts: false,
   introMuted: false,
   introTransition: 'dip-black',
 
@@ -234,7 +234,7 @@ export const DEFAULT_TEMPLATE_CONFIG: VideoTemplateConfig = {
   outroThemeColor: '#F59E0B',
   outroVideoPath: undefined,
   outroVideoDurationSeconds: 4.5,
-  skipOutroForShorts: true,
+  skipOutroForShorts: false,
   outroMuted: false,
   outroTransition: 'dip-black',
 

@@ -470,11 +470,11 @@ export const BrandingTab: React.FC = () => {
                 <label className="text-xs text-gray-400">Skip for 9:16 Shorts</label>
                 <div className="flex items-center justify-between p-2 rounded-xl bg-gray-950 border border-gray-800">
                   <span className="text-[11px] text-gray-300">
-                    {config.skipIntroForShorts !== false ? 'Enabled' : 'Disabled'}
+                    {Boolean(config.skipIntroForShorts) ? 'Enabled' : 'Disabled'}
                   </span>
                   <input
                     type="checkbox"
-                    checked={config.skipIntroForShorts !== false}
+                    checked={Boolean(config.skipIntroForShorts)}
                     onChange={(e) => updateConfig({ skipIntroForShorts: e.target.checked })}
                     className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
                   />
@@ -1296,11 +1296,11 @@ export const BrandingTab: React.FC = () => {
                 <label className="text-xs text-gray-400">Skip for 9:16 Shorts</label>
                 <div className="flex items-center justify-between p-2 rounded-xl bg-gray-950 border border-gray-800">
                   <span className="text-[11px] text-gray-300">
-                    {config.skipOutroForShorts !== false ? 'Enabled' : 'Disabled'}
+                    {Boolean(config.skipOutroForShorts) ? 'Enabled' : 'Disabled'}
                   </span>
                   <input
                     type="checkbox"
-                    checked={config.skipOutroForShorts !== false}
+                    checked={Boolean(config.skipOutroForShorts)}
                     onChange={(e) => updateConfig({ skipOutroForShorts: e.target.checked })}
                     className="w-4 h-4 accent-emerald-500 rounded cursor-pointer"
                   />

@@ -380,7 +380,7 @@ export function calculateYouTubeTimestamps(
   const isIntroActive = Boolean(
     config.enableIntroVideo &&
     (config.introMode === 'custom-video' ? config.introVideoPath : true) &&
-    !(config.skipIntroForShorts !== false && config.aspectRatio === '9:16')
+    !(Boolean(config.skipIntroForShorts) && config.aspectRatio === '9:16')
   );
   const introDurationInFrames = isIntroActive
     ? Math.max(1, Math.round((config.introVideoDurationSeconds || 4) * fps))
@@ -389,7 +389,7 @@ export function calculateYouTubeTimestamps(
   // 2. Surah Title Card Duration
   const isTitleCardActive = Boolean(
     config.enableSurahTitleCard &&
-    !(config.skipTitleCardForShorts !== false && config.aspectRatio === '9:16')
+    !(Boolean(config.skipTitleCardForShorts) && config.aspectRatio === '9:16')
   );
   const titleCardDurationInFrames = isTitleCardActive
     ? Math.max(1, Math.round((config.titleCardDurationSeconds || 3.5) * fps))
@@ -584,7 +584,7 @@ export function calculateYouTubeTimestamps(
   const isOutroActive = Boolean(
     config.enableOutroVideo &&
     (config.outroMode === 'custom-video' ? config.outroVideoPath : true) &&
-    !(config.skipOutroForShorts !== false && config.aspectRatio === '9:16')
+    !(Boolean(config.skipOutroForShorts) && config.aspectRatio === '9:16')
   );
 
   if (isOutroActive) {
