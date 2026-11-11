@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import {
   VideoTemplateConfig,
   AyahSequenceData,
+  AyahAudioData,
   ReciterInfo,
   ScriptType,
   BackgroundClip,
@@ -103,6 +104,41 @@ interface StudioState {
   resetToDefault: () => Promise<void>;
 }
 
+export function computeTotalCompositionFrames(
+  ayahs: AyahSequenceData[],
+  config: VideoTemplateConfig
+): number {
+  const scriptureFrames = ayahs.reduce((sum, a) => sum + (a.durationInFrames || 0), 0);
+
+  const isIntroActive = Boolean(
+    config.enableIntroVideo &&
+    (config.introMode === 'custom-video' ? config.introVideoPath : true) &&
+    !(Boolean(config.skipIntroForShorts) && config.aspectRatio === '9:16')
+  );
+  const introFrames = isIntroActive
+    ? Math.max(1, Math.round((config.introVideoDurationSeconds || 4) * config.fps))
+    : 0;
+
+  const isTitleCardActive = Boolean(
+    config.enableSurahTitleCard &&
+    !(Boolean(config.skipTitleCardForShorts) && config.aspectRatio === '9:16')
+  );
+  const titleCardFrames = isTitleCardActive
+    ? Math.max(1, Math.round((config.titleCardDurationSeconds || 3.5) * config.fps))
+    : 0;
+
+  const isOutroActive = Boolean(
+    config.enableOutroVideo &&
+    (config.outroMode === 'custom-video' ? config.outroVideoPath : true) &&
+    !(Boolean(config.skipOutroForShorts) && config.aspectRatio === '9:16')
+  );
+  const outroFrames = isOutroActive
+    ? Math.max(1, Math.round((config.outroVideoDurationSeconds || 4.5) * config.fps))
+    : 0;
+
+  return Math.max(30, scriptureFrames + introFrames + titleCardFrames + outroFrames);
+}
+
 export const useStudioStore = create<StudioState>((set, get) => ({
   config: DEFAULT_TEMPLATE_CONFIG,
   ayahs: [],
@@ -199,53 +235,58 @@ export const useStudioStore = create<StudioState>((set, get) => ({
 
   updateConfig: (partial) => {
     set((state) => ({ config: { ...state.config, ...partial } }));
-    // If FPS, recitation speed, includeBismillah, aspectRatio, or intro settings changed:
-    if (
-      partial.fps ||
+
+    // Determine whether this config update modifies the scripture verse content
+    const requiresScriptureReload =
+      partial.fps !== undefined ||
+      partial.surahNumber !== undefined ||
+      partial.fromAyah !== undefined ||
+      partial.toAyah !== undefined ||
+      partial.script !== undefined ||
+      partial.reciterIndex !== undefined ||
       partial.recitationSpeed !== undefined ||
       partial.includeBismillah !== undefined ||
-      partial.aspectRatio !== undefined ||
-      partial.enableIntroVideo !== undefined ||
-      partial.introMode !== undefined ||
-      partial.introPreset !== undefined ||
-      partial.introTitle !== undefined ||
-      partial.introSubtitle !== undefined ||
-      partial.introCustomLogo !== undefined ||
-      partial.introThemeColor !== undefined ||
-      partial.introVideoPath !== undefined ||
-      partial.introVideoDurationSeconds !== undefined ||
-      partial.skipIntroForShorts !== undefined ||
-      partial.enableSurahTitleCard !== undefined ||
-      partial.titleCardDurationSeconds !== undefined ||
-      partial.titleCardPreset !== undefined ||
-      partial.titleCardThemeColor !== undefined ||
-      partial.titleCardScale !== undefined ||
-      partial.titleCardWidthPercent !== undefined ||
-      partial.showReciterInTitleCard !== undefined ||
-      partial.showStyleInTitleCard !== undefined ||
-      partial.showVerseRangeInTitleCard !== undefined ||
-      partial.showTranslationInTitleCard !== undefined ||
-      partial.titleCardTransition !== undefined ||
-      partial.skipTitleCardForShorts !== undefined ||
-      partial.enableOutroVideo !== undefined ||
-      partial.outroMode !== undefined ||
-      partial.outroPreset !== undefined ||
-      partial.outroTitle !== undefined ||
-      partial.outroSubtitle !== undefined ||
-      partial.outroCustomLogo !== undefined ||
-      partial.outroThemeColor !== undefined ||
-      partial.outroVideoPath !== undefined ||
-      partial.outroVideoDurationSeconds !== undefined ||
-      partial.skipOutroForShorts !== undefined ||
-      partial.outroMuted !== undefined ||
-      partial.outroTransition !== undefined ||
+      partial.primaryTranslationLang !== undefined ||
+      partial.primaryTranslationFile !== undefined ||
+      partial.secondaryTranslationLang !== undefined ||
+      partial.secondaryTranslationFile !== undefined ||
+      partial.showPrimaryTranslation !== undefined ||
+      partial.showSecondaryTranslation !== undefined ||
+      partial.recitationAudioMode !== undefined ||
       partial.customAudioPath !== undefined ||
       partial.customTimestampPath !== undefined ||
       partial.recitationVideoPath !== undefined ||
       partial.useRecitationVideoAudio !== undefined ||
-      partial.useRecitationVideoAsBackground !== undefined
-    ) {
+      partial.useRecitationVideoAsBackground !== undefined;
+
+    if (requiresScriptureReload) {
       get().refreshAyahSequence();
+    } else {
+      // If only bumpers (intro/title card/outro), branding, or aspect ratio changed,
+      // recalculate total composition frames synchronously in < 1ms without reloading all 286 verses!
+      const currentAyahs = get().ayahs;
+      if (currentAyahs.length > 0) {
+        const hasBumperDurationImpact =
+          partial.enableIntroVideo !== undefined ||
+          partial.introMode !== undefined ||
+          partial.introVideoPath !== undefined ||
+          partial.introVideoDurationSeconds !== undefined ||
+          partial.skipIntroForShorts !== undefined ||
+          partial.enableSurahTitleCard !== undefined ||
+          partial.titleCardDurationSeconds !== undefined ||
+          partial.skipTitleCardForShorts !== undefined ||
+          partial.enableOutroVideo !== undefined ||
+          partial.outroMode !== undefined ||
+          partial.outroVideoPath !== undefined ||
+          partial.outroVideoDurationSeconds !== undefined ||
+          partial.skipOutroForShorts !== undefined ||
+          partial.aspectRatio !== undefined;
+
+        if (hasBumperDurationImpact) {
+          const newTotal = computeTotalCompositionFrames(currentAyahs, get().config);
+          set({ totalDurationInFrames: newTotal });
+        }
+      }
     }
   },
 
@@ -1108,12 +1149,14 @@ export const useStudioStore = create<StudioState>((set, get) => ({
               config.toAyah
             )
           : Promise.resolve({} as Record<number, string>),
-        api.getAyahRangeAudioData(
-          config.reciterIndex,
-          config.surahNumber,
-          config.fromAyah,
-          config.toAyah
-        ),
+        (isCustomTimingActive || config.recitationAudioMode === 'full-surah-file' || Boolean(config.customAudioPath))
+          ? Promise.resolve({} as Record<number, AyahAudioData>)
+          : api.getAyahRangeAudioData(
+              config.reciterIndex,
+              config.surahNumber,
+              config.fromAyah,
+              config.toAyah
+            ),
       ]);
 
       // Build sequence

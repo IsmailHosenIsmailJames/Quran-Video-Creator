@@ -24,6 +24,9 @@ if (process.platform === 'win32') {
   app.setAppUserModelId('com.quranvideo.studio');
 }
 
+// Boost V8 heap limit for large multimedia projects (e.g. 2-hour long recitation files & 4K renders)
+app.commandLine.appendSwitch('js-flags', '--max-old-space-size=8192');
+
 // Prioritize IPv4 DNS lookups to prevent IPv6 ENETUNREACH and ETIMEDOUT connection stalls
 try {
   dns.setDefaultResultOrder('ipv4first');
@@ -340,6 +343,15 @@ function createWindow(mediaServerPort: number): void {
 
   registerIpcHandlers(mainWindow);
   createApplicationMenu(mainWindow);
+
+  // Diagnostic crash & hang telemetry for long media timelines
+  mainWindow.webContents.on('render-process-gone', (_event, details) => {
+    console.error('[Main] Renderer process exited abnormally:', details);
+  });
+
+  mainWindow.webContents.on('unresponsive', () => {
+    console.warn('[Main] Electron renderer window became unresponsive');
+  });
 
   // Native context menu for text fields (Cut, Copy, Paste, Undo, Redo, Select All)
   mainWindow.webContents.on('context-menu', (_event, params) => {

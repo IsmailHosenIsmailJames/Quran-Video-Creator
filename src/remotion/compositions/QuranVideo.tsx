@@ -373,6 +373,7 @@ export const QuranVideo: React.FC<QuranVideoCompositionProps> = ({
           {isFullAudioMode && config.showWaveform && effectiveAudioPath && (
             <WaveformLayer
               audioUrl={effectiveAudioPath}
+              isFullAudioMode={true}
               initialFrameOffset={fullAudioStartFromFrame}
               type={config.waveformType}
               color={config.waveformColor}
@@ -414,6 +415,7 @@ export const QuranVideo: React.FC<QuranVideoCompositionProps> = ({
                     {!isFullAudioMode && config.showWaveform && audioSrc && (
                       <WaveformLayer
                         audioUrl={audioSrc}
+                        isFullAudioMode={false}
                         type={config.waveformType}
                         color={config.waveformColor}
                         colorSecondary={config.waveformColorSecondary}

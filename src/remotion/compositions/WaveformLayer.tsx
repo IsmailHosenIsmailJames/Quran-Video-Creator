@@ -5,8 +5,9 @@ import { getMediaUrl } from '../../shared/media-url';
 import { WaveformType } from '../../shared/types';
 
 interface WaveformLayerProps {
-  audioUrl: string;
+  audioUrl?: string;
   initialFrameOffset?: number;
+  isFullAudioMode?: boolean;
   type: WaveformType;
   color: string;
   colorSecondary?: string;
@@ -23,9 +24,66 @@ interface WaveformLayerProps {
   opacity?: number;
 }
 
+export function generateHarmonicSamples(
+  effectiveFrame: number,
+  effectiveSampleCount: number
+): number[] {
+  return Array.from({ length: effectiveSampleCount }, (_, i) => {
+    const norm = i / (effectiveSampleCount - 1);
+    const bell = Math.sin(norm * Math.PI); // Taper ends gracefully to 0
+    const wave1 = Math.sin(norm * 14 + effectiveFrame * 0.14) * 0.45;
+    const wave2 = Math.cos(norm * 22 - effectiveFrame * 0.1) * 0.32;
+    const wave3 = Math.sin(norm * 8 + effectiveFrame * 0.06) * 0.38;
+    // Vocal cadence modulation
+    const pulse = Math.abs(Math.sin(effectiveFrame * 0.08)) * 0.45 + 0.55;
+    return (wave1 + wave2 + wave3) * bell * pulse;
+  });
+}
+
+/**
+ * Isolated sampler for short per-ayah audio clips (< 60s in standard CDN mode).
+ * Encapsulating useAudioData here ensures top-level unconditional hook compliance.
+ */
+const ShortClipAudioSampler: React.FC<{
+  audioSrc: string;
+  effectiveFrame: number;
+  effectiveSampleCount: number;
+  renderVisualizer: (samples: number[]) => React.ReactElement;
+}> = ({ audioSrc, effectiveFrame, effectiveSampleCount, renderVisualizer }) => {
+  let audioData = null;
+  try {
+    audioData = useAudioData(audioSrc);
+  } catch {
+    audioData = null;
+  }
+
+  let samples: number[] = [];
+  if (audioData) {
+    try {
+      samples = visualizeAudioWaveform({
+        audioData,
+        frame: effectiveFrame,
+        fps: 30,
+        numberOfSamples: effectiveSampleCount,
+        windowInSeconds: 0.1,
+      });
+    } catch {
+      samples = [];
+    }
+  }
+
+  const hasAcousticEnergy = samples.length > 0 && samples.some((val) => Math.abs(val) > 0.005);
+  const finalSamples = hasAcousticEnergy
+    ? samples
+    : generateHarmonicSamples(effectiveFrame, effectiveSampleCount);
+
+  return renderVisualizer(finalSamples);
+};
+
 export const WaveformLayer: React.FC<WaveformLayerProps> = ({
   audioUrl,
   initialFrameOffset = 0,
+  isFullAudioMode = false,
   type = 'smooth-wave',
   color = '#F59E0B',
   colorSecondary,
@@ -45,64 +103,22 @@ export const WaveformLayer: React.FC<WaveformLayerProps> = ({
   const effectiveFrame = frame + (initialFrameOffset || 0);
   const gradId = useId().replace(/:/g, '');
 
-  const resolvedAudioSrc = getMediaUrl(audioUrl);
+  const resolvedAudioSrc = audioUrl ? getMediaUrl(audioUrl) : '';
   const secondaryColor = colorSecondary || color;
-
-  // Gracefully attempt audio extraction; fall back to vocal harmonics if WebAudio is restricted
-  let audioData = null;
-  try {
-    if (resolvedAudioSrc) {
-      // eslint-disable-next-line react-hooks/rules-of-hooks
-      audioData = useAudioData(resolvedAudioSrc);
-    }
-  } catch {
-    audioData = null;
-  }
-
   const effectiveSampleCount = Math.min(128, Math.max(24, sampleCount || 64));
-  let samples: number[] = [];
 
-  if (audioData) {
-    try {
-      samples = visualizeAudioWaveform({
-        audioData,
-        frame: effectiveFrame,
-        fps: 30,
-        numberOfSamples: effectiveSampleCount,
-        windowInSeconds: 0.1,
-      });
-    } catch {
-      samples = [];
-    }
-  }
-
-  // Check if samples actually contain acoustic energy (avoiding flat-line during headless renders or initial load)
-  const hasAcousticEnergy = samples.length > 0 && samples.some((val) => Math.abs(val) > 0.005);
-
-  if (!hasAcousticEnergy) {
-    samples = Array.from({ length: effectiveSampleCount }, (_, i) => {
-      const norm = i / (effectiveSampleCount - 1);
-      const bell = Math.sin(norm * Math.PI); // Taper ends gracefully to 0
-      const wave1 = Math.sin(norm * 14 + effectiveFrame * 0.14) * 0.45;
-      const wave2 = Math.cos(norm * 22 - effectiveFrame * 0.1) * 0.32;
-      const wave3 = Math.sin(norm * 8 + effectiveFrame * 0.06) * 0.38;
-      // Vocal cadence modulation
-      const pulse = Math.abs(Math.sin(effectiveFrame * 0.08)) * 0.45 + 0.55;
-      return (wave1 + wave2 + wave3) * bell * pulse;
+  const renderVisualizer = (samples: number[]) => {
+    // Process samples with amplitude multiplier, clamped cleanly
+    const amp = amplitude ?? 2.2;
+    const processedSamples = samples.map((val) => {
+      return Math.max(-0.95, Math.min(0.95, val * amp));
     });
-  }
 
-  // Process samples with amplitude multiplier, clamped cleanly
-  const amp = amplitude ?? 2.2;
-  const processedSamples = samples.map((val) => {
-    return Math.max(-0.95, Math.min(0.95, val * amp));
-  });
+    const glowFilter = glow
+      ? `drop-shadow(0 0 ${6 * glowIntensity}px ${color}) drop-shadow(0 0 ${14 * glowIntensity}px ${secondaryColor}88)`
+      : 'none';
 
-  const glowFilter = glow
-    ? `drop-shadow(0 0 ${6 * glowIntensity}px ${color}) drop-shadow(0 0 ${14 * glowIntensity}px ${secondaryColor}88)`
-    : 'none';
-
-  return (
+    return (
     <AbsoluteFill
       style={{
         top: `${positionY}%`,
@@ -516,5 +532,25 @@ export const WaveformLayer: React.FC<WaveformLayerProps> = ({
         )}
       </div>
     </AbsoluteFill>
+  );
+};
+
+  // For continuous full-surah audio (e.g. 2-hour long files like Surah Al-Baqarah),
+  // NEVER invoke in-memory WebAudio decoding via useAudioData, because decoding 2 hours of stereo PCM
+  // requires > 2.76 GB of RAM, immediately triggering Chromium V8 out-of-memory crashes!
+  // Instead, use the high-performance vocal cadence harmonic engine with zero memory overhead.
+  if (isFullAudioMode || !resolvedAudioSrc) {
+    const samples = generateHarmonicSamples(effectiveFrame, effectiveSampleCount);
+    return renderVisualizer(samples);
+  }
+
+  // For individual short Ayah audio snippets (< 60s in standard CDN mode), sample safely:
+  return (
+    <ShortClipAudioSampler
+      audioSrc={resolvedAudioSrc}
+      effectiveFrame={effectiveFrame}
+      effectiveSampleCount={effectiveSampleCount}
+      renderVisualizer={renderVisualizer}
+    />
   );
 };
