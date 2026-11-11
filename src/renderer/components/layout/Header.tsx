@@ -27,9 +27,15 @@ export const Header: React.FC = () => {
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2.5">
           <img
-            src="/icon-256.png"
+            src="./icon-256.png"
             alt="Quran Video Studio"
             className="w-6 h-6 rounded-md shadow-md shadow-amber-500/20 object-cover border border-amber-500/30"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              if (!target.src.endsWith('icon.png')) {
+                target.src = './icon.png';
+              }
+            }}
           />
           <span className="text-xs font-bold text-white tracking-wide">
             Quran Video Studio

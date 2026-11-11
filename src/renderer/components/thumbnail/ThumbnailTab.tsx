@@ -371,7 +371,7 @@ export const ThumbnailTab: React.FC = () => {
                     />
                   ) : reciters[config.reciterIndex]?.local_img ? (
                     <img
-                      src={`/${reciters[config.reciterIndex].local_img}`}
+                      src={`./${reciters[config.reciterIndex].local_img!.replace(/^\/+/, '')}`}
                       alt={reciters[config.reciterIndex].name}
                       className="w-12 h-12 rounded-xl object-cover border border-amber-500/50 shadow-md flex-shrink-0 bg-gray-950"
                     />
@@ -413,7 +413,7 @@ export const ThumbnailTab: React.FC = () => {
                       if (found) {
                         updateThumbnailConfig({
                           reciterPortraitSource: 'local_img',
-                          reciterPortraitCustomUrl: found.local_img ? `/${found.local_img}` : found.img,
+                          reciterPortraitCustomUrl: found.local_img ? `./${found.local_img.replace(/^\/+/, '')}` : found.img,
                           reciterNameText: found.name,
                           bengaliReciterNameText: getBengaliReciterName(found.name),
                         });

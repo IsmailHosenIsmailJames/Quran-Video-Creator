@@ -24,9 +24,18 @@ const imageCache = new Map<string, HTMLImageElement>();
  * Loads an image from URL or data URL and caches it.
  */
 export function loadCachedImage(url: string): Promise<HTMLImageElement> {
+  let resolvedUrl = url;
+  if (resolvedUrl.startsWith('/reciter_images/')) {
+    resolvedUrl = '.' + resolvedUrl;
+  } else if (resolvedUrl.startsWith('/icon')) {
+    resolvedUrl = '.' + resolvedUrl;
+  } else if (resolvedUrl.startsWith('/Quran fonts/')) {
+    resolvedUrl = '.' + resolvedUrl;
+  }
+
   return new Promise((resolve, reject) => {
-    if (imageCache.has(url)) {
-      const cached = imageCache.get(url)!;
+    if (imageCache.has(resolvedUrl)) {
+      const cached = imageCache.get(resolvedUrl)!;
       if (cached.complete && cached.naturalWidth > 0) {
         return resolve(cached);
       }
@@ -35,13 +44,13 @@ export function loadCachedImage(url: string): Promise<HTMLImageElement> {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
-      imageCache.set(url, img);
+      imageCache.set(resolvedUrl, img);
       resolve(img);
     };
     img.onerror = (err) => {
       reject(err);
     };
-    img.src = url;
+    img.src = resolvedUrl;
   });
 }
 
@@ -870,12 +879,15 @@ export async function renderThumbnailToCanvas(
       } else if (config.reciterPortraitSource === 'captured-frame' && config.bgCapturedDataUrl) {
         reciterSrc = config.bgCapturedDataUrl;
       } else if (reciterInfo?.local_img) {
-        reciterSrc = '/' + reciterInfo.local_img;
+        reciterSrc = `./${reciterInfo.local_img.replace(/^\/+/, '')}`;
       } else if (reciterInfo?.img) {
         reciterSrc = reciterInfo.img;
       }
 
       if (reciterSrc) {
+        if (reciterSrc.startsWith('/reciter_images/')) {
+          reciterSrc = '.' + reciterSrc;
+        }
         try {
           const pImg = await loadCachedImage(reciterSrc);
           if (pImg && pImg.naturalWidth > 0) {

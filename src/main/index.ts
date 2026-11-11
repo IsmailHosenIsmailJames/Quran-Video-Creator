@@ -1,5 +1,15 @@
 import dns from 'dns';
-import { app, BrowserWindow, protocol, net, Menu, MenuItem, MenuItemConstructorOptions } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  protocol,
+  net,
+  Menu,
+  MenuItem,
+  MenuItemConstructorOptions,
+  session,
+  nativeImage,
+} from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { pathToFileURL } from 'url';
@@ -7,6 +17,12 @@ import { registerIpcHandlers } from './ipc-handlers';
 import { quranDbService } from './services/quran-db';
 import { localMediaServer } from './services/local-media-server';
 import { settingsService } from './services/settings-service';
+
+// Set application identity for OS desktop environments & taskbars
+app.setName('Quran Video Studio');
+if (process.platform === 'win32') {
+  app.setAppUserModelId('com.quranvideo.studio');
+}
 
 // Prioritize IPv4 DNS lookups to prevent IPv6 ENETUNREACH and ETIMEDOUT connection stalls
 try {
@@ -272,11 +288,12 @@ function createApplicationMenu(window: BrowserWindow): void {
 
 function getAppIconPath(): string | undefined {
   const candidates = [
-    path.join(__dirname, '../../public/icon.png'),
-    path.join(app.getAppPath(), 'public/icon.png'),
-    path.join(app.getAppPath(), 'dist/icon.png'),
-    path.join(__dirname, '../../dist/icon.png'),
     path.join(process.resourcesPath, 'icon.png'),
+    path.join(process.resourcesPath, 'build/icon.png'),
+    path.join(app.getAppPath(), 'dist/icon.png'),
+    path.join(app.getAppPath(), 'public/icon.png'),
+    path.join(__dirname, '../../dist/icon.png'),
+    path.join(__dirname, '../../public/icon.png'),
     path.join(app.getAppPath(), 'build/icon.png'),
   ];
   for (const candidate of candidates) {
@@ -289,6 +306,7 @@ function getAppIconPath(): string | undefined {
 
 function createWindow(mediaServerPort: number): void {
   const iconPath = getAppIconPath();
+  const appIcon = iconPath ? nativeImage.createFromPath(iconPath) : undefined;
 
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -297,7 +315,7 @@ function createWindow(mediaServerPort: number): void {
     minHeight: 700,
     title: 'Quran Video Studio',
     backgroundColor: '#090d16',
-    ...(iconPath ? { icon: iconPath } : {}),
+    ...(appIcon && !appIcon.isEmpty() ? { icon: appIcon } : iconPath ? { icon: iconPath } : {}),
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       sandbox: false,
@@ -308,9 +326,13 @@ function createWindow(mediaServerPort: number): void {
     },
   });
 
-  if (process.platform === 'darwin' && app.dock && iconPath) {
+  if (process.platform === 'darwin' && app.dock) {
     try {
-      app.dock.setIcon(iconPath);
+      if (appIcon && !appIcon.isEmpty()) {
+        app.dock.setIcon(appIcon);
+      } else if (iconPath) {
+        app.dock.setIcon(iconPath);
+      }
     } catch (err) {
       console.warn('[Main] Failed to set dock icon:', err);
     }
@@ -369,13 +391,59 @@ function createWindow(mediaServerPort: number): void {
 
 app.whenReady().then(async () => {
   const iconPath = getAppIconPath();
-  if (process.platform === 'darwin' && app.dock && iconPath) {
+  const appIcon = iconPath ? nativeImage.createFromPath(iconPath) : undefined;
+  if (process.platform === 'darwin' && app.dock) {
     try {
-      app.dock.setIcon(iconPath);
+      if (appIcon && !appIcon.isEmpty()) {
+        app.dock.setIcon(appIcon);
+      } else if (iconPath) {
+        app.dock.setIcon(iconPath);
+      }
     } catch (err) {
       // Dock may initialize with window
     }
   }
+
+  // Intercept and redirect root-relative file:/// requests (e.g., file:///icon-256.png, file:///reciter_images/...)
+  // to their real physical location in dist/ or process.resourcesPath so production release packages never miss any assets
+  const appPath = app.getAppPath();
+  const distDir = fs.existsSync(path.join(appPath, 'dist'))
+    ? path.join(appPath, 'dist')
+    : path.join(__dirname, '../../dist');
+
+  session.defaultSession.webRequest.onBeforeRequest({ urls: ['file:///*'] }, (details, callback) => {
+    try {
+      const urlObj = new URL(details.url);
+      const pathname = decodeURIComponent(urlObj.pathname);
+
+      // On Windows pathname starts with /C:/..., on Unix with /...
+      let relPath = pathname;
+      if (/^\/[a-zA-Z]:\//.test(pathname)) {
+        relPath = pathname.slice(3);
+      }
+      const cleanRel = relPath.replace(/^\/+/, '');
+
+      if (cleanRel) {
+        const targetInDist = path.join(distDir, cleanRel);
+        const targetInResources = path.join(process.resourcesPath, cleanRel);
+
+        if (fs.existsSync(targetInDist)) {
+          const redirected = pathToFileURL(targetInDist).toString();
+          if (redirected !== details.url) {
+            return callback({ redirectURL: redirected });
+          }
+        } else if (fs.existsSync(targetInResources)) {
+          const redirected = pathToFileURL(targetInResources).toString();
+          if (redirected !== details.url) {
+            return callback({ redirectURL: redirected });
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[Main] WebRequest asset interceptor warning:', err);
+    }
+    callback({});
+  });
 
   // Start local streaming server for media with Range 206 support
   const port = await localMediaServer.start();

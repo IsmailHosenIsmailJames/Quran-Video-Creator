@@ -832,7 +832,7 @@ export const AudioTab: React.FC = () => {
                   <img
                     src={
                       reciters[config.reciterIndex].local_img
-                        ? `/${reciters[config.reciterIndex].local_img}`
+                        ? `./${reciters[config.reciterIndex].local_img!.replace(/^\/+/, '')}`
                         : reciters[config.reciterIndex].img
                     }
                     alt={reciters[config.reciterIndex].name}

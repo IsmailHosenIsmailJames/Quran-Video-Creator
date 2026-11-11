@@ -1,5 +1,6 @@
 {
   "name": "quran-video-studio",
+  "productName": "Quran Video Studio",
   "version": "1.0.0",
   "description": "Production-grade desktop application for creating cinematic Quran recitation videos",
   "main": "dist-electron/main/index.js",

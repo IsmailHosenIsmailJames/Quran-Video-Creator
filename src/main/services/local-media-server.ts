@@ -1,6 +1,7 @@
 import http from 'http';
 import fs from 'fs';
 import path from 'path';
+import { app } from 'electron';
 import { recitationService } from './recitation-service';
 
 class LocalMediaServer {
@@ -51,6 +52,26 @@ class LocalMediaServer {
             const remoteUrl = recitationService.getRemoteUrlForPath(filePath);
             if (remoteUrl) {
               await recitationService.ensureAudioCached(remoteUrl, filePath);
+            }
+          }
+
+          if (!fs.existsSync(filePath)) {
+            const clean = filePath.replace(/^\/+/, '');
+            const candidates = [
+              path.join(process.resourcesPath, clean),
+              path.join(process.resourcesPath, filePath),
+              path.join(app.getAppPath(), 'dist', clean),
+              path.join(app.getAppPath(), clean),
+              path.join(__dirname, '../../dist', clean),
+              path.join(process.cwd(), clean),
+            ];
+            for (const cand of candidates) {
+              try {
+                if (fs.existsSync(cand) && fs.statSync(cand).isFile()) {
+                  filePath = cand;
+                  break;
+                }
+              } catch {}
             }
           }
 
