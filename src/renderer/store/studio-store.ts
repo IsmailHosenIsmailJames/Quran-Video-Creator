@@ -1181,10 +1181,14 @@ export const useStudioStore = create<StudioState>((set, get) => ({
 
           if (isCustomTimingActive && singleManifest?.preamble?.has_basmala && singleManifest.preamble.basmala) {
             const basmala = singleManifest.preamble.basmala;
-            bDurationInSeconds = (basmala.duration_ms / 1000) / speed;
+            const firstAyahTiming = singleManifest.ayahs.find((item) => item.ayah_number === config.fromAyah);
+            const rawBasmalaMs = firstAyahTiming && firstAyahTiming.start_ms > basmala.start_ms
+              ? (firstAyahTiming.start_ms - basmala.start_ms)
+              : basmala.duration_ms;
+            bDurationInSeconds = (rawBasmalaMs / 1000) / speed;
             scaledBismillahSegments = convertBasmalaToRelativeSegments(basmala, speed);
             bStartMs = basmala.start_ms;
-            bEndMs = basmala.end_ms;
+            bEndMs = firstAyahTiming ? firstAyahTiming.start_ms : basmala.end_ms;
           }
 
           const bDurationInFrames = Math.max(
@@ -1228,11 +1232,28 @@ export const useStudioStore = create<StudioState>((set, get) => ({
         let audioEndMs: number | undefined;
 
         if (customAyahTiming) {
-          const rawDurationMs = customAyahTiming.duration_ms || (customAyahTiming.end_ms - customAyahTiming.start_ms);
+          // Lookahead to the next custom ayah timing to smoothly bridge any silence / breathing gaps
+          const nextCustomAyah = singleManifest?.ayahs.find((item) => item.ayah_number === a + 1);
+          let rawDurationMs: number;
+          if (nextCustomAyah) {
+            // Span continuously until the next verse begins
+            rawDurationMs = Math.max(
+              customAyahTiming.end_ms - customAyahTiming.start_ms,
+              nextCustomAyah.start_ms - customAyahTiming.start_ms
+            );
+          } else {
+            // Last ayah in the selected range: extend to recording total_duration_ms if available
+            rawDurationMs = singleManifest?.total_duration_ms && singleManifest.total_duration_ms > customAyahTiming.start_ms
+              ? (singleManifest.total_duration_ms - customAyahTiming.start_ms)
+              : (customAyahTiming.duration_ms || (customAyahTiming.end_ms - customAyahTiming.start_ms));
+          }
+
           durationInSeconds = (rawDurationMs / 1000) / speed;
           scaledSegments = convertAyahToRelativeSegments(customAyahTiming, speed);
           audioStartMs = customAyahTiming.start_ms;
-          audioEndMs = customAyahTiming.end_ms;
+          audioEndMs = nextCustomAyah
+            ? nextCustomAyah.start_ms
+            : (singleManifest?.total_duration_ms || customAyahTiming.end_ms);
         } else {
           const audioData = audioMap[a] || {
             audioUrl: '',
@@ -1271,6 +1292,22 @@ export const useStudioStore = create<StudioState>((set, get) => ({
           audioStartMs,
           audioEndMs,
         });
+      }
+
+      // Zero-drift alignment with total_duration_ms if singleManifest is active across the full surah/range
+      if (
+        isCustomTimingActive &&
+        singleManifest?.total_duration_ms &&
+        config.fromAyah === (singleManifest.start_ayah || 1) &&
+        config.toAyah === (singleManifest.end_ayah || surahMeta.totalAyahs) &&
+        sequence.length > 0
+      ) {
+        const targetFrames = Math.round(((singleManifest.total_duration_ms / 1000) / speed) * config.fps);
+        const drift = targetFrames - totalFrames;
+        if (Math.abs(drift) > 0 && Math.abs(drift) <= 45) {
+          sequence[sequence.length - 1].durationInFrames += drift;
+          totalFrames = targetFrames;
+        }
       }
 
       const isIntroActive = Boolean(
