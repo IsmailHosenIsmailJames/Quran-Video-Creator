@@ -340,6 +340,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
         message: `Successfully loaded Salat Jama'ah (${manifest.segments.length} segments, ${totalAyahs} ayahs) from ${fileName}`,
       };
     } else {
+      const hasBasmala = Boolean(manifest.preamble?.has_basmala);
       set((state) => ({
         customTimestamp: manifest,
         customTimestampPath: filePath || fileName,
@@ -353,7 +354,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
           toAyah: manifest.end_ayah,
           customTimestampPath: filePath || fileName,
           hasCustomTimestamp: true,
-          includeBismillah: manifest.preamble?.has_basmala ? true : state.config.includeBismillah,
+          includeBismillah: hasBasmala,
         },
         statusMessage: `Loaded Whisper alignment for Surah ${manifest.surah_name_en} (${manifest.start_ayah}–${manifest.end_ayah})`,
       }));
@@ -1168,11 +1169,13 @@ export const useStudioStore = create<StudioState>((set, get) => ({
       // Rules:
       // 1. Never add Bismillah to Surah 9 (At-Tawbah)
       // 2. Never duplicate Bismillah if Surah 1 (Al-Fatihah) begins with Ayah 1
-      // 3. User must have enabled it (config.includeBismillah !== false)
+      // 3. For custom timestamp manifests, only add if the recording explicitly contains a Basmala preamble
+      // 4. User must have enabled it (config.includeBismillah !== false)
       const shouldAddBismillah =
         config.includeBismillah !== false &&
         config.surahNumber !== 9 &&
-        !(config.surahNumber === 1 && config.fromAyah === 1);
+        !(config.surahNumber === 1 && config.fromAyah === 1) &&
+        (!isCustomTimingActive || Boolean(singleManifest?.preamble?.has_basmala));
 
       if (shouldAddBismillah) {
         try {
@@ -1225,12 +1228,12 @@ export const useStudioStore = create<StudioState>((set, get) => ({
           if (isCustomTimingActive && singleManifest?.preamble?.has_basmala && singleManifest.preamble.basmala) {
             const basmala = singleManifest.preamble.basmala;
             const firstAyahTiming = singleManifest.ayahs.find((item) => item.ayah_number === config.fromAyah);
-            const rawBasmalaMs = firstAyahTiming && firstAyahTiming.start_ms > basmala.start_ms
-              ? (firstAyahTiming.start_ms - basmala.start_ms)
+            const rawBasmalaMs = firstAyahTiming && firstAyahTiming.start_ms > 0
+              ? firstAyahTiming.start_ms
               : basmala.duration_ms;
             bDurationInSeconds = (rawBasmalaMs / 1000) / speed;
             scaledBismillahSegments = convertBasmalaToRelativeSegments(basmala, speed);
-            bStartMs = basmala.start_ms;
+            bStartMs = 0;
             bEndMs = firstAyahTiming ? firstAyahTiming.start_ms : basmala.end_ms;
           }
 
@@ -1275,25 +1278,51 @@ export const useStudioStore = create<StudioState>((set, get) => ({
         let audioEndMs: number | undefined;
 
         if (customAyahTiming) {
+          // If this is the starting ayah of the sequence and we are starting from the beginning of the recording
+          // (i.e. config.fromAyah matches start_ayah or 1) and there was no preceding Bismillah preface,
+          // then the reciter begins from frame 0 (0ms) of the audio file. Any aligner offset at the start
+          // of the audio file (e.g. 5.54s Madd duration on Muqatta'at like "Alif-Lam-Meem") must be bridged
+          // from 0ms so the opening recitation is never cut off or skipped.
+          const isSequenceStart = a === config.fromAyah;
+          const isRecordingBeginning = config.fromAyah === (singleManifest?.start_ayah || 1);
+          const hasPrecedingBasmala = Boolean(singleManifest?.preamble?.has_basmala && shouldAddBismillah);
+          const effectiveStartMs = (isSequenceStart && isRecordingBeginning && !hasPrecedingBasmala)
+            ? 0
+            : customAyahTiming.start_ms;
+
           // Lookahead to the next custom ayah timing to smoothly bridge any silence / breathing gaps
           const nextCustomAyah = singleManifest?.ayahs.find((item) => item.ayah_number === a + 1);
           let rawDurationMs: number;
           if (nextCustomAyah) {
             // Span continuously until the next verse begins
             rawDurationMs = Math.max(
-              customAyahTiming.end_ms - customAyahTiming.start_ms,
-              nextCustomAyah.start_ms - customAyahTiming.start_ms
+              customAyahTiming.end_ms - effectiveStartMs,
+              nextCustomAyah.start_ms - effectiveStartMs
             );
           } else {
             // Last ayah in the selected range: extend to recording total_duration_ms if available
-            rawDurationMs = singleManifest?.total_duration_ms && singleManifest.total_duration_ms > customAyahTiming.start_ms
-              ? (singleManifest.total_duration_ms - customAyahTiming.start_ms)
-              : (customAyahTiming.duration_ms || (customAyahTiming.end_ms - customAyahTiming.start_ms));
+            rawDurationMs = singleManifest?.total_duration_ms && singleManifest.total_duration_ms > effectiveStartMs
+              ? (singleManifest.total_duration_ms - effectiveStartMs)
+              : (customAyahTiming.duration_ms || (customAyahTiming.end_ms - effectiveStartMs));
           }
 
           durationInSeconds = (rawDurationMs / 1000) / speed;
-          scaledSegments = convertAyahToRelativeSegments(customAyahTiming, speed);
-          audioStartMs = customAyahTiming.start_ms;
+
+          // If the verse has only 1 word (like Muqatta'at "الٓمٓ", "المص", "حم"), ensure the single word
+          // segment spans the full duration of the verse rather than cutting off mid-recitation.
+          if (customAyahTiming.words && customAyahTiming.words.length === 1) {
+            scaledSegments = [
+              {
+                wordIndex: customAyahTiming.words[0].word_index || 1,
+                startMs: 0,
+                endMs: Math.max(1, Math.round(rawDurationMs / speed)),
+              },
+            ];
+          } else {
+            scaledSegments = convertAyahToRelativeSegments(customAyahTiming, speed, effectiveStartMs);
+          }
+
+          audioStartMs = effectiveStartMs;
           audioEndMs = nextCustomAyah
             ? nextCustomAyah.start_ms
             : (singleManifest?.total_duration_ms || customAyahTiming.end_ms);
@@ -1542,6 +1571,9 @@ export const useStudioStore = create<StudioState>((set, get) => ({
           initialConfig.salatSegments = undefined;
           initialConfig.hasCustomTimestamp = true;
           initialConfig.customTimestampPath = restoredTimestampPath || initialConfig.customTimestampPath;
+          if (restoredManifest.preamble) {
+            initialConfig.includeBismillah = Boolean(restoredManifest.preamble.has_basmala);
+          }
         }
       }
 

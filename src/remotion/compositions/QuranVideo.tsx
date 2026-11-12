@@ -186,7 +186,13 @@ export const QuranVideo: React.FC<QuranVideoCompositionProps> = ({
     const firstAyah = ayahs[0];
     const offsetMs = firstAyah.audioStartMs || 0;
     const speed = config.recitationSpeed || 1.0;
-    fullAudioStartFromFrame = Math.max(0, Math.round((offsetMs / 1000) * config.fps * speed));
+    // When starting from the first verse of the sequence (or Bismillah ayah 0), do not skip opening frames
+    const isBeginning = firstAyah.ayah === 0 || firstAyah.ayah === 1;
+    if (isBeginning && (config.fromAyah === 1 || !firstAyah.audioStartMs)) {
+      fullAudioStartFromFrame = 0;
+    } else {
+      fullAudioStartFromFrame = Math.max(0, Math.round((offsetMs / 1000) * config.fps * speed));
+    }
   }
 
   return (

@@ -200,6 +200,10 @@ export const VerseSelector: React.FC = () => {
             <span className="text-[10px] bg-sky-500/20 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-full font-medium">
               Ayah 1 is Bismillah
             </span>
+          ) : isCustomTimingActive && (customTimestamp as any).preamble && !(customTimestamp as any).preamble.has_basmala ? (
+            <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-medium">
+              Omitted (Not in Audio)
+            </span>
           ) : (
             <label className="relative inline-flex items-center cursor-pointer">
               <input
@@ -218,6 +222,8 @@ export const VerseSelector: React.FC = () => {
             ? 'Surah At-Tawbah does not begin with Bismillah in the Holy Quran, so Bismillah is strictly omitted.'
             : config.surahNumber === 1 && config.fromAyah === 1
             ? 'Surah Al-Fatihah already begins with Bismillah as its first verse.'
+            : isCustomTimingActive && (customTimestamp as any).preamble && !(customTimestamp as any).preamble.has_basmala
+            ? 'The loaded custom audio file begins directly with verse recitation without a separate Basmala preamble.'
             : 'Prepend the recitation, synchronized karaoke, and typography of Bismillahi-r-Rahmani-r-Raheem at the beginning of the video.'}
         </p>
       </div>

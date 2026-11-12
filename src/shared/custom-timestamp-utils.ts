@@ -376,10 +376,11 @@ function validateSalatJammatManifest(parsed: any): ParseResult {
  */
 export function convertAyahToRelativeSegments(
   ayahTiming: WhisperAyahTiming,
-  speed: number = 1.0
+  speed: number = 1.0,
+  baseOffsetMs?: number
 ): WordSegment[] {
   const safeSpeed = Math.max(0.5, Math.min(2.0, speed));
-  const baseStartMs = ayahTiming.start_ms;
+  const baseStartMs = baseOffsetMs !== undefined ? baseOffsetMs : ayahTiming.start_ms;
 
   return (ayahTiming.words || []).map((w) => ({
     wordIndex: w.word_index,
