@@ -243,7 +243,7 @@ class RenderSessionManager {
       framesPerChunk,
       totalChunks,
       hasAudio: true,
-      audioFileName: 'master_audio.aac',
+      audioFileName: 'master_audio.m4a',
       audioCompleted: false,
       chunks,
       status: 'in-progress',

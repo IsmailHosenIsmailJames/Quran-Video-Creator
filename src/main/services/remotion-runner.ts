@@ -243,6 +243,148 @@ class RemotionRunnerService {
     return devPath;
   }
 
+  private async generateMasterAudioFastPath({
+    config,
+    ayahs,
+    totalDurationInFrames,
+    audioOutputPath,
+    binariesDirectory,
+    cleanMediaFilePath,
+    cancelSignal,
+  }: {
+    config: VideoTemplateConfig;
+    ayahs: AyahSequenceData[];
+    totalDurationInFrames: number;
+    audioOutputPath: string;
+    binariesDirectory?: string | null;
+    cleanMediaFilePath: (p?: string | null) => string;
+    cancelSignal?: any;
+  }): Promise<boolean> {
+    const effectiveAudioPath =
+      config.useRecitationVideoAudio && config.recitationVideoPath
+        ? config.recitationVideoPath
+        : config.customAudioPath;
+
+    const isFullAudioMode = Boolean(
+      effectiveAudioPath &&
+      (config.recitationAudioMode === 'full-surah-file' ||
+        config.hasCustomTimestamp ||
+        (config.useRecitationVideoAudio && Boolean(config.recitationVideoPath)))
+    );
+
+    if (!isFullAudioMode || !effectiveAudioPath) {
+      console.log('[RemotionRunner] Master audio fast-path: Non-full-audio mode, falling back to standard audio renderer.');
+      return false;
+    }
+
+    const cleanAudioPath = cleanMediaFilePath(effectiveAudioPath);
+    if (!cleanAudioPath || !fs.existsSync(cleanAudioPath)) {
+      console.warn('[RemotionRunner] Master audio fast-path: Source audio file not found on disk:', cleanAudioPath);
+      return false;
+    }
+
+    const fps = config.fps || 30;
+    const isIntroActive = Boolean(
+      config.enableIntroVideo &&
+      (config.introMode === 'custom-video' ? config.introVideoPath : true) &&
+      !(Boolean(config.skipIntroForShorts) && config.aspectRatio === '9:16')
+    );
+    const introDurationInFrames = isIntroActive
+      ? Math.max(1, Math.round((config.introVideoDurationSeconds || 4) * fps))
+      : 0;
+
+    const isTitleCardActive = Boolean(
+      config.enableSurahTitleCard &&
+      !(Boolean(config.skipTitleCardForShorts) && config.aspectRatio === '9:16')
+    );
+    const titleCardDurationInFrames = isTitleCardActive
+      ? Math.max(1, Math.round((config.titleCardDurationSeconds || 3.5) * fps))
+      : 0;
+    const scriptureStartFrame = introDurationInFrames + titleCardDurationInFrames;
+
+    const speed = config.recitationSpeed || 1.0;
+
+    let fullAudioStartFromFrame = 0;
+    if (ayahs && ayahs.length > 0) {
+      const firstAyah = ayahs[0];
+      const offsetMs = firstAyah.audioStartMs || 0;
+      const isBeginning = firstAyah.ayah === 0 || firstAyah.ayah === 1;
+      if (isBeginning && (config.fromAyah === 1 || !firstAyah.audioStartMs)) {
+        fullAudioStartFromFrame = 0;
+      } else {
+        fullAudioStartFromFrame = Math.max(0, Math.round((offsetMs / 1000) * fps * speed));
+      }
+    }
+
+    const delayMs = Math.round((scriptureStartFrame / fps) * 1000);
+    const startOffsetSeconds = fullAudioStartFromFrame > 0 ? fullAudioStartFromFrame / (fps * speed) : 0;
+    const totalDurationSeconds = totalDurationInFrames / fps;
+
+    const outDir = path.dirname(audioOutputPath);
+    if (!fs.existsSync(outDir)) {
+      fs.mkdirSync(outDir, { recursive: true });
+    }
+
+    const ffmpegArgs: string[] = ['-hide_banner', '-y'];
+
+    if (startOffsetSeconds > 0) {
+      ffmpegArgs.push('-ss', startOffsetSeconds.toFixed(4));
+    }
+
+    ffmpegArgs.push('-i', cleanAudioPath);
+
+    const audioFilters: string[] = [];
+    if (Math.abs(speed - 1.0) > 0.005) {
+      let remaining = speed;
+      while (remaining > 2.0) {
+        audioFilters.push('atempo=2.0');
+        remaining /= 2.0;
+      }
+      while (remaining < 0.5) {
+        audioFilters.push('atempo=0.5');
+        remaining /= 0.5;
+      }
+      audioFilters.push(`atempo=${remaining.toFixed(4)}`);
+    }
+
+    if (delayMs > 0) {
+      audioFilters.push(`adelay=${delayMs}:all=1`);
+    }
+
+    audioFilters.push('apad');
+
+    ffmpegArgs.push('-af', audioFilters.join(','));
+    ffmpegArgs.push(
+      '-t',
+      totalDurationSeconds.toFixed(4),
+      '-c:a',
+      'aac',
+      '-b:a',
+      '192k',
+      audioOutputPath
+    );
+
+    console.log(
+      `[RemotionRunner] Executing native FFmpeg master audio fast-path: scriptureStartFrame=${scriptureStartFrame}, delayMs=${delayMs}, startOffset=${startOffsetSeconds}s, speed=${speed}, totalDuration=${totalDurationSeconds}s`
+    );
+
+    await RenderInternals.callFf({
+      args: ffmpegArgs,
+      bin: 'ffmpeg',
+      indent: false,
+      logLevel: 'info',
+      binariesDirectory: binariesDirectory ?? null,
+      cancelSignal,
+    });
+
+    if (fs.existsSync(audioOutputPath) && fs.statSync(audioOutputPath).size > 512) {
+      console.log(`[RemotionRunner] Master audio fast-path completed successfully: ${audioOutputPath}`);
+      return true;
+    }
+
+    return false;
+  }
+
   public async renderVideo(
     jobId: string,
     config: VideoTemplateConfig,
@@ -629,25 +771,49 @@ class RemotionRunnerService {
         });
 
         try {
-          await renderMedia({
-            composition,
-            serveUrl: bundleLocation,
-            codec: 'aac',
-            outputLocation: audioPath,
-            inputProps: inputProps as unknown as Record<string, unknown>,
-            browserExecutable,
-            binariesDirectory,
-            cancelSignal,
-          });
+          // Attempt high-speed native FFmpeg audio synthesis first (bypasses Chromium DOM evaluation)
+          let fastPathOk = false;
+          try {
+            fastPathOk = await this.generateMasterAudioFastPath({
+              config,
+              ayahs,
+              totalDurationInFrames,
+              audioOutputPath: audioPath,
+              binariesDirectory,
+              cleanMediaFilePath,
+              cancelSignal,
+            });
+          } catch (fpErr: any) {
+            console.warn('[RemotionRunner] Fast-path master audio attempt failed, will fall back:', fpErr?.message);
+            fastPathOk = false;
+          }
 
-          if (fs.existsSync(audioPath) && fs.statSync(audioPath).size > 512) {
+          if (fastPathOk && fs.existsSync(audioPath) && fs.statSync(audioPath).size > 512) {
             manifest.audioCompleted = true;
             manifest.hasAudio = true;
             renderSessionManager.saveManifest(sessionDir, manifest);
           } else {
-            manifest.audioCompleted = true;
-            manifest.hasAudio = false;
-            renderSessionManager.saveManifest(sessionDir, manifest);
+            console.log('[RemotionRunner] Rendering master audio track via Remotion Chromium fallback...');
+            await renderMedia({
+              composition,
+              serveUrl: bundleLocation,
+              codec: 'aac',
+              outputLocation: audioPath,
+              inputProps: inputProps as unknown as Record<string, unknown>,
+              browserExecutable,
+              binariesDirectory,
+              cancelSignal,
+            });
+
+            if (fs.existsSync(audioPath) && fs.statSync(audioPath).size > 512) {
+              manifest.audioCompleted = true;
+              manifest.hasAudio = true;
+              renderSessionManager.saveManifest(sessionDir, manifest);
+            } else {
+              manifest.audioCompleted = true;
+              manifest.hasAudio = false;
+              renderSessionManager.saveManifest(sessionDir, manifest);
+            }
           }
         } catch (audioErr: any) {
           console.warn('[RemotionRunner] Audio track notice:', audioErr?.message);
