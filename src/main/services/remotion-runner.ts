@@ -598,10 +598,24 @@ class RemotionRunnerService {
       });
 
       const cpuCount = require('os').cpus().length || 4;
-      // Balance concurrency to avoid thread contention and hardware video decoder saturation on high-res renders
-      const concurrency = config.resolution === '4k'
-        ? Math.min(3, Math.max(1, Math.floor(cpuCount / 2)))
-        : Math.min(4, Math.max(1, Math.floor(cpuCount / 2)));
+      const is4K = config.resolution === '4k';
+
+      // Maximize CPU utilization on multi-core processors (e.g. Apple Silicon M4 with 10 cores)
+      // Reserve 1-2 cores for system responsiveness, Electron UI, and FFmpeg multiplexer, utilizing the rest for parallel browser rendering
+      const concurrency = is4K
+        ? Math.max(2, Math.min(cpuCount, Math.max(2, cpuCount - 3)))
+        : Math.max(2, Math.min(cpuCount, Math.max(2, cpuCount - 2)));
+
+      // Dedicated parallel threads for Remotion compositor to decode OffthreadVideo frames.
+      // Default in Remotion is only 2, which starves multi-threaded browser rendering
+      const offthreadVideoThreads = Math.max(4, Math.min(8, Math.floor(cpuCount * 0.6)));
+
+      // Fast encoding preset: 'veryfast' cuts H.264 CPU compression overhead by 50%+ with visually identical quality
+      const x264Preset = 'veryfast';
+
+      console.log(
+        `[RemotionRunner] Configured render performance: cpuCount=${cpuCount}, concurrency=${concurrency}, offthreadVideoThreads=${offthreadVideoThreads}, x264Preset=${x264Preset}, gl=${process.platform === 'darwin' ? 'angle' : 'default'}`
+      );
 
       // 3. Audio Synchronization Track (Rendered once up front for continuous sync)
       const audioPath = path.join(sessionDir, manifest.audioFileName);
@@ -712,8 +726,10 @@ class RemotionRunnerService {
           outputLocation: chunkVideoPath,
           frameRange: [chunk.startFrame, chunk.endFrame],
           inputProps: inputProps as unknown as Record<string, unknown>,
-          crf: config.resolution === '4k' ? 18 : 22,
+          crf: is4K ? 18 : 22,
           concurrency,
+          offthreadVideoThreads,
+          x264Preset,
           cancelSignal,
           browserExecutable,
           binariesDirectory,
@@ -721,6 +737,7 @@ class RemotionRunnerService {
           chromiumOptions: {
             enableMultiProcessOnLinux: true,
             disableWebSecurity: true,
+            gl: process.platform === 'darwin' ? 'angle' : null,
           },
           onProgress: ({ renderedFrames, renderEstimatedTime }) => {
             if (isCancelled) return;

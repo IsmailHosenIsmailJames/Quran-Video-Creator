@@ -44,12 +44,12 @@ const ClipItem: React.FC<ClipItemProps> = ({
     Math.min(Math.floor(durationInFrames / 2), clip.transitionDurationFrames || 24)
   );
 
-  const transition: TransitionType = isFirst ? 'cut' : clip.transition || 'crossfade';
+  const transition: TransitionType = (isFirst || durationInFrames <= 2) ? 'cut' : clip.transition || 'crossfade';
 
   // Transition In Progress (0 to 1)
-  const inProgress = transition === 'cut'
+  const inProgress = transition === 'cut' || transitionFrames <= 0
     ? 1
-    : interpolate(frame, [0, transitionFrames], [0, 1], {
+    : interpolate(frame, [0, Math.max(1, transitionFrames)], [0, 1], {
         extrapolateLeft: 'clamp',
         extrapolateRight: 'clamp',
       });
@@ -160,6 +160,8 @@ const ClipItem: React.FC<ClipItemProps> = ({
             playbackRate={effectivePlaybackRate}
             pauseWhenBuffering
             muted
+            toneMapped={false}
+            transparent={false}
             style={{
               width: '100%',
               height: '100%',
@@ -204,44 +206,56 @@ export const BackgroundLayer: React.FC<BackgroundLayerProps> = ({
 }) => {
   const activeClips = clips && clips.length > 0 ? clips : null;
 
-  // Calculate proportional frame distribution for multi-media clips using percentage
+  // Calculate mathematically robust proportional frame distribution for multi-media clips
   const clipSequences = React.useMemo(() => {
-    if (!activeClips || activeClips.length === 0) return [];
+    if (!activeClips || activeClips.length === 0 || totalDurationInFrames <= 0) return [];
 
     const totalWeight = activeClips.reduce(
-      (sum, c) => sum + (c.percentage !== undefined ? c.percentage : (c.durationRatio || 1.0) * 100),
+      (sum, c) => sum + (c.percentage !== undefined && c.percentage > 0 ? c.percentage : (c.durationRatio || 1.0) * 100),
       0
     );
     const validTotalWeight = totalWeight > 0 ? totalWeight : activeClips.length;
 
-    let currentStart = 0;
+    let accumulatedWeight = 0;
     const items: Array<{ clip: BackgroundClip; startFrame: number; durationFrames: number }> = [];
 
     activeClips.forEach((clip, index) => {
       const isLast = index === activeClips.length - 1;
-      const weight = clip.percentage !== undefined ? clip.percentage : (clip.durationRatio || 1.0) * 100;
-      const proportionalFrames = Math.max(
-        15,
-        Math.round((weight / validTotalWeight) * totalDurationInFrames)
+      const weight = clip.percentage !== undefined && clip.percentage > 0
+        ? clip.percentage
+        : (clip.durationRatio && clip.durationRatio > 0 ? clip.durationRatio * 100 : 100 / activeClips.length);
+
+      const startFrame = Math.min(
+        totalDurationInFrames - 1,
+        Math.round((accumulatedWeight / validTotalWeight) * totalDurationInFrames)
       );
 
-      const durationFrames = isLast
-        ? Math.max(15, totalDurationInFrames - currentStart)
-        : proportionalFrames;
+      accumulatedWeight += weight;
 
-      // Allow clips to overlap slightly during transition window so the underlying clip remains visible during fades
-      const transFrames = clip.transitionDurationFrames || 24;
-      const extendedDuration = isLast
-        ? durationFrames
-        : durationFrames + transFrames;
+      const endFrame = isLast
+        ? totalDurationInFrames
+        : Math.min(
+            totalDurationInFrames,
+            Math.round((accumulatedWeight / validTotalWeight) * totalDurationInFrames)
+          );
 
-      items.push({
-        clip,
-        startFrame: currentStart,
-        durationFrames: Math.min(totalDurationInFrames - currentStart, extendedDuration),
-      });
+      const rawDuration = Math.max(1, endFrame - startFrame);
 
-      currentStart += durationFrames;
+      // Only schedule if startFrame is strictly within totalDurationInFrames
+      if (startFrame < totalDurationInFrames && rawDuration > 0) {
+        // Allow clips to overlap slightly during transition window so the underlying clip remains visible during fades
+        // Cap transition duration to at most half of the clip's duration
+        const maxTransitionAllowed = Math.max(0, Math.floor(rawDuration / 2));
+        const transFrames = Math.min(maxTransitionAllowed, clip.transitionDurationFrames || 24);
+        const extendedDuration = isLast ? rawDuration : rawDuration + transFrames;
+        const finalDuration = Math.max(1, Math.min(totalDurationInFrames - startFrame, extendedDuration));
+
+        items.push({
+          clip,
+          startFrame,
+          durationFrames: finalDuration,
+        });
+      }
     });
 
     return items;
@@ -267,6 +281,8 @@ export const BackgroundLayer: React.FC<BackgroundLayerProps> = ({
             playbackRate={1.0}
             pauseWhenBuffering
             muted
+            toneMapped={false}
+            transparent={false}
             style={{
               width: '100%',
               height: '100%',

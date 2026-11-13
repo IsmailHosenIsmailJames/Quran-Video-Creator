@@ -1,6 +1,7 @@
 import {
   WhisperTimestampManifest,
   WhisperAyahTiming,
+  WhisperWordTiming,
   WhisperPreambleItem,
   WordSegment,
   SalatJammatManifest,
@@ -129,13 +130,38 @@ export function validateAndParseTimestampJson(rawInput: string | unknown): Parse
           };
         }
 
+        let intervals: WhisperWordTiming['intervals'] = undefined;
+        if (Array.isArray(rawWord.intervals) && rawWord.intervals.length > 0) {
+          intervals = rawWord.intervals
+            .map((intv: any) => ({
+              start_ms: Number(intv.start_ms || 0),
+              end_ms: Number(intv.end_ms || 0),
+              is_repeat: Boolean(intv.is_repeat),
+            }))
+            .filter((intv: any) => !isNaN(intv.start_ms) && !isNaN(intv.end_ms) && intv.end_ms >= intv.start_ms);
+        }
+
         validatedWords.push({
           word_index: wordIndex,
           text_uthmani: String(rawWord.text_uthmani || '').trim(),
           start_ms: wStartMs,
           end_ms: wEndMs,
+          intervals,
         });
       }
+    }
+
+    let timelineSegments: WhisperAyahTiming['timeline_segments'] = undefined;
+    if (Array.isArray(rawAyah.timeline_segments) && rawAyah.timeline_segments.length > 0) {
+      timelineSegments = rawAyah.timeline_segments
+        .map((seg: any) => ({
+          word_index: Number(seg.word_index || 1),
+          text_uthmani: seg.text_uthmani ? String(seg.text_uthmani).trim() : undefined,
+          start_ms: Number(seg.start_ms || 0),
+          end_ms: Number(seg.end_ms || 0),
+          is_repeat: Boolean(seg.is_repeat),
+        }))
+        .filter((seg: any) => !isNaN(seg.start_ms) && !isNaN(seg.end_ms) && seg.end_ms >= seg.start_ms);
     }
 
     validatedAyahs.push({
@@ -146,6 +172,7 @@ export function validateAndParseTimestampJson(rawInput: string | unknown): Parse
       duration_ms: durationMs,
       word_count: validatedWords.length || Number(rawAyah.word_count || 0),
       words: validatedWords,
+      timeline_segments: timelineSegments,
     });
   }
 
@@ -276,13 +303,39 @@ function validateSalatJammatManifest(parsed: any): ParseResult {
               error: `Word at index ${w} in Ayah ${ayahNumber} has invalid timestamps.`,
             };
           }
+
+          let intervals: WhisperWordTiming['intervals'] = undefined;
+          if (Array.isArray(rawWord.intervals) && rawWord.intervals.length > 0) {
+            intervals = rawWord.intervals
+              .map((intv: any) => ({
+                start_ms: Number(intv.start_ms || 0),
+                end_ms: Number(intv.end_ms || 0),
+                is_repeat: Boolean(intv.is_repeat),
+              }))
+              .filter((intv: any) => !isNaN(intv.start_ms) && !isNaN(intv.end_ms) && intv.end_ms >= intv.start_ms);
+          }
+
           validatedWords.push({
             word_index: wordIndex,
             text_uthmani: String(rawWord.text_uthmani || '').trim(),
             start_ms: wStartMs,
             end_ms: wEndMs,
+            intervals,
           });
         }
+      }
+
+      let timelineSegments: WhisperAyahTiming['timeline_segments'] = undefined;
+      if (Array.isArray(rawAyah.timeline_segments) && rawAyah.timeline_segments.length > 0) {
+        timelineSegments = rawAyah.timeline_segments
+          .map((seg: any) => ({
+            word_index: Number(seg.word_index || 1),
+            text_uthmani: seg.text_uthmani ? String(seg.text_uthmani).trim() : undefined,
+            start_ms: Number(seg.start_ms || 0),
+            end_ms: Number(seg.end_ms || 0),
+            is_repeat: Boolean(seg.is_repeat),
+          }))
+          .filter((seg: any) => !isNaN(seg.start_ms) && !isNaN(seg.end_ms) && seg.end_ms >= seg.start_ms);
       }
 
       const salatAyah: WhisperSalatAyahTiming = {
@@ -293,6 +346,7 @@ function validateSalatJammatManifest(parsed: any): ParseResult {
         duration_ms: durationMs,
         word_count: validatedWords.length || Number(rawAyah.word_count || 0),
         words: validatedWords,
+        timeline_segments: timelineSegments,
         segment_id: segmentId,
         segment_label: label,
         surah_number: surahNumber,
@@ -382,11 +436,42 @@ export function convertAyahToRelativeSegments(
   const safeSpeed = Math.max(0.5, Math.min(2.0, speed));
   const baseStartMs = baseOffsetMs !== undefined ? baseOffsetMs : ayahTiming.start_ms;
 
-  return (ayahTiming.words || []).map((w) => ({
-    wordIndex: w.word_index,
-    startMs: Math.max(0, Math.round((w.start_ms - baseStartMs) / safeSpeed)),
-    endMs: Math.max(0, Math.round((w.end_ms - baseStartMs) / safeSpeed)),
-  }));
+  const rawSegments: WordSegment[] = [];
+
+  // 1. If explicit timeline_segments is present (contains full chronological stream including repeats)
+  if (Array.isArray(ayahTiming.timeline_segments) && ayahTiming.timeline_segments.length > 0) {
+    for (const seg of ayahTiming.timeline_segments) {
+      rawSegments.push({
+        wordIndex: seg.word_index,
+        startMs: Math.max(0, Math.round((seg.start_ms - baseStartMs) / safeSpeed)),
+        endMs: Math.max(0, Math.round((seg.end_ms - baseStartMs) / safeSpeed)),
+      });
+    }
+  } else if (Array.isArray(ayahTiming.words)) {
+    // 2. Otherwise expand words, unpacking multiple intervals for repeated words if present
+    for (const w of ayahTiming.words) {
+      if (Array.isArray(w.intervals) && w.intervals.length > 0) {
+        for (const intv of w.intervals) {
+          rawSegments.push({
+            wordIndex: w.word_index,
+            startMs: Math.max(0, Math.round((intv.start_ms - baseStartMs) / safeSpeed)),
+            endMs: Math.max(0, Math.round((intv.end_ms - baseStartMs) / safeSpeed)),
+          });
+        }
+      } else {
+        rawSegments.push({
+          wordIndex: w.word_index,
+          startMs: Math.max(0, Math.round((w.start_ms - baseStartMs) / safeSpeed)),
+          endMs: Math.max(0, Math.round((w.end_ms - baseStartMs) / safeSpeed)),
+        });
+      }
+    }
+  }
+
+  // Strictly sort chronological sequence so repeats naturally trigger at their exact spoken frames
+  rawSegments.sort((a, b) => a.startMs - b.startMs);
+
+  return rawSegments;
 }
 
 /**

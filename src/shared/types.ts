@@ -72,11 +72,26 @@ export interface AyahAudioData {
   segments: WordSegment[];
 }
 
+export interface WhisperWordInterval {
+  start_ms: number;
+  end_ms: number;
+  is_repeat?: boolean;
+}
+
 export interface WhisperWordTiming {
   word_index: number;
   text_uthmani: string;
   start_ms: number;
   end_ms: number;
+  intervals?: WhisperWordInterval[];
+}
+
+export interface WhisperTimelineSegment {
+  word_index: number;
+  text_uthmani?: string;
+  start_ms: number;
+  end_ms: number;
+  is_repeat?: boolean;
 }
 
 export interface WhisperAyahTiming {
@@ -87,6 +102,7 @@ export interface WhisperAyahTiming {
   duration_ms: number;
   word_count: number;
   words: WhisperWordTiming[];
+  timeline_segments?: WhisperTimelineSegment[];
 }
 
 export interface WhisperPreambleItem {

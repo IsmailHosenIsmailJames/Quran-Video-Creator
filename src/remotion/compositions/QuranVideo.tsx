@@ -71,6 +71,8 @@ const IntroSequence: React.FC<IntroSequenceProps> = ({
       <OffthreadVideo
         src={getMediaUrl(videoPath)}
         muted={muted}
+        toneMapped={false}
+        transparent={false}
         style={{
           width: '100%',
           height: '100%',

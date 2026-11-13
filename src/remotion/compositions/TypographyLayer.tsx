@@ -467,18 +467,40 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
 
   const currentMs = (frame / fps) * 1000;
 
+  // Determine active word position based on current millisecond
+  let activeSegment = ayahData.segments.find(
+    (seg) => currentMs >= seg.startMs && currentMs <= seg.endMs
+  );
+
+  // If in a micro-gap between segments (up to 650ms), bridge to previous segment
+  if (!activeSegment && ayahData.segments && ayahData.segments.length > 0) {
+    const prevSeg = ayahData.segments
+      .filter((s) => s.endMs <= currentMs && currentMs - s.endMs <= 650)
+      .pop();
+    if (prevSeg) {
+      activeSegment = prevSeg;
+    }
+  }
+  const activeWordIndex = activeSegment ? activeSegment.wordIndex : -1;
+
   // Compute phrasing chunks for this Ayah based on Waqf & reciter pauses
   const chunks = useMemo(() => {
     return computeAyahChunks(ayahData, config);
   }, [ayahData, config]);
 
+  const isChunked = chunks.length > 1;
+
   // Determine active chunk based on current playback millisecond
+  // When activeWordIndex is known, prioritize the chunk that contains this word (guarantees repeats are visible!)
+  const chunkWithActiveWord = isChunked && activeWordIndex !== -1
+    ? chunks.find((c) => c.words.some((w) => w.word === activeWordIndex))
+    : null;
+
   const activeChunk =
+    chunkWithActiveWord ||
     chunks.find((c) => currentMs >= c.startMs && currentMs < c.endMs) ||
     chunks[chunks.length - 1] ||
     chunks[0];
-
-  const isChunked = chunks.length > 1;
 
   // Chunk-level smooth transition for phrase-by-phrase display
   const chunkStartFrame = Math.floor((activeChunk.startMs / 1000) * fps);
@@ -521,11 +543,6 @@ export const TypographyLayer: React.FC<TypographyLayerProps> = ({
   const finalArabicTransform = `translateY(${finalArabicTranslateY}px) scale(${arabicScale.toFixed(4)}) perspective(100px)`;
   const finalSubTransform = `translateY(${finalSubTranslateY}px) scale(${subScale.toFixed(4)}) perspective(100px)`;
 
-  // Determine active word position based on current millisecond
-  const activeSegment = ayahData.segments.find(
-    (seg) => currentMs >= seg.startMs && currentMs <= seg.endMs
-  );
-  const activeWordIndex = activeSegment ? activeSegment.wordIndex : -1;
 
   // Format Surah title string for surah-name-v1 font ligature
   const surahLigatureCode = `surah${String(ayahData.surah).padStart(3, '0')}`;

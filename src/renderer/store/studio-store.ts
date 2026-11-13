@@ -668,8 +668,8 @@ export const useStudioStore = create<StudioState>((set, get) => ({
       if (clipIndex === -1 || currentClips.length <= 1) return state;
 
       const totalClips = currentClips.length;
-      const minPercentage = 2.0;
-      const maxPercentage = 100 - (totalClips - 1) * minPercentage;
+      const minPercentage = Math.min(1.0, Math.max(0.01, Number((50 / totalClips).toFixed(3))));
+      const maxPercentage = Math.max(minPercentage, 100 - (totalClips - 1) * minPercentage);
       const clampedTarget = Math.max(minPercentage, Math.min(maxPercentage, newPercentage));
 
       const oldClip = currentClips[clipIndex];

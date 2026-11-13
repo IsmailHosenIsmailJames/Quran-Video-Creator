@@ -630,7 +630,7 @@ export const VisualsTab: React.FC = () => {
                 </button>
               </div>
             </div>
-            <div className="space-y-1.5 pt-1">
+            <div className="space-y-1.5 pt-1 max-h-72 overflow-y-auto pr-1">
               {config.backgroundClips.slice(1).map((clip, idx) => (
                 <div
                   key={clip.id}

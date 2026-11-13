@@ -235,19 +235,27 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
   // Calculate normalized percentages, duration, and Ayah verse coverage for each clip
   const clipLayouts = useMemo(() => {
     const totalClips = clips.length;
+    if (totalClips === 0) return [];
+
     const totalWeight = clips.reduce(
-      (sum, c) => sum + (c.percentage !== undefined ? c.percentage : (c.durationRatio || 1.0) * 100),
+      (sum, c) => sum + (c.percentage !== undefined && c.percentage > 0 ? c.percentage : (c.durationRatio || 1.0) * 100),
       0
     );
-    const norm = totalWeight > 0 ? 100 / totalWeight : 1;
+    const validTotalWeight = totalWeight > 0 ? totalWeight : totalClips;
 
     let accumulatedPercent = 0;
     return clips.map((clip, index) => {
       const isLast = index === totalClips - 1;
-      const rawPct = (clip.percentage !== undefined ? clip.percentage : (clip.durationRatio || 1.0) * 100) * norm;
-      const percent = isLast ? Math.max(2, 100 - accumulatedPercent) : Math.max(2, Number(rawPct.toFixed(2)));
+      const weight = clip.percentage !== undefined && clip.percentage > 0
+        ? clip.percentage
+        : (clip.durationRatio && clip.durationRatio > 0 ? clip.durationRatio * 100 : 100 / totalClips);
+
       const startPercent = accumulatedPercent;
-      accumulatedPercent += percent;
+      const rawEndPercent = isLast
+        ? 100
+        : Math.min(100, Number((accumulatedPercent + (weight / validTotalWeight) * 100).toFixed(4)));
+      const percent = Math.max(0.001, Number((rawEndPercent - startPercent).toFixed(4)));
+      accumulatedPercent = rawEndPercent;
 
       const durationSec = Number(((percent / 100) * (recitationFrames / fps)).toFixed(1));
 
@@ -618,21 +626,33 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
     const totalClips = clips.length;
     const totalAyahs = ayahs.length;
 
-    const ayahsPerClip = totalAyahs / totalClips;
-    const updatedClips = clips.map((clip, idx) => {
-      const fromIdx = Math.floor(idx * ayahsPerClip);
-      const toIdx = idx === totalClips - 1 ? totalAyahs - 1 : Math.floor((idx + 1) * ayahsPerClip) - 1;
+    let updatedClips: BackgroundClip[];
 
-      const bucketAyahs = ayahs.slice(fromIdx, toIdx + 1);
-      const bucketFrames = bucketAyahs.reduce((sum, a) => sum + a.durationInFrames, 0);
-      const pct = Number(((bucketFrames / recitationFrames) * 100).toFixed(2));
-
-      return {
+    if (totalClips > totalAyahs) {
+      // More clips than Ayahs: distribute clips evenly across the entire timeline
+      const share = Number((100 / totalClips).toFixed(4));
+      updatedClips = clips.map((clip) => ({
         ...clip,
-        percentage: Math.max(2, pct),
-        durationRatio: Number((pct / 100).toFixed(4)),
-      };
-    });
+        percentage: share,
+        durationRatio: Number((share / 100).toFixed(4)),
+      }));
+    } else {
+      const ayahsPerClip = totalAyahs / totalClips;
+      updatedClips = clips.map((clip, idx) => {
+        const fromIdx = Math.floor(idx * ayahsPerClip);
+        const toIdx = idx === totalClips - 1 ? totalAyahs - 1 : Math.floor((idx + 1) * ayahsPerClip) - 1;
+
+        const bucketAyahs = ayahs.slice(fromIdx, toIdx + 1);
+        const bucketFrames = bucketAyahs.reduce((sum, a) => sum + a.durationInFrames, 0);
+        const pct = Math.max(0.1, Number(((bucketFrames / recitationFrames) * 100).toFixed(2)));
+
+        return {
+          ...clip,
+          percentage: pct,
+          durationRatio: Number((pct / 100).toFixed(4)),
+        };
+      });
+    }
 
     const sum = updatedClips.reduce((s, c) => s + (c.percentage || 0), 0);
     const diff = 100 - sum;
@@ -711,7 +731,8 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
       }
 
       const snappedDuration = bestEndFrame - bestStartFrame;
-      const newPct = Math.max(2, Number(((snappedDuration / recitationFrames) * 100).toFixed(2)));
+      const minSnapPct = Math.min(1.0, 50 / Math.max(1, clips.length));
+      const newPct = Math.max(minSnapPct, Number(((snappedDuration / recitationFrames) * 100).toFixed(2)));
       updateClipPercentage(clipId, newPct);
     },
     [clipLayouts, ayahTimeMap, recitationFrames, updateClipPercentage]
@@ -1179,12 +1200,9 @@ export const StudioTimeline: React.FC<StudioTimelineProps> = ({
                         e.stopPropagation();
                         setSelectedClipId(clip.id);
                         setSelectedAyahNumber(null);
-                        let clipStart = preScriptureFrames;
-                        for (let k = 0; k < index; k++) {
-                          clipStart += Math.round(recitationFrames * clipLayouts[k].percent);
-                        }
-                        setCurrentFrame(clipStart);
-                        playerRef.current?.seekTo(clipStart);
+                        const targetFrame = Math.round(clipLayouts[index]?.clipStartTotal ?? preScriptureFrames);
+                        setCurrentFrame(targetFrame);
+                        playerRef.current?.seekTo(targetFrame);
                         navigateToTabSection('visuals', 'visuals-background-clips');
                       }}
                       onClick={(e) => {
