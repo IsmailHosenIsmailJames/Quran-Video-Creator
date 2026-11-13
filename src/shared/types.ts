@@ -110,6 +110,7 @@ export interface WhisperPreambleItem {
   start_ms: number;
   end_ms: number;
   duration_ms: number;
+  words?: WhisperWordTiming[];
 }
 
 export interface WhisperPreamble {

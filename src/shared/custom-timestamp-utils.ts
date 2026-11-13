@@ -476,21 +476,45 @@ export function convertAyahToRelativeSegments(
 
 /**
  * Creates relative word segments for the Bismillah preface (Ayah 0) from preamble data.
+ * If individual word timestamps exist (from recitation_processor), uses exact acoustic intervals.
+ * Otherwise, applies realistic phonetic weighting (Bism: 15%, Allahi: 25%, Al-Rahmani: 30%, Al-Rahim: 30%)
+ * respecting basmala.start_ms rather than blindly highlighting from 0ms.
  */
 export function convertBasmalaToRelativeSegments(
   basmala: WhisperPreambleItem,
-  speed: number = 1.0
+  speed: number = 1.0,
+  baseOffsetMs: number = 0
 ): WordSegment[] {
   const safeSpeed = Math.max(0.5, Math.min(2.0, speed));
-  const totalMs = Math.round(basmala.duration_ms / safeSpeed);
 
-  // Default 4 words of Bismillah (Bism, Allahi, Al-Rahmani, Al-Rahim)
-  const quarter = Math.round(totalMs / 4);
+  // 1. If individual word timings exist from Whisper alignment, use exact acoustic timestamps
+  if (Array.isArray(basmala.words) && basmala.words.length > 0) {
+    return basmala.words.map((w) => ({
+      wordIndex: w.word_index,
+      startMs: Math.max(0, Math.round((w.start_ms - baseOffsetMs) / safeSpeed)),
+      endMs: Math.max(0, Math.round((w.end_ms - baseOffsetMs) / safeSpeed)),
+    }));
+  }
+
+  // 2. Intelligent phonetic interpolation fallback
+  const startOffsetMs = Math.max(0, Math.round(((basmala.start_ms || 0) - baseOffsetMs) / safeSpeed));
+  const endOffsetMs = Math.max(
+    startOffsetMs + 100,
+    Math.round(((basmala.end_ms || basmala.duration_ms || 0) - baseOffsetMs) / safeSpeed)
+  );
+  const recitationDurationMs = endOffsetMs - startOffsetMs;
+
+  // Syllabic distribution: Bism (15%), Allahi (25%), Al-Rahmani (30%), Al-Rahim (30%)
+  const w1End = startOffsetMs + Math.round(recitationDurationMs * 0.15);
+  const w2End = startOffsetMs + Math.round(recitationDurationMs * 0.40);
+  const w3End = startOffsetMs + Math.round(recitationDurationMs * 0.70);
+  const w4End = endOffsetMs;
+
   return [
-    { wordIndex: 1, startMs: 0, endMs: quarter },
-    { wordIndex: 2, startMs: quarter, endMs: quarter * 2 },
-    { wordIndex: 3, startMs: quarter * 2, endMs: quarter * 3 },
-    { wordIndex: 4, startMs: quarter * 3, endMs: totalMs },
+    { wordIndex: 1, startMs: startOffsetMs, endMs: w1End },
+    { wordIndex: 2, startMs: w1End, endMs: w2End },
+    { wordIndex: 3, startMs: w2End, endMs: w3End },
+    { wordIndex: 4, startMs: w3End, endMs: w4End },
   ];
 }
 

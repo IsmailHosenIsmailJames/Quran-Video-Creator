@@ -1232,7 +1232,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
               ? firstAyahTiming.start_ms
               : basmala.duration_ms;
             bDurationInSeconds = (rawBasmalaMs / 1000) / speed;
-            scaledBismillahSegments = convertBasmalaToRelativeSegments(basmala, speed);
+            scaledBismillahSegments = convertBasmalaToRelativeSegments(basmala, speed, 0);
             bStartMs = 0;
             bEndMs = firstAyahTiming ? firstAyahTiming.start_ms : basmala.end_ms;
           }
