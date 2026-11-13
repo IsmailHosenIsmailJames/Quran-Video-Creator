@@ -332,6 +332,7 @@ class RemotionRunnerService {
     }
 
     ffmpegArgs.push('-i', cleanAudioPath);
+    ffmpegArgs.push('-vn'); // Discard embedded video/cover-art streams (e.g. attached pics in MP3)
 
     const audioFilters: string[] = [];
     if (Math.abs(speed - 1.0) > 0.005) {
@@ -354,6 +355,14 @@ class RemotionRunnerService {
     audioFilters.push('apad');
 
     ffmpegArgs.push('-af', audioFilters.join(','));
+
+    // Remotion's custom bundled FFmpeg requires explicit muxer format for audio containers
+    if (audioOutputPath.endsWith('.m4a') || audioOutputPath.endsWith('.mp4')) {
+      ffmpegArgs.push('-f', 'mp4');
+    } else if (audioOutputPath.endsWith('.aac')) {
+      ffmpegArgs.push('-f', 'adts');
+    }
+
     ffmpegArgs.push(
       '-t',
       totalDurationSeconds.toFixed(4),
