@@ -6,6 +6,7 @@ import { translationService } from './services/translation-service';
 import { recitationService } from './services/recitation-service';
 import { remotionRunner } from './services/remotion-runner';
 import { settingsService } from './services/settings-service';
+import { renderSessionManager } from './services/render-session-manager';
 import { ScriptType, VideoTemplateConfig, AyahSequenceData } from '../shared/types';
 import { ThumbnailConfig } from '../shared/thumbnail-types';
 
@@ -293,18 +294,44 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
 
   // 5. Video Rendering
   ipcMain.handle(
+    'render:check-session',
+    async (
+      _,
+      config: VideoTemplateConfig,
+      totalDurationInFrames: number,
+      outputPath: string
+    ) => {
+      return renderSessionManager.checkExistingSession(config, totalDurationInFrames, outputPath);
+    }
+  );
+
+  ipcMain.handle(
+    'render:discard-session',
+    async (
+      _,
+      config: VideoTemplateConfig,
+      totalDurationInFrames: number,
+      outputPath: string
+    ) => {
+      const discarded = renderSessionManager.discardSession(config, totalDurationInFrames, outputPath);
+      return { success: discarded };
+    }
+  );
+
+  ipcMain.handle(
     'render:start',
     async (
       _,
       config: VideoTemplateConfig,
       ayahs: AyahSequenceData[],
       totalDurationInFrames: number,
-      outputPath: string
+      outputPath: string,
+      options?: { forceFresh?: boolean }
     ) => {
       const jobId = `job_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
       // Run rendering asynchronously so IPC returns immediately with jobId
       remotionRunner
-        .renderVideo(jobId, config, ayahs, totalDurationInFrames, outputPath, mainWindow)
+        .renderVideo(jobId, config, ayahs, totalDurationInFrames, outputPath, mainWindow, options)
         .catch((err) => {
           console.error('Render error:', err);
         });

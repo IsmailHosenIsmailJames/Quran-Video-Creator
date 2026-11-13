@@ -1,11 +1,12 @@
 import path from 'path';
 import fs from 'fs';
 import { bundle } from '@remotion/bundler';
-import { renderMedia, selectComposition, ensureBrowser } from '@remotion/renderer';
+import { renderMedia, selectComposition, ensureBrowser, RenderInternals } from '@remotion/renderer';
 import { BrowserWindow, app } from 'electron';
 import { VideoTemplateConfig, AyahSequenceData, QuranVideoCompositionProps } from '../../shared/types';
 import { localMediaServer } from './local-media-server';
 import { recitationService } from './recitation-service';
+import { renderSessionManager } from './render-session-manager';
 
 class RemotionRunnerService {
   private activeJobs = new Map<string, { cancel: () => void }>();
@@ -248,12 +249,14 @@ class RemotionRunnerService {
     ayahs: AyahSequenceData[],
     totalDurationInFrames: number,
     outputPath: string,
-    mainWindow: BrowserWindow
+    mainWindow: BrowserWindow,
+    options?: { forceFresh?: boolean }
   ): Promise<void> {
     mainWindow.webContents.send('render:progress', {
       jobId,
       progress: 0.02,
       status: 'rendering',
+      message: 'Initializing render session and checkpoint engine...',
     });
 
     const { cancelSignal, cancel } = require('@remotion/renderer').makeCancelSignal();
@@ -270,7 +273,20 @@ class RemotionRunnerService {
       },
     });
 
+    let currentSessionDir: string | null = null;
+    let currentManifest: any = null;
+
     try {
+      // 0. Initialize or restore session checkpoint
+      const { manifest, sessionDir, isResumed } = renderSessionManager.initOrCreateSession(
+        config,
+        totalDurationInFrames,
+        outputPath,
+        options?.forceFresh
+      );
+      currentSessionDir = sessionDir;
+      currentManifest = manifest;
+
       const prebundled = this.getPrebundledPath();
       let bundleLocation: string;
 
@@ -278,15 +294,17 @@ class RemotionRunnerService {
         bundleLocation = prebundled;
         mainWindow.webContents.send('render:progress', {
           jobId,
-          progress: 0.1,
+          progress: 0.06,
           status: 'rendering',
+          message: 'Loading pre-bundled composition...',
         });
       } else if (prebundled && !fs.existsSync(path.join(process.cwd(), 'src/remotion/index.ts'))) {
         bundleLocation = prebundled;
         mainWindow.webContents.send('render:progress', {
           jobId,
-          progress: 0.1,
+          progress: 0.06,
           status: 'rendering',
+          message: 'Loading pre-bundled composition...',
         });
       } else {
         const entryPoint = this.resolveEntryPoint();
@@ -297,8 +315,9 @@ class RemotionRunnerService {
             if (isCancelled) return;
             mainWindow.webContents.send('render:progress', {
               jobId,
-              progress: progress * 0.1, // First 10% is bundling
+              progress: progress * 0.06,
               status: 'rendering',
+              message: `Preparing bundles (${Math.round(progress * 100)}%)...`,
             });
           },
         });
@@ -310,6 +329,7 @@ class RemotionRunnerService {
           jobId,
           progress: 0,
           status: 'cancelled',
+          message: 'Render cancelled',
         });
         return;
       }
@@ -490,7 +510,6 @@ class RemotionRunnerService {
       };
 
       // Ensure all recitation audio tracks are cached locally on disk before rendering begins
-      // This guarantees offline export and avoids repeated server requests during render
       const sanitizedAyahs: AyahSequenceData[] = [];
       const totalAyahs = (ayahs || []).length;
       for (let i = 0; i < totalAyahs; i++) {
@@ -520,7 +539,7 @@ class RemotionRunnerService {
           if (!isCached && remoteUrl) {
             mainWindow.webContents.send('render:progress', {
               jobId,
-              progress: 0.01 + (i / totalAyahs) * 0.04,
+              progress: 0.06 + (i / totalAyahs) * 0.04,
               status: 'rendering',
               message: `Caching recitation audio for offline render (${i + 1}/${totalAyahs})...`,
             });
@@ -557,6 +576,7 @@ class RemotionRunnerService {
           jobId,
           progress: 0,
           status: 'cancelled',
+          message: 'Render cancelled',
         });
         return;
       }
@@ -583,36 +603,238 @@ class RemotionRunnerService {
         ? Math.min(3, Math.max(1, Math.floor(cpuCount / 2)))
         : Math.min(4, Math.max(1, Math.floor(cpuCount / 2)));
 
-      // 3. Render MP4 Media
-      await renderMedia({
-        composition,
-        serveUrl: bundleLocation,
-        codec: 'h264',
-        outputLocation: outputPath,
-        inputProps: inputProps as unknown as Record<string, unknown>,
-        crf: config.resolution === '4k' ? 18 : 22,
-        concurrency,
-        cancelSignal,
-        browserExecutable,
-        binariesDirectory,
-        chromiumOptions: {
-          enableMultiProcessOnLinux: true,
-          disableWebSecurity: true,
-        },
-        onProgress: ({ renderedFrames, renderEstimatedTime }) => {
-          if (isCancelled) return;
-          const progress = 0.1 + (renderedFrames / totalDurationInFrames) * 0.9;
-          mainWindow.webContents.send('render:progress', {
-            jobId,
-            progress: Math.min(0.99, progress),
-            currentFrame: renderedFrames,
-            totalFrames: totalDurationInFrames,
-            renderEstimatedTime,
-            status: 'rendering',
-            message: `Rendering frame ${renderedFrames} of ${totalDurationInFrames}`,
+      // 3. Audio Synchronization Track (Rendered once up front for continuous sync)
+      const audioPath = path.join(sessionDir, manifest.audioFileName);
+      if (!manifest.audioCompleted) {
+        if (isCancelled) return;
+        mainWindow.webContents.send('render:progress', {
+          jobId,
+          progress: 0.11,
+          status: 'rendering',
+          message: 'Synchronizing master audio track for frame-accurate playback...',
+        });
+
+        try {
+          await renderMedia({
+            composition,
+            serveUrl: bundleLocation,
+            codec: 'aac',
+            outputLocation: audioPath,
+            inputProps: inputProps as unknown as Record<string, unknown>,
+            browserExecutable,
+            binariesDirectory,
+            cancelSignal,
           });
-        },
+
+          if (fs.existsSync(audioPath) && fs.statSync(audioPath).size > 512) {
+            manifest.audioCompleted = true;
+            manifest.hasAudio = true;
+            renderSessionManager.saveManifest(sessionDir, manifest);
+          } else {
+            manifest.audioCompleted = true;
+            manifest.hasAudio = false;
+            renderSessionManager.saveManifest(sessionDir, manifest);
+          }
+        } catch (audioErr: any) {
+          console.warn('[RemotionRunner] Audio track notice:', audioErr?.message);
+          manifest.audioCompleted = true;
+          manifest.hasAudio = false;
+          renderSessionManager.saveManifest(sessionDir, manifest);
+        }
+      }
+
+      if (isCancelled) {
+        this.activeJobs.delete(jobId);
+        mainWindow.webContents.send('render:progress', {
+          jobId,
+          progress: 0,
+          status: 'cancelled',
+          message: 'Render cancelled',
+        });
+        return;
+      }
+
+      // 4. Segment-Based Video Rendering (Safe against load shedding)
+      const totalChunks = manifest.chunks.length;
+      const initialCompleted = manifest.chunks.filter((c) => c.completed).length;
+
+      if (isResumed && initialCompleted > 0) {
+        const initialFramesDone = manifest.chunks
+          .filter((c) => c.completed)
+          .reduce((sum, c) => sum + c.durationInFrames, 0);
+
+        mainWindow.webContents.send('render:progress', {
+          jobId,
+          progress: 0.12 + (initialFramesDone / totalDurationInFrames) * 0.82,
+          currentFrame: initialFramesDone,
+          totalFrames: totalDurationInFrames,
+          currentChunk: initialCompleted,
+          totalChunks,
+          isResumed: true,
+          status: 'rendering',
+          message: `Resuming: ${initialCompleted} of ${totalChunks} segments (${Math.round((initialFramesDone / totalDurationInFrames) * 100)}%) already completed!`,
+        });
+      }
+
+      for (let i = 0; i < totalChunks; i++) {
+        if (isCancelled) break;
+        const chunk = manifest.chunks[i];
+        const chunkVideoPath = path.join(sessionDir, chunk.videoFileName);
+
+        if (chunk.completed && fs.existsSync(chunkVideoPath) && fs.statSync(chunkVideoPath).size > 1024) {
+          console.log(`[RemotionRunner] Segment ${i + 1}/${totalChunks} already rendered. Skipping.`);
+          continue;
+        }
+
+        const priorCompletedFrames = manifest.chunks
+          .slice(0, i)
+          .filter((c) => c.completed)
+          .reduce((sum, c) => sum + c.durationInFrames, 0);
+
+        mainWindow.webContents.send('render:progress', {
+          jobId,
+          progress: 0.12 + (priorCompletedFrames / totalDurationInFrames) * 0.82,
+          currentFrame: priorCompletedFrames,
+          totalFrames: totalDurationInFrames,
+          currentChunk: i + 1,
+          totalChunks,
+          isResumed,
+          status: 'rendering',
+          message: `Rendering segment ${i + 1} of ${totalChunks} (frames ${chunk.startFrame}–${chunk.endFrame})...`,
+        });
+
+        // Render video frames for this chunk.
+        // Muted is true because master_audio.aac holds the master continuous audio track.
+        await renderMedia({
+          composition,
+          serveUrl: bundleLocation,
+          codec: 'h264',
+          outputLocation: chunkVideoPath,
+          frameRange: [chunk.startFrame, chunk.endFrame],
+          inputProps: inputProps as unknown as Record<string, unknown>,
+          crf: config.resolution === '4k' ? 18 : 22,
+          concurrency,
+          cancelSignal,
+          browserExecutable,
+          binariesDirectory,
+          muted: true,
+          chromiumOptions: {
+            enableMultiProcessOnLinux: true,
+            disableWebSecurity: true,
+          },
+          onProgress: ({ renderedFrames, renderEstimatedTime }) => {
+            if (isCancelled) return;
+            const globalRenderedFrames = priorCompletedFrames + renderedFrames;
+            const progress = 0.12 + (globalRenderedFrames / totalDurationInFrames) * 0.82;
+
+            let scaledRemainingTime = renderEstimatedTime;
+            if (renderEstimatedTime && renderEstimatedTime > 0 && chunk.durationInFrames > 0) {
+              const remainingTotalFrames = Math.max(0, totalDurationInFrames - globalRenderedFrames);
+              const msPerFrame = renderEstimatedTime / Math.max(1, chunk.durationInFrames - renderedFrames);
+              scaledRemainingTime = Math.round(msPerFrame * remainingTotalFrames);
+            }
+
+            mainWindow.webContents.send('render:progress', {
+              jobId,
+              progress: Math.min(0.95, progress),
+              currentFrame: globalRenderedFrames,
+              totalFrames: totalDurationInFrames,
+              currentChunk: i + 1,
+              totalChunks,
+              isResumed,
+              renderEstimatedTime: scaledRemainingTime,
+              status: 'rendering',
+              message: `Rendering segment ${i + 1} of ${totalChunks} (frame ${globalRenderedFrames} of ${totalDurationInFrames})`,
+            });
+          },
+        });
+
+        if (isCancelled) break;
+
+        // Verify newly rendered chunk on disk and update checkpoint manifest atomically
+        if (fs.existsSync(chunkVideoPath) && fs.statSync(chunkVideoPath).size > 1024) {
+          chunk.completed = true;
+          chunk.fileSizeBytes = fs.statSync(chunkVideoPath).size;
+          renderSessionManager.saveManifest(sessionDir, manifest);
+        } else {
+          throw new Error(`Segment ${i + 1} failed to write valid video output to disk.`);
+        }
+      }
+
+      if (isCancelled) {
+        this.activeJobs.delete(jobId);
+        mainWindow.webContents.send('render:progress', {
+          jobId,
+          progress: 0,
+          status: 'cancelled',
+          message: 'Render cancelled. Progress saved locally for instant resume.',
+        });
+        return;
+      }
+
+      // 5. Final Fast Lossless Stream-Copy Muxing (2-3 seconds total, zero re-encoding)
+      mainWindow.webContents.send('render:progress', {
+        jobId,
+        progress: 0.96,
+        status: 'encoding',
+        message: 'Stitching video segments together losslessly (0% quality loss)...',
       });
+
+      const concatListPath = path.join(sessionDir, 'chunks.txt');
+      const fileEntries = manifest.chunks
+        .map((c) => {
+          const p = path.join(sessionDir, c.videoFileName).replace(/\\/g, '/');
+          return `file '${p}'`;
+        })
+        .join('\n');
+      fs.writeFileSync(concatListPath, fileEntries, 'utf8');
+
+      const outputDir = path.dirname(outputPath);
+      if (!fs.existsSync(outputDir)) {
+        fs.mkdirSync(outputDir, { recursive: true });
+      }
+
+      const hasAudioFile = manifest.hasAudio && fs.existsSync(audioPath) && fs.statSync(audioPath).size > 512;
+      const ffmpegArgs = hasAudioFile
+        ? [
+            '-hide_banner',
+            '-f', 'concat',
+            '-safe', '0',
+            '-i', concatListPath,
+            '-i', audioPath,
+            '-c:v', 'copy',
+            '-c:a', 'copy',
+            '-shortest',
+            '-movflags', '+faststart',
+            '-y',
+            outputPath,
+          ]
+        : [
+            '-hide_banner',
+            '-f', 'concat',
+            '-safe', '0',
+            '-i', concatListPath,
+            '-c:v', 'copy',
+            '-movflags', '+faststart',
+            '-y',
+            outputPath,
+          ];
+
+      await RenderInternals.callFf({
+        args: ffmpegArgs,
+        bin: 'ffmpeg',
+        indent: false,
+        logLevel: 'info',
+        binariesDirectory: binariesDirectory ?? null,
+        cancelSignal,
+      });
+
+      if (!fs.existsSync(outputPath) || fs.statSync(outputPath).size < 1024) {
+        throw new Error('Final stitched video output file was not created or is empty.');
+      }
+
+      // 6. Clean up session files now that final video is confirmed
+      renderSessionManager.cleanupSession(sessionDir);
 
       this.activeJobs.delete(jobId);
       mainWindow.webContents.send('render:progress', {
@@ -621,16 +843,26 @@ class RemotionRunnerService {
         currentFrame: totalDurationInFrames,
         totalFrames: totalDurationInFrames,
         status: 'completed',
+        message: 'Export completed successfully!',
       });
     } catch (err: any) {
       this.activeJobs.delete(jobId);
       const isUserCancel = isCancelled || err?.message?.includes('cancelled');
+
+      // Preserve session state in manifest so user can resume later
+      if (currentSessionDir && currentManifest) {
+        currentManifest.status = isUserCancel ? 'interrupted' : 'failed';
+        renderSessionManager.saveManifest(currentSessionDir, currentManifest);
+      }
+
       mainWindow.webContents.send('render:progress', {
         jobId,
         progress: 0,
         status: isUserCancel ? 'cancelled' : 'failed',
         error: err?.message || 'Rendering failed',
+        message: isUserCancel ? 'Render cancelled' : 'Render encountered an error',
       });
+
       if (!isUserCancel) {
         console.error('Render error:', err);
       }

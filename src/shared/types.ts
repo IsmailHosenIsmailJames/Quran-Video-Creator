@@ -455,8 +455,20 @@ export interface RenderProgressPayload {
   progress: number;            // 0.0 to 1.0
   currentFrame?: number;
   totalFrames?: number;
+  currentChunk?: number;
+  totalChunks?: number;
+  isResumed?: boolean;
   renderEstimatedTime?: number; // Estimated remaining time in ms
   status: 'rendering' | 'encoding' | 'completed' | 'failed' | 'cancelled';
   error?: string;
   message?: string;
+}
+
+export interface RenderSessionCheckResult {
+  hasExistingSession: boolean;
+  completedChunks: number;
+  totalChunks: number;
+  percentComplete: number;
+  sessionId: string;
+  outputPath: string;
 }

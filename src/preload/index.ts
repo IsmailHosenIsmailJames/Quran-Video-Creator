@@ -6,6 +6,7 @@ import {
   VideoTemplateConfig,
   AyahSequenceData,
   RenderProgressPayload,
+  RenderSessionCheckResult,
   ScriptType,
 } from '../shared/types';
 import { ThumbnailConfig } from '../shared/thumbnail-types';
@@ -82,14 +83,27 @@ const api = {
   copyImageToClipboard: (dataUrl: string): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke('clipboard:write-image', dataUrl),
 
-  // Video Rendering
+  // Video Rendering & Session Checkpointing
+  checkRenderSession: (
+    config: VideoTemplateConfig,
+    totalDurationInFrames: number,
+    outputPath: string
+  ): Promise<RenderSessionCheckResult | null> =>
+    ipcRenderer.invoke('render:check-session', config, totalDurationInFrames, outputPath),
+  discardRenderSession: (
+    config: VideoTemplateConfig,
+    totalDurationInFrames: number,
+    outputPath: string
+  ): Promise<{ success: boolean }> =>
+    ipcRenderer.invoke('render:discard-session', config, totalDurationInFrames, outputPath),
   startRender: (
     config: VideoTemplateConfig,
     ayahs: AyahSequenceData[],
     totalDurationInFrames: number,
-    outputPath: string
+    outputPath: string,
+    options?: { forceFresh?: boolean }
   ): Promise<{ jobId: string }> =>
-    ipcRenderer.invoke('render:start', config, ayahs, totalDurationInFrames, outputPath),
+    ipcRenderer.invoke('render:start', config, ayahs, totalDurationInFrames, outputPath, options),
   cancelRender: (jobId: string): Promise<void> =>
     ipcRenderer.invoke('render:cancel', jobId),
   onRenderProgress: (callback: (payload: RenderProgressPayload) => void): (() => void) => {

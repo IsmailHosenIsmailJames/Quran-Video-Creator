@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useStudioStore } from '../store/studio-store';
-import { RenderProgressPayload } from '../../shared/types';
+import { RenderProgressPayload, RenderSessionCheckResult } from '../../shared/types';
 import { getSurahByNumber } from '../../shared/surahs';
 import { getTranslationBookName } from '../../shared/surah-localization';
 import { generateYouTubeDescription } from '../../shared/youtube-seo-generator';
@@ -16,6 +16,7 @@ import {
   Copy,
   Check,
   Youtube,
+  Zap,
 } from 'lucide-react';
 
 const formatDuration = (ms: number): string => {
@@ -49,6 +50,7 @@ export const ExportDialog: React.FC = () => {
   const [exportedFilePath, setExportedFilePath] = useState<string>('');
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [renderProgress, setRenderProgress] = useState<RenderProgressPayload | null>(null);
+  const [sessionCheck, setSessionCheck] = useState<RenderSessionCheckResult | null>(null);
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [elapsedRenderTime, setElapsedRenderTime] = useState<number | null>(null);
   const [hasCopiedDesc, setHasCopiedDesc] = useState<boolean>(false);
@@ -106,14 +108,35 @@ export const ExportDialog: React.FC = () => {
       setRenderProgress(payload);
       if (payload.status === 'completed' || payload.status === 'failed' || payload.status === 'cancelled') {
         setIsExporting(false);
-        if (payload.status === 'completed' && renderStartTimeRef.current) {
-          setElapsedRenderTime(Date.now() - renderStartTimeRef.current);
+        if (payload.status === 'completed') {
+          setSessionCheck(null);
+          if (renderStartTimeRef.current) {
+            setElapsedRenderTime(Date.now() - renderStartTimeRef.current);
+          }
         }
       }
     });
 
     return () => cleanup();
   }, []);
+
+  // Check for any previous interrupted session for the current file path
+  useEffect(() => {
+    if (!outputPath || !isExportModalOpen) return;
+    const api = window.electronAPI;
+    if (!api?.checkRenderSession) return;
+
+    let isMounted = true;
+    api.checkRenderSession(config, totalDurationInFrames, outputPath).then((res: RenderSessionCheckResult | null) => {
+      if (isMounted) {
+        setSessionCheck(res);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [outputPath, isExportModalOpen, config, totalDurationInFrames]);
 
   if (!isExportModalOpen) return null;
 
@@ -127,7 +150,16 @@ export const ExportDialog: React.FC = () => {
     }
   };
 
-  const handleStartExport = async () => {
+  const handleDiscardCheckpoint = async () => {
+    if (!outputPath) return;
+    const api = window.electronAPI;
+    if (api?.discardRenderSession) {
+      await api.discardRenderSession(config, totalDurationInFrames, outputPath);
+    }
+    setSessionCheck(null);
+  };
+
+  const handleStartExport = async (forceFresh = false) => {
     const api = window.electronAPI;
     if (!api) return;
 
@@ -143,14 +175,21 @@ export const ExportDialog: React.FC = () => {
     renderStartTimeRef.current = Date.now();
     setElapsedRenderTime(null);
     setIsExporting(true);
+
+    const isResuming = sessionCheck && !forceFresh;
+    const startProgress = isResuming ? Math.max(0.05, (sessionCheck.percentComplete / 100) * 0.9) : 0.01;
+
     setRenderProgress({
       jobId: 'init',
-      progress: 0.01,
+      progress: startProgress,
       status: 'rendering',
+      message: isResuming
+        ? `Resuming export from checkpoint: ${sessionCheck.completedChunks}/${sessionCheck.totalChunks} segments saved...`
+        : 'Initializing render session and checkpoint engine...',
     });
 
     try {
-      const result = await api.startRender(config, ayahs, totalDurationInFrames, targetPath);
+      const result = await api.startRender(config, ayahs, totalDurationInFrames, targetPath, { forceFresh });
       setActiveJobId(result.jobId);
     } catch (err: any) {
       console.error('Failed to start render:', err);
@@ -312,6 +351,46 @@ export const ExportDialog: React.FC = () => {
             </div>
           </div>
 
+          {/* Load Shedding & Power-Loss Checkpoint Recovery Banner */}
+          {sessionCheck && sessionCheck.hasExistingSession && !isExporting && (
+            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-transparent border border-amber-500/35 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg shadow-amber-950/20">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-400 shrink-0">
+                  <Zap className="w-4 h-4 fill-amber-400 stroke-none" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-xs font-bold text-white">Interrupted Render Saved Locally</h4>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-400 text-black font-extrabold font-mono">
+                      {sessionCheck.percentComplete}% Done
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-300 pt-0.5">
+                    Found {sessionCheck.completedChunks} of {sessionCheck.totalChunks} finished segments on disk. Resume immediately without re-rendering!
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                <button
+                  type="button"
+                  onClick={handleDiscardCheckpoint}
+                  className="px-2.5 py-1.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white text-xs font-medium transition"
+                  title="Delete previous segments and start from frame 0"
+                >
+                  Discard
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleStartExport(false)}
+                  className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold transition shadow-md shadow-amber-500/20 flex items-center gap-1.5 active:scale-95"
+                >
+                  <Zap className="w-3.5 h-3.5 fill-black stroke-none" />
+                  <span>Resume ({sessionCheck.percentComplete}%)</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Quick YouTube Thumbnail Creator Shortcut */}
           <div className="p-3.5 rounded-xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/25 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
@@ -375,21 +454,41 @@ export const ExportDialog: React.FC = () => {
               {renderProgress.status === 'rendering' ? (
                 renderProgress.currentFrame && renderProgress.totalFrames ? (
                   <div className="flex justify-between items-center text-[11px] text-gray-400 font-mono">
-                    <span>
-                      Frame {renderProgress.currentFrame} of {renderProgress.totalFrames}
-                    </span>
+                    <div className="flex items-center gap-1.5 truncate">
+                      {renderProgress.isResumed && (
+                        <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-semibold border border-amber-500/30 flex items-center gap-1 shrink-0">
+                          <Zap className="w-2.5 h-2.5 fill-amber-300 stroke-none" />
+                          <span>Resumed</span>
+                        </span>
+                      )}
+                      <span className="truncate">
+                        {renderProgress.currentChunk && renderProgress.totalChunks ? (
+                          <>Segment {renderProgress.currentChunk}/{renderProgress.totalChunks} • Frame {renderProgress.currentFrame} of {renderProgress.totalFrames}</>
+                        ) : (
+                          <>Frame {renderProgress.currentFrame} of {renderProgress.totalFrames}</>
+                        )}
+                      </span>
+                    </div>
                     {estimatedTimeText ? (
-                      <span className="text-amber-400/90 font-medium">
-                        Estimated remaining: <span className="text-white font-semibold">{estimatedTimeText}</span>
+                      <span className="text-amber-400/90 font-medium shrink-0 pl-2">
+                        ETA: <span className="text-white font-semibold">{estimatedTimeText}</span>
                       </span>
                     ) : (
-                      <span className="text-gray-500">Calculating ETA...</span>
+                      <span className="text-gray-500 shrink-0 pl-2">Calculating ETA...</span>
                     )}
                   </div>
                 ) : (
                   <div className="flex justify-between items-center text-[11px] text-gray-400 font-mono">
-                    <span>{renderProgress.message || 'Preparing composition & bundler...'}</span>
-                    <span className="text-gray-500">Starting render</span>
+                    <div className="flex items-center gap-1.5 truncate">
+                      {renderProgress.isResumed && (
+                        <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-semibold border border-amber-500/30 flex items-center gap-1 shrink-0">
+                          <Zap className="w-2.5 h-2.5 fill-amber-300 stroke-none" />
+                          <span>Resumed</span>
+                        </span>
+                      )}
+                      <span className="truncate">{renderProgress.message || 'Preparing composition & bundler...'}</span>
+                    </div>
+                    <span className="text-gray-500 shrink-0 pl-2">In Progress</span>
                   </div>
                 )
               ) : renderProgress.status === 'completed' ? (
@@ -469,7 +568,7 @@ export const ExportDialog: React.FC = () => {
                   <span>YouTube Kit</span>
                 </button>
                 <button
-                  onClick={handleStartExport}
+                  onClick={() => handleStartExport(true)}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold transition shadow-lg shadow-amber-500/20 active:scale-98"
                 >
                   <RotateCcw className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -486,11 +585,20 @@ export const ExportDialog: React.FC = () => {
                 Close
               </button>
               <button
-                onClick={handleStartExport}
+                onClick={() => handleStartExport(false)}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold transition shadow-lg shadow-amber-500/20 active:scale-[0.98]"
               >
-                <Download className="w-4 h-4 stroke-[2.5]" />
-                {renderProgress?.status === 'failed' ? 'Retry Rendering' : 'Start Rendering'}
+                {sessionCheck && sessionCheck.hasExistingSession ? (
+                  <>
+                    <Zap className="w-4 h-4 fill-black stroke-none" />
+                    <span>Resume Export ({sessionCheck.percentComplete}%)</span>
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4 stroke-[2.5]" />
+                    <span>{renderProgress?.status === 'failed' ? 'Retry Rendering' : 'Start Rendering'}</span>
+                  </>
+                )}
               </button>
             </div>
           )}

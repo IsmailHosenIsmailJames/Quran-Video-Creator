@@ -15,6 +15,7 @@
     "test:reciter-thumbnail": "electron scripts/verify-reciter-thumbnails.cjs",
     "test:seo": "node scripts/test-youtube-seo.cjs",
     "test:chunking": "node scripts/test-scaling-and-chunking.cjs",
+    "test:resumable": "node scripts/test-resumable-export.cjs",
     "test:waveform": "node scripts/test-waveform-engine.cjs",
     "loc": "node scripts/count-loc.js",
     "pack": "npm run build:vite && npm run bundle:remotion && electron-builder --dir",
